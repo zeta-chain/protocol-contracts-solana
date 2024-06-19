@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token::{transfer, Token, TokenAccount};
-use borsh::BorshDeserialize;
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
 use std::mem::size_of;
@@ -15,9 +14,8 @@ pub enum MyError {
 declare_id!("9WSwbVLthCsJXABeDJcVcw4UQMYuoNLTJTLqueFXU5Q2");
 
 
-
 #[program]
-pub mod crowdfund {
+pub mod gateway {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {

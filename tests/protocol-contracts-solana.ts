@@ -239,10 +239,11 @@ describe("some tests", () => {
         // );
         const nonce = pdaAccountData.nonce;
         const amount = new anchor.BN(500000000);
+        const to = wallet.publicKey;
         const buffer = Buffer.concat([
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),
-            wallet.publicKey.toBuffer(),
+            to.toBuffer(),
         ]);
         const message_hash = keccak256(buffer);
         const signature = keyPair.sign(message_hash, 'hex');
@@ -256,10 +257,13 @@ describe("some tests", () => {
             amount, Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
             .accounts({
                 pda: pdaAccount,
+                to: to,
             }).rpc();
         let bal2 = await conn.getBalance(pdaAccount);
         console.log("pda account balance", bal2);
         expect(bal2).to.be.eq(bal1 - 500_000_000);
+        let bal3 = await conn.getBalance(to);
+        expect(bal3).to.be.gte(500_000_000);
     })
 
     it("update TSS address", async () => {

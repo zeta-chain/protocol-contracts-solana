@@ -3,8 +3,8 @@ use anchor_lang::system_program;
 use anchor_spl::token::{transfer, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
-use spl_associated_token_account;
 use std::mem::size_of;
+use spl_associated_token_account;
 
 #[error_code]
 pub enum Errors {
@@ -22,7 +22,7 @@ pub enum Errors {
     MessageHashMismatch,
 }
 
-declare_id!("9WSwbVLthCsJXABeDJcVcw4UQMYuoNLTJTLqueFXU5Q2");
+declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
 
 
 #[program]
@@ -100,7 +100,7 @@ pub mod gateway {
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&ctx.accounts.signer.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
         require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
 
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
@@ -112,7 +112,7 @@ pub mod gateway {
 
         // transfer amount of SOL from PDA to the payer
         pda.sub_lamports(amount)?;
-        ctx.accounts.signer.add_lamports(amount)?;
+        ctx.accounts.to.add_lamports(amount)?;
 
         pda.nonce += 1;
 
@@ -228,6 +228,8 @@ pub struct Withdraw<'info> {
 
     #[account(mut)]
     pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub to: SystemAccount<'info>,
 }
 
 #[derive(Accounts)]

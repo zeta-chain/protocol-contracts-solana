@@ -17,7 +17,8 @@ no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
-anchor-lang = "0.30.0"
-anchor-spl = { version = "0.30.0" , features = ["idl-build"]}
-solana-program = "1.18.15"
+anchor-lang = { version = "=0.30.0" }
+anchor-spl = { version = "=0.30.0" , features = ["idl-build"]}
+anchor-syn = "=0.30.0"
 spl-associated-token-account = "3.0.2"
+solana-program = "=1.18.15"

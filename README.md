@@ -61,3 +61,27 @@ To run the tests
 ```bash
 $ anchor test
 ```
+
+# Relevant Account and Addresses
+
+The Gateway program derive a PDA (Program Derived Address)
+with seeds `b"meta"` and canonical bump. 
+This PDA account/address actually holds the SOL
+balance of the Gateway program. For SPL tokens, 
+the PDA derived ATA (Associated Token Account) is
+used to hold the SPL token balance.
+
+The PDA account itself is a data account that holds
+Gateway program state, namely the following data types
+```rust
+pub struct Pda {
+    nonce: u64,            // ensure that each signature can only be used once
+    tss_address: [u8; 20], // 20 bytes address format of ethereum
+}
+```
+The `nonce` is incremented on each successful withdraw transaction,
+and it's used to prevent replay of signed ECDSA messages. 
+The `tss_address` is the TSS address of ZetaChain (20Bytes,
+Ethereum style). 
+
+The `initialize` instruction sets nonce to 0. 

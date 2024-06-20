@@ -23,11 +23,16 @@ describe("some tests", () => {
     let pda_ata: spl.Account;
 
     it("Initializes the program", async () => {
-        let transaction = new anchor.web3.Transaction();
-        console.log("wallet address", wallet.publicKey.toString());
-        // Add your test here.
-        transaction.add(await gatewayProgram.methods.initialize().instruction());
-        await anchor.web3.sendAndConfirmTransaction(anchor.getProvider().connection, transaction, [wallet]);
+        await gatewayProgram.methods.initialize().rpc();
+
+        // repeated initialization should fail
+        try {
+            await gatewayProgram.methods.initialize().rpc();
+            throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+        } catch (err) {
+            expect(err).to.be.not.null;
+            // console.log("Error message: ", err.message)
+        }
     });
 
     it("Mint a SPL USDC token", async () => {

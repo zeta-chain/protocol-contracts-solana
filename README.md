@@ -46,6 +46,18 @@ to build the transaction and pay tx fees. There
 are no restrictions on who the native transaction
 signer/fee payer is. 
 
+In both `withdraw` and `withdrawAndCall` instructions, 
+the ECDSA signed message_hash must commit to the 
+`nonce`, `amount`, and recipient address. See the 
+check in these instructions like: 
+```rust
+let mut concatenated_buffer = Vec::new();
+concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
+require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
+```
+
 # Build and Test Instructions
 
 Prerequisites: a recent version of `rust` compiler

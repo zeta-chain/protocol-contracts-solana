@@ -1,8 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
-import {Program} from "@coral-xyz/anchor";
+import {Program, web3} from "@coral-xyz/anchor";
 import {Gateway} from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
-import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
+
 import { expect } from 'chai';
 
 
@@ -14,21 +14,25 @@ describe("some tests", () => {
     // Configure the client to use the local cluster.
     anchor.setProvider(anchor.AnchorProvider.env());
     const conn = anchor.getProvider().connection;
-
     const gatewayProgram = anchor.workspace.Gateway as Program<Gateway>;
+    const wallet = anchor.workspace.Gateway.provider.wallet.payer;
+    const mint = anchor.web3.Keypair.generate();
+    let tokenAccount;
+    let wallet_ata: anchor.web3.PublicKey;
+    let pdaAccount: anchor.web3.PublicKey;
+    let pda_ata: spl.Account;
 
-    it("Test suite 1", async () => {
+    it("Initializes the program", async () => {
         let transaction = new anchor.web3.Transaction();
-        const wallet = anchor.workspace.Gateway.provider.wallet.payer;
         console.log("wallet address", wallet.publicKey.toString());
         // Add your test here.
         transaction.add(await gatewayProgram.methods.initialize().instruction());
-        const tx = await anchor.web3.sendAndConfirmTransaction(anchor.getProvider().connection, transaction, [wallet]);
-        // console.log("Your transaction signature", tx);
+        await anchor.web3.sendAndConfirmTransaction(anchor.getProvider().connection, transaction, [wallet]);
+    });
 
+    it("Mint a SPL USDC token", async () => {
         // now deploying a fake USDC SPL Token
         // 1. create a mint account
-        const mint = anchor.web3.Keypair.generate();
         const mintRent = await spl.getMinimumBalanceForRentExemptMint(conn);
         const tokenTransaction = new anchor.web3.Transaction();
         tokenTransaction.add(
@@ -50,7 +54,7 @@ describe("some tests", () => {
         console.log("mint account created!", mint.publicKey.toString());
 
         // 2. create token account to receive mint
-        const tokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+        tokenAccount = await spl.getOrCreateAssociatedTokenAccount(
             conn,
             wallet,
             mint.publicKey,
@@ -72,18 +76,21 @@ describe("some tests", () => {
         console.log("Account owner: ", account.owner.toString());
 
         // OK; transfer some USDC SPL token to the gateway PDA
-        const wallet_ata = await spl.getAssociatedTokenAddress(
+        wallet_ata = await spl.getAssociatedTokenAddress(
             mint.publicKey,
             wallet.publicKey,
         );
         console.log(`wallet_ata: ${wallet_ata.toString()}`);
+    })
+
+    it("Withdraw 500_000 USDC from Gateway with ECDSA signature", async () => {
         let seeds = [Buffer.from("meta", "utf-8")];
-        let [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+        [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
             seeds,
             gatewayProgram.programId,
         );
         console.log("gateway pda account", pdaAccount.toString());
-        const pda_ata = await spl.getOrCreateAssociatedTokenAccount(
+        pda_ata = await spl.getOrCreateAssociatedTokenAccount(
             conn,
             wallet,
             mint.publicKey,
@@ -140,6 +147,39 @@ describe("some tests", () => {
         }
 
     });
+
+    it("withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
+        const transaction = new anchor.web3.Transaction();
+        transaction.add(
+            web3.SystemProgram.transfer({
+                fromPubkey: wallet.publicKey,
+                toPubkey: pdaAccount,
+                lamports: 1_000_000_000,
+            })
+        );
+        await anchor.web3.sendAndConfirmTransaction(conn, transaction, [wallet]);
+        let bal1 = await conn.getBalance(pdaAccount);
+        console.log("pda account balance", bal1);
+        expect(bal1).to.be.gte(1_000_000_000);
+
+        const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+        console.log(`pda account data: nonce ${pdaAccountData.nonce}`);
+        const message_hash = fromHexString(
+            "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
+        );
+        const signature = fromHexString(
+            "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
+        );
+        const nonce = pdaAccountData.nonce;
+        await gatewayProgram.methods.withdraw(
+            new anchor.BN(500000000),signature, 0, message_hash, nonce)
+            .accounts({
+                pda: pdaAccount,
+            }).rpc();
+        let bal2 = await conn.getBalance(pdaAccount);
+        console.log("pda account balance", bal2);
+        expect(bal2).to.be.eq(bal1-500_000_000);
+    })
 
 
 });

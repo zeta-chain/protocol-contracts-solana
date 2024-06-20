@@ -2,8 +2,10 @@ import * as anchor from "@coral-xyz/anchor";
 import {Program, web3} from "@coral-xyz/anchor";
 import {Gateway} from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
+import {randomFillSync} from 'crypto';
 
-import { expect } from 'chai';
+
+import {expect} from 'chai';
 
 
 const fromHexString = (hexString) =>
@@ -103,26 +105,26 @@ describe("some tests", () => {
             true
         );
         console.log("pda_ata address", pda_ata.address.toString());
-       await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
-           {
-               from: tokenAccount.address,
-               to: pda_ata.address,
-           }
-       )
-       .rpc();
-       try {
-           await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
-               {
-                   from: tokenAccount.address,
-                   to: wallet_ata,
-               }
-           ).rpc();
-           throw new Error("Expected error not thrown");
-       } catch (err) {
-           expect(err).to.be.instanceof(anchor.AnchorError);
-           expect(err.message).to.include("DepositToAddressMismatch");
-           // console.log("Error message: ", err.message);
-       }
+        await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
+            {
+                from: tokenAccount.address,
+                to: pda_ata.address,
+            }
+        )
+            .rpc();
+        try {
+            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
+                {
+                    from: tokenAccount.address,
+                    to: wallet_ata,
+                }
+            ).rpc();
+            throw new Error("Expected error not thrown");
+        } catch (err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("DepositToAddressMismatch");
+            // console.log("Error message: ", err.message);
+        }
     });
 
     it("Withdraw 500_000 USDC from Gateway with ECDSA signature", async () => {
@@ -178,7 +180,7 @@ describe("some tests", () => {
     });
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
-        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000)).accounts({pda:pdaAccount}).rpc();
+        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000)).accounts({pda: pdaAccount}).rpc();
         // const transaction = new anchor.web3.Transaction();
         // transaction.add(
         //     web3.SystemProgram.transfer({
@@ -202,16 +204,37 @@ describe("some tests", () => {
         );
         const nonce = pdaAccountData.nonce;
         await gatewayProgram.methods.withdraw(
-            new anchor.BN(500000000),signature, 0, message_hash, nonce)
+            new anchor.BN(500000000), signature, 0, message_hash, nonce)
             .accounts({
                 pda: pdaAccount,
             }).rpc();
         let bal2 = await conn.getBalance(pdaAccount);
         console.log("pda account balance", bal2);
-        expect(bal2).to.be.eq(bal1-500_000_000);
+        expect(bal2).to.be.eq(bal1 - 500_000_000);
     })
 
+    it("update TSS address", async () => {
+        const newTss = new Uint8Array(20);
+        randomFillSync(newTss);
+        // console.log("generated new TSS address", newTss);
+        await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
+            pda: pdaAccount,
+        }).rpc();
+        const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+        // console.log("updated TSS address", pdaAccountData.tssAddress);
+        expect(pdaAccountData.tssAddress).to.be.deep.eq(Array.from(newTss));
 
+        // only the authority stored in PDA can update the TSS address; the following should fail
+        try {
+            await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
+                pda: pdaAccount,
+                signer: mint.publicKey,
+            }).signers([mint]).rpc();
+        } catch (err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("SignerIsNotAuthority");
+        }
+    });
 });
 
 

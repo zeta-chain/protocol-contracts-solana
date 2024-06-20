@@ -34,7 +34,15 @@ pub mod gateway {
             239, 36, 74, 232, 12, 58, 220, 53, 101, 185, 127, 45, 0, 144, 15, 163, 104, 163, 74,
             178,
         ];
+        initialized_pda.authority = ctx.accounts.signer.key();
 
+        Ok(())
+    }
+
+    pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(ctx.accounts.signer.key() == pda.authority, Errors::SignerIsNotAuthority);
+        pda.tss_address = tss_address;
         Ok(())
     }
 
@@ -228,8 +236,17 @@ pub struct WithdrawSPLToken<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+#[derive(Accounts)]
+pub struct UpdateTss<'info> {
+    #[account(mut)]
+    pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
 #[account]
 pub struct Pda {
     nonce: u64,            // ensure that each signature can only be used once
     tss_address: [u8; 20], // 20 bytes address format of ethereum
+    authority: Pubkey,
 }

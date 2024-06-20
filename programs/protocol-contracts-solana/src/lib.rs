@@ -27,13 +27,10 @@ declare_id!("9WSwbVLthCsJXABeDJcVcw4UQMYuoNLTJTLqueFXU5Q2");
 pub mod gateway {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, tss_address:[u8; 20]) -> Result<()> {
         let initialized_pda = &mut ctx.accounts.pda;
         initialized_pda.nonce = 0;
-        initialized_pda.tss_address = [
-            239, 36, 74, 232, 12, 58, 220, 53, 101, 185, 127, 45, 0, 144, 15, 163, 104, 163, 74,
-            178,
-        ];
+        initialized_pda.tss_address = tss_address;
         initialized_pda.authority = ctx.accounts.signer.key();
 
         Ok(())

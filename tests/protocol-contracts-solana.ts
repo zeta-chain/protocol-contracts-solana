@@ -23,13 +23,14 @@ describe("some tests", () => {
     let wallet_ata: anchor.web3.PublicKey;
     let pdaAccount: anchor.web3.PublicKey;
     let pda_ata: spl.Account;
+    const tssAddress = [239, 36, 74, 232, 12, 58, 220, 53, 101, 185, 127, 45, 0, 144, 15, 163, 104, 163, 74, 178,];
 
     it("Initializes the program", async () => {
-        await gatewayProgram.methods.initialize().rpc();
+        await gatewayProgram.methods.initialize(tssAddress).rpc();
 
         // repeated initialization should fail
         try {
-            await gatewayProgram.methods.initialize().rpc();
+            await gatewayProgram.methods.initialize(tssAddress).rpc();
             throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
         } catch (err) {
             expect(err).to.be.not.null;

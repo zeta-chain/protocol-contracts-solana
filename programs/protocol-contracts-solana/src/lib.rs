@@ -18,6 +18,8 @@ pub enum Errors {
     TSSAuthenticationFailed,
     #[msg("DepositToAddressMismatch")]
     DepositToAddressMismatch,
+    #[msg("MessageHashMismatch")]
+    MessageHashMismatch,
 }
 
 declare_id!("9WSwbVLthCsJXABeDJcVcw4UQMYuoNLTJTLqueFXU5Q2");
@@ -95,6 +97,12 @@ pub mod gateway {
             msg!("mismatch nonce");
             return err!(Errors::NonceMismatch);
         }
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
+        msg!("concatenated_buffer: {:?}", concatenated_buffer);
+
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         msg!("recovered address {:?}", address);
         if address != pda.tss_address {
@@ -246,4 +254,23 @@ pub struct Pda {
     nonce: u64,            // ensure that each signature can only be used once
     tss_address: [u8; 20], // 20 bytes address format of ethereum
     authority: Pubkey,
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let nonce: u64 = 0;
+        let amount: u64 = 500_000;
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        println!("concatenated_buffer: {:?}", concatenated_buffer);
+
+        let message_hash = hash(&concatenated_buffer[..]).to_bytes();
+        println!("message_hash: {:?}", message_hash);
+    }
 }

@@ -6,9 +6,15 @@ use solana_program::secp256k1_recover::secp256k1_recover;
 use std::mem::size_of;
 
 #[error_code]
-pub enum MyError {
-    #[msg("This is a custom error message")]
-    CustomError,
+pub enum Errors {
+    #[msg("SignerIsNotAuthority")]
+    SignerIsNotAuthority,
+    #[msg("InsufficientPoints")]
+    InsufficientPoints,
+    #[msg("NonceMismatch")]
+    NonceMismatch,
+    #[msg("TSSAuthenticationFailed")]
+    TSSAuthenticationFailed,
 }
 
 declare_id!("9WSwbVLthCsJXABeDJcVcw4UQMYuoNLTJTLqueFXU5Q2");
@@ -55,13 +61,13 @@ pub mod gateway {
 
         if nonce != pda.nonce {
             msg!("mismatch nonce");
-            return err!(MyError::CustomError);
+            return err!(Errors::NonceMismatch);
         }
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         msg!("recovered address {:?}", address);
         if address != pda.tss_address {
             msg!("ECDSA signature error");
-            return err!(MyError::CustomError);
+            return err!(Errors::TSSAuthenticationFailed);
         }
 
         // transfer amount of SOL from PDA to the payer
@@ -85,13 +91,13 @@ pub mod gateway {
         // let program_id = &mut ctx.accounts
         if nonce != pda.nonce {
             msg!("mismatch nonce");
-            return err!(MyError::CustomError);
+            return err!(Errors::NonceMismatch);
         }
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         msg!("recovered address {:?}", address);
         if address != pda.tss_address {
             msg!("ECDSA signature error");
-            return err!(MyError::CustomError);
+            return err!(Errors::TSSAuthenticationFailed);
         }
 
         let token = &ctx.accounts.token_program;
@@ -102,12 +108,14 @@ pub mod gateway {
             anchor_spl::token::Transfer {
                 from: ctx.accounts.from.to_account_info(),
                 to: ctx.accounts.to.to_account_info(),
-                authority: ctx.accounts.pda.to_account_info(),
+                authority: pda.to_account_info(),
             },
             signer_seeds,
         );
         transfer(xfer_ctx, amount)?;
         msg!("withdraw spl token successfully");
+
+        pda.nonce += 1;
 
         Ok(())
     }

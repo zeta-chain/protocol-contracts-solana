@@ -3,6 +3,8 @@ import {Program} from "@coral-xyz/anchor";
 import {Gateway} from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
 import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
+import { expect } from 'chai';
+
 
 const fromHexString = (hexString) =>
     hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16));
@@ -97,9 +99,10 @@ describe("some tests", () => {
             wallet,
             1_000_000
         );
-        console.log("xfer tx hash", tx_xfer);
+        // console.log("xfer tx hash", tx_xfer);
         const account2 = await spl.getAccount(conn, pda_ata.address);
-        console.log("B4 withdraw: Account balance:", account2.amount.toString());
+        expect(account2.amount).to.be.eq(1_000_000n);
+        // console.log("B4 withdraw: Account balance:", account2.amount.toString());
 
 
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
@@ -118,7 +121,23 @@ describe("some tests", () => {
             }).rpc();
 
         const account3 = await spl.getAccount(conn, pda_ata.address);
-        console.log("After withdraw: Account balance:", account3.amount.toString());
+        expect(account3.amount).to.be.eq(500_000n);
+
+
+        try {
+            (await gatewayProgram.methods.withdrawSplToken(new anchor.BN(500_000), signature, 0, message_hash, nonce)
+                .accounts({
+                    from: pda_ata.address,
+                    to: wallet_ata,
+                }).rpc());
+            throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+        } catch (err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("NonceMismatch");
+            const account4 = await spl.getAccount(conn, pda_ata.address);
+            console.log("After 2nd withdraw: Account balance:", account4.amount.toString());
+            expect(account4.amount).to.be.eq(500_000n);
+        }
 
     });
 

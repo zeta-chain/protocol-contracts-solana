@@ -100,8 +100,8 @@ pub mod gateway {
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.signer.key().to_bytes());
         require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
-        msg!("concatenated_buffer: {:?}", concatenated_buffer);
 
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         msg!("recovered address {:?}", address);
@@ -133,6 +133,12 @@ pub mod gateway {
             msg!("mismatch nonce");
             return err!(Errors::NonceMismatch);
         }
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
+        require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
+
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         msg!("recovered address {:?}", address);
         if address != pda.tss_address {

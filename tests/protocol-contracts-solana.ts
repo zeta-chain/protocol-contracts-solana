@@ -177,6 +177,7 @@ describe("some tests", () => {
         const buffer = Buffer.concat([
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),
+            wallet_ata.toBuffer(),
         ]);
         const message_hash = keccak256(buffer);
         const signature = keyPair.sign(message_hash, 'hex');
@@ -241,6 +242,7 @@ describe("some tests", () => {
         const buffer = Buffer.concat([
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),
+            wallet.publicKey.toBuffer(),
         ]);
         const message_hash = keccak256(buffer);
         const signature = keyPair.sign(message_hash, 'hex');

@@ -3,9 +3,15 @@ import {Program, web3} from "@coral-xyz/anchor";
 import {Gateway} from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
 import {randomFillSync} from 'crypto';
-
-
+import { ec as EC } from 'elliptic';
+import { keccak256 } from 'ethereumjs-util';
+import { toBuffer, bufferToHex, ecsign } from 'ethereumjs-util';
 import {expect} from 'chai';
+import {ecdsaRecover} from 'secp256k1';
+
+const ec = new EC('secp256k1');
+const keyPair = ec.genKeyPair();
+console.log("private key", keyPair.getPrivate('hex'));
 
 
 const fromHexString = (hexString) =>
@@ -23,7 +29,25 @@ describe("some tests", () => {
     let wallet_ata: anchor.web3.PublicKey;
     let pdaAccount: anchor.web3.PublicKey;
     let pda_ata: spl.Account;
-    const tssAddress = [239, 36, 74, 232, 12, 58, 220, 53, 101, 185, 127, 45, 0, 144, 15, 163, 104, 163, 74, 178,];
+    const message_hash = keccak256(Buffer.from("hello world"));
+    const signature = keyPair.sign(message_hash, 'hex');
+    const { r, s, recoveryParam } = signature;
+    console.log("r", recoveryParam);
+    const signatureBuffer = Buffer.concat([
+        r.toArrayLike(Buffer, 'be', 32),
+        s.toArrayLike(Buffer, 'be', 32),
+        // Buffer.from([v])
+    ]);
+    const recoveredPubkey = ecdsaRecover(signatureBuffer, recoveryParam, message_hash, false);
+    console.log("recovered pubkey    ", bufferToHex(Buffer.from(recoveredPubkey)));
+    const publicKeyBuffer = Buffer.from(keyPair.getPublic(false, 'hex').slice(2), 'hex');  // Uncompressed form of public key, remove the '04' prefix
+    console.log("generated public key", bufferToHex(publicKeyBuffer));
+
+    const addressBuffer = keccak256(publicKeyBuffer);  // Skip the first byte (format indicator)
+    const address = addressBuffer.slice(-20);
+    console.log("address", bufferToHex(address));
+    // const tssAddress = [239, 36, 74, 232, 12, 58, 220, 53, 101, 185, 127, 45, 0, 144, 15, 163, 104, 163, 74, 178,];
+    const tssAddress = Array.from(address);
 
     it("Initializes the program", async () => {
         await gatewayProgram.methods.initialize(tssAddress).rpc();
@@ -146,14 +170,14 @@ describe("some tests", () => {
 
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         console.log(`pda account data: nonce ${pdaAccountData.nonce}`);
-        const message_hash = fromHexString(
-            "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
-        );
-        const signature = fromHexString(
-            "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
-        );
+        // const message_hash = fromHexString(
+        //     "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
+        // );
+        // const signature = fromHexString(
+        //     "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
+        // );
         const nonce = pdaAccountData.nonce;
-        await gatewayProgram.methods.withdrawSplToken(new anchor.BN(500_000), signature, 0, message_hash, nonce)
+        await gatewayProgram.methods.withdrawSplToken(new anchor.BN(500_000), Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
             .accounts({
                 from: pda_ata.address,
                 to: wallet_ata,
@@ -164,7 +188,7 @@ describe("some tests", () => {
 
 
         try {
-            (await gatewayProgram.methods.withdrawSplToken(new anchor.BN(500_000), signature, 0, message_hash, nonce)
+            (await gatewayProgram.methods.withdrawSplToken(new anchor.BN(500_000), Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
                 .accounts({
                     from: pda_ata.address,
                     to: wallet_ata,
@@ -197,15 +221,15 @@ describe("some tests", () => {
 
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         console.log(`pda account data: nonce ${pdaAccountData.nonce}`);
-        const message_hash = fromHexString(
-            "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
-        );
-        const signature = fromHexString(
-            "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
-        );
+        // const message_hash = fromHexString(
+        //     "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
+        // );
+        // const signature = fromHexString(
+        //     "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
+        // );
         const nonce = pdaAccountData.nonce;
         await gatewayProgram.methods.withdraw(
-            new anchor.BN(500000000), signature, 0, message_hash, nonce)
+            new anchor.BN(500000000), Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
             .accounts({
                 pda: pdaAccount,
             }).rpc();

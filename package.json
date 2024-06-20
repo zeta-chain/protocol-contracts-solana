@@ -5,7 +5,10 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.0",
-    "@solana/spl-token": "^0.4.6"
+    "@solana/spl-token": "^0.4.6",
+    "elliptic": "^6.5.5",
+    "ethereumjs-util": "^7.1.5",
+    "secp256k1": "^5.0.0"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",

@@ -52,7 +52,7 @@ and `cargo` package manger must be installed. The program
 is built with the `anchor` framework so it needs to be
 installed as well; see [installation](https://www.anchor-lang.com/docs/installation)
 
-To build
+To build (this will require at least 2GB disk space)
 ```bash
 $ anchor build
 ```
@@ -67,9 +67,11 @@ $ anchor test
 The Gateway program derive a PDA (Program Derived Address)
 with seeds `b"meta"` and canonical bump. 
 This PDA account/address actually holds the SOL
-balance of the Gateway program. For SPL tokens, 
-the PDA derived ATA (Associated Token Account) is
-used to hold the SPL token balance.
+balance of the Gateway program. 
+For SPL tokens, the program stores the SPL token
+in PDA derived ATAs. For each SPL token (different mint
+account), the program creates ATA from PDA and the Mint
+(standard way of deriving ATA in Solana SPL program).
 
 The PDA account itself is a data account that holds
 Gateway program state, namely the following data types

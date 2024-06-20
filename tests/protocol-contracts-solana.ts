@@ -17,7 +17,7 @@ describe("some tests", () => {
     const gatewayProgram = anchor.workspace.Gateway as Program<Gateway>;
     const wallet = anchor.workspace.Gateway.provider.wallet.payer;
     const mint = anchor.web3.Keypair.generate();
-    let tokenAccount;
+    let tokenAccount: spl.Account;
     let wallet_ata: anchor.web3.PublicKey;
     let pdaAccount: anchor.web3.PublicKey;
     let pda_ata: spl.Account;
@@ -88,7 +88,7 @@ describe("some tests", () => {
         console.log(`wallet_ata: ${wallet_ata.toString()}`);
     })
 
-    it("Withdraw 500_000 USDC from Gateway with ECDSA signature", async () => {
+    it("Deposit 1_000_000 USDC to Gateway", async () => {
         let seeds = [Buffer.from("meta", "utf-8")];
         [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
             seeds,
@@ -103,14 +103,38 @@ describe("some tests", () => {
             true
         );
         console.log("pda_ata address", pda_ata.address.toString());
-        const tx_xfer = await spl.transfer(
-            conn,
-            wallet,
-            tokenAccount.address,
-            pda_ata.address,
-            wallet,
-            1_000_000
-        );
+       await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
+           {
+               from: tokenAccount.address,
+               to: pda_ata.address,
+           }
+       )
+       .rpc();
+       try {
+           await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
+               {
+                   from: tokenAccount.address,
+                   to: wallet_ata,
+               }
+           ).rpc();
+           throw new Error("Expected error not thrown");
+       } catch (err) {
+           expect(err).to.be.instanceof(anchor.AnchorError);
+           expect(err.message).to.include("DepositToAddressMismatch");
+           // console.log("Error message: ", err.message);
+       }
+    });
+
+    it("Withdraw 500_000 USDC from Gateway with ECDSA signature", async () => {
+
+        // const tx_xfer = await spl.transfer(
+        //     conn,
+        //     wallet,
+        //     tokenAccount.address,
+        //     pda_ata.address,
+        //     wallet,
+        //     1_000_000
+        // );
         // console.log("xfer tx hash", tx_xfer);
         const account2 = await spl.getAccount(conn, pda_ata.address);
         expect(account2.amount).to.be.eq(1_000_000n);
@@ -153,16 +177,17 @@ describe("some tests", () => {
 
     });
 
-    it("withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
-        const transaction = new anchor.web3.Transaction();
-        transaction.add(
-            web3.SystemProgram.transfer({
-                fromPubkey: wallet.publicKey,
-                toPubkey: pdaAccount,
-                lamports: 1_000_000_000,
-            })
-        );
-        await anchor.web3.sendAndConfirmTransaction(conn, transaction, [wallet]);
+    it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
+        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000)).accounts({pda:pdaAccount}).rpc();
+        // const transaction = new anchor.web3.Transaction();
+        // transaction.add(
+        //     web3.SystemProgram.transfer({
+        //         fromPubkey: wallet.publicKey,
+        //         toPubkey: pdaAccount,
+        //         lamports: 1_000_000_000,
+        //     })
+        // );
+        // await anchor.web3.sendAndConfirmTransaction(conn, transaction, [wallet]);
         let bal1 = await conn.getBalance(pdaAccount);
         console.log("pda account balance", bal1);
         expect(bal1).to.be.gte(1_000_000_000);

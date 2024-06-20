@@ -20,4 +20,4 @@ idl-build = ["anchor-lang/idl-build"]
 anchor-lang = "0.30.0"
 anchor-spl = { version = "0.30.0" , features = ["idl-build"]}
 solana-program = "1.18.15"
-
+spl-associated-token-account = "3.0.2"

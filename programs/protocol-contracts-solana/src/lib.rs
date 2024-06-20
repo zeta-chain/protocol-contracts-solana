@@ -3,6 +3,7 @@ use anchor_lang::system_program;
 use anchor_spl::token::{transfer, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
+use spl_associated_token_account;
 use std::mem::size_of;
 
 #[error_code]
@@ -15,6 +16,8 @@ pub enum Errors {
     NonceMismatch,
     #[msg("TSSAuthenticationFailed")]
     TSSAuthenticationFailed,
+    #[msg("DepositToAddressMismatch")]
+    DepositToAddressMismatch,
 }
 
 declare_id!("9WSwbVLthCsJXABeDJcVcw4UQMYuoNLTJTLqueFXU5Q2");
@@ -35,7 +38,7 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn donate(ctx: Context<Donate>, amount: u64) -> Result<()> {
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -43,8 +46,32 @@ pub mod gateway {
                 to: ctx.accounts.pda.to_account_info().clone(),
             },
         );
-
         system_program::transfer(cpi_context, amount)?;
+
+        Ok(())
+    }
+
+    pub fn deposit_spl_token(ctx: Context<DepositSplToken>, amount: u64) -> Result<()> {
+        let token = &ctx.accounts.token_program;
+        let from = &ctx.accounts.from;
+
+        let pda_ata = spl_associated_token_account::get_associated_token_address(
+            &ctx.accounts.pda.key(),
+            &from.mint,
+        );
+        // must deposit to the ATA from PDA in order to receive credit
+        require!(pda_ata == ctx.accounts.to.to_account_info().key(), Errors::DepositToAddressMismatch);
+
+        let xfer_ctx = CpiContext::new(
+            token.to_account_info(),
+            anchor_spl::token::Transfer {
+                from: ctx.accounts.from.to_account_info(),
+                to: ctx.accounts.to.to_account_info(),
+                authority: ctx.accounts.signer.to_account_info(),
+            },
+        );
+        transfer(xfer_ctx, amount)?;
+        msg!("deposit spl token successfully");
 
         Ok(())
     }
@@ -119,7 +146,6 @@ pub mod gateway {
 
         Ok(())
     }
-
 }
 
 fn recover_eth_address(
@@ -145,20 +171,35 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(init, payer = signer, space=size_of::<Pda>() + 8, seeds=[b"meta"], bump)]
+    #[account(init, payer = signer, space = size_of::< Pda > () + 8, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-pub struct Donate<'info> {
+pub struct Deposit<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
     #[account(mut)]
     pub pda: Account<'info, Pda>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct DepositSplToken<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+    pub token_program: Program<'info, Token>,
+
+    #[account(mut)]
+    pub from: Account<'info, TokenAccount>, // this must be owned by signer; normally the ATA of signer
+    #[account(mut)]
+    pub to: Account<'info, TokenAccount>,   // this must be ATA of PDA
 }
 
 #[derive(Accounts)]

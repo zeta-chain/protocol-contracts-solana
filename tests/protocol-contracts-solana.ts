@@ -1,13 +1,16 @@
 import * as anchor from "@coral-xyz/anchor";
-import {Program} from "@coral-xyz/anchor";
+import {Program, web3} from "@coral-xyz/anchor";
 import {Gateway} from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
+import * as memo from "@solana/spl-memo";
 import {randomFillSync} from 'crypto';
 import { ec as EC } from 'elliptic';
 import { keccak256 } from 'ethereumjs-util';
 import { bufferToHex } from 'ethereumjs-util';
 import {expect} from 'chai';
 import {ecdsaRecover} from 'secp256k1';
+
+
 
 const ec = new EC('secp256k1');
 const keyPair = ec.genKeyPair();
@@ -124,15 +127,26 @@ describe("some tests", () => {
             true
         );
         console.log("pda_ata address", pda_ata.address.toString());
-        await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
+        const tx = new web3.Transaction();
+        const memoInst = memo.createMemoInstruction(
+            "this is a memo",
+            [wallet.publicKey],
+        );
+        tx.add(memoInst);
+        const depositInst = await gatewayProgram.methods.depositSplToken(
+            new anchor.BN(1_000_000),
+            Buffer.from("hello", "utf-8")).accounts(
             {
                 from: tokenAccount.address,
                 to: pda_ata.address,
             }
-        )
-            .rpc();
+        ).instruction();
+        tx.add(depositInst);
+        const txsig = await anchor.web3.sendAndConfirmTransaction(conn, tx, [wallet]);
+
+
         try {
-            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000)).accounts(
+            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Buffer.from("world", "utf-8")).accounts(
                 {
                     from: tokenAccount.address,
                     to: wallet_ata,
@@ -215,7 +229,7 @@ describe("some tests", () => {
     });
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
-        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000)).accounts({pda: pdaAccount}).rpc();
+        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), Buffer.from("hello")).accounts({pda: pdaAccount}).rpc();
         // const transaction = new anchor.web3.Transaction();
         // transaction.add(
         //     web3.SystemProgram.transfer({

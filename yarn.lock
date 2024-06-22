@@ -132,6 +132,13 @@
     "@solana/codecs-core" "2.0.0-preview.2"
     "@solana/codecs-numbers" "2.0.0-preview.2"
 
+"@solana/spl-memo@^0.2.5":
+  version "0.2.5"
+  resolved "https://registry.npmjs.org/@solana/spl-memo/-/spl-memo-0.2.5.tgz"
+  integrity sha512-0Zx5t3gAdcHlRTt2O3RgGlni1x7vV7Xq7j4z9q8kKOMgU03PyoTbFQ/BSYCcICHzkaqD7ZxAiaJ6dlXolg01oA==
+  dependencies:
+    buffer "^6.0.3"
+
 "@solana/spl-token-group@^0.0.4":
   version "0.0.4"
   resolved "https://registry.npmjs.org/@solana/spl-token-group/-/spl-token-group-0.0.4.tgz"

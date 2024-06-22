@@ -20,6 +20,8 @@ pub enum Errors {
     DepositToAddressMismatch,
     #[msg("MessageHashMismatch")]
     MessageHashMismatch,
+    #[msg("MemoLengthExceeded")]
+    MemoLengthExceeded,
 }
 
 declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
@@ -45,7 +47,8 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+    pub fn deposit(ctx: Context<Deposit>, amount: u64, memo: Vec<u8>) -> Result<()> {
+        require!(memo.len() <= 512, Errors::MemoLengthExceeded);
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -54,11 +57,13 @@ pub mod gateway {
             },
         );
         system_program::transfer(cpi_context, amount)?;
+        msg!("{:?} deposits {:?} lamports to PDA", ctx.accounts.signer.key(), amount);
 
         Ok(())
     }
 
-    pub fn deposit_spl_token(ctx: Context<DepositSplToken>, amount: u64) -> Result<()> {
+    pub fn deposit_spl_token(ctx: Context<DepositSplToken>, amount: u64, memo: Vec<u8>) -> Result<()> {
+        require!(memo.len() <= 512, Errors::MemoLengthExceeded);
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
 
@@ -78,6 +83,7 @@ pub mod gateway {
             },
         );
         transfer(xfer_ctx, amount)?;
+
         msg!("deposit spl token successfully");
 
         Ok(())

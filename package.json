@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.0",
+    "@solana/spl-memo": "^0.2.5",
     "@solana/spl-token": "^0.4.6",
     "elliptic": "^6.5.5",
     "ethereumjs-util": "^7.1.5",

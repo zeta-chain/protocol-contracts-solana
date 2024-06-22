@@ -48,7 +48,7 @@ signer/fee payer is.
 
 In both `withdraw` and `withdrawAndCall` instructions, 
 the ECDSA signed message_hash must commit to the 
-`nonce`, `amount`, and recipient address. See the 
+`nonce`, `amount`, and `to` address. See the 
 check in these instructions like: 
 ```rust
 let mut concatenated_buffer = Vec::new();

@@ -22,6 +22,8 @@ pub enum Errors {
     MessageHashMismatch,
     #[msg("MemoLengthExceeded")]
     MemoLengthExceeded,
+    #[msg("MemoLengthTooShort")]
+    MemoLengthTooShort,
 }
 
 declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
@@ -48,6 +50,7 @@ pub mod gateway {
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64, memo: Vec<u8>) -> Result<()> {
+        require!(memo.len() >= 20, Errors::MemoLengthTooShort);
         require!(memo.len() <= 512, Errors::MemoLengthExceeded);
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -63,6 +66,7 @@ pub mod gateway {
     }
 
     pub fn deposit_spl_token(ctx: Context<DepositSplToken>, amount: u64, memo: Vec<u8>) -> Result<()> {
+        require!(memo.len() >= 20, Errors::MemoLengthTooShort);
         require!(memo.len() <= 512, Errors::MemoLengthExceeded);
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;

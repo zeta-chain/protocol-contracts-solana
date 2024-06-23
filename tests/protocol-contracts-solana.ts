@@ -13,8 +13,9 @@ import {ecdsaRecover} from 'secp256k1';
 
 
 const ec = new EC('secp256k1');
-const keyPair = ec.genKeyPair();
-console.log("private key", keyPair.getPrivate('hex'));
+// const keyPair = ec.genKeyPair();
+// read private key from hex dump
+const keyPair = ec.keyFromPrivate('5b81cdf52ba0766983acf8dd0072904733d92afe4dd3499e83e879b43ccb73e8');
 
 describe("some tests", () => {
     // Configure the client to use the local cluster.
@@ -43,8 +44,10 @@ describe("some tests", () => {
     const addressBuffer = keccak256(publicKeyBuffer);  // Skip the first byte (format indicator)
     const address = addressBuffer.slice(-20);
     console.log("address", bufferToHex(address));
+    // console.log("address", address);
     // const tssAddress = [239, 36, 74, 232, 12, 58, 220, 53, 101, 185, 127, 45, 0, 144, 15, 163, 104, 163, 74, 178,];
     const tssAddress = Array.from(address);
+    console.log("tss address", tssAddress);
 
     it("Initializes the program", async () => {
         await gatewayProgram.methods.initialize(tssAddress).rpc();
@@ -134,8 +137,7 @@ describe("some tests", () => {
         );
         tx.add(memoInst);
         const depositInst = await gatewayProgram.methods.depositSplToken(
-            new anchor.BN(1_000_000),
-            Buffer.from("hello", "utf-8")).accounts(
+            new anchor.BN(1_000_000), address).accounts(
             {
                 from: tokenAccount.address,
                 to: pda_ata.address,
@@ -146,7 +148,7 @@ describe("some tests", () => {
 
 
         try {
-            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Buffer.from("world", "utf-8")).accounts(
+            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), address).accounts(
                 {
                     from: tokenAccount.address,
                     to: wallet_ata,
@@ -161,16 +163,6 @@ describe("some tests", () => {
     });
 
     it("Withdraw 500_000 USDC from Gateway with ECDSA signature", async () => {
-
-        // const tx_xfer = await spl.transfer(
-        //     conn,
-        //     wallet,
-        //     tokenAccount.address,
-        //     pda_ata.address,
-        //     wallet,
-        //     1_000_000
-        // );
-        // console.log("xfer tx hash", tx_xfer);
         const account2 = await spl.getAccount(conn, pda_ata.address);
         expect(account2.amount).to.be.eq(1_000_000n);
         // console.log("B4 withdraw: Account balance:", account2.amount.toString());
@@ -229,7 +221,7 @@ describe("some tests", () => {
     });
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
-        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), Buffer.from("hello")).accounts({pda: pdaAccount}).rpc();
+        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), address).accounts({pda: pdaAccount}).rpc();
         // const transaction = new anchor.web3.Transaction();
         // transaction.add(
         //     web3.SystemProgram.transfer({

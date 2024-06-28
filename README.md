@@ -44,19 +44,29 @@ the native transaction signer (fee payer on Solana)
 does not carry authorization and it's only used
 to build the transaction and pay tx fees. There
 are no restrictions on who the native transaction
-signer/fee payer is. 
+signer/fee payer is. The following code excerpt is
+for authenticating TSS signature in the contract itself, 
+using the [Rust secp256k1 library bundled with solana](https://docs.rs/solana-program/latest/solana_program/secp256k1_recover/index.html):
+https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L116
+
+The function `recover_eth_address` is implemented in the gateway program: 
+https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L180-L196
+
+The TSS signature is a ECDSA secp256k1 signature; its public key therefore address
+(Ethereum compatible hashing from pubkey) is therefore verifiable using the `secp256k1_recover`
+function. Alternatively, Solana runtime also privides a program to provide this verification service
+via CPI; see [proposal 48](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0048-native-program-for-secp256r1-sigverify.md)
+which might be more cost efficient. 
 
 In both `withdraw` and `withdrawAndCall` instructions, 
 the ECDSA signed message_hash must commit to the 
 `nonce`, `amount`, and `to` address. See the 
 check in these instructions like: 
-```rust
-let mut concatenated_buffer = Vec::new();
-concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
-require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
-```
+https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L110-L114
+The commitment of `nonce` in the signature prevents replay of the TSS ECDSA signed message. 
+Also (to be added in https://github.com/zeta-chain/protocol-contracts-solana/issues/6) a chain id of Solana
+should be added to the commitment of the message hash, so that the signature cannot be replayed on *other blockchains*
+that potentially uses similar authentication (say in TON). 
 
 # Build and Test Instructions
 

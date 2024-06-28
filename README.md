@@ -47,7 +47,7 @@ are no restrictions on who the native transaction
 signer/fee payer is. The following code excerpt is
 for authenticating TSS signature in the contract itself, 
 using the [Rust secp256k1 library bundled with solana](https://docs.rs/solana-program/latest/solana_program/secp256k1_recover/index.html):
-https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L116
+https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L116-L121
 
 The function `recover_eth_address` is implemented in the gateway program: 
 https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L180-L196

@@ -98,15 +98,12 @@ account), the program creates ATA from PDA and the Mint
 
 The PDA account itself is a data account that holds
 Gateway program state, namely the following data types
-```rust
-pub struct Pda {
-    nonce: u64,            // ensure that each signature can only be used once
-    tss_address: [u8; 20], // 20 bytes address format of ethereum
-}
-```
+https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L271-L275
+
 The `nonce` is incremented on each successful withdraw transaction,
 and it's used to prevent replay of signed ECDSA messages. 
 The `tss_address` is the TSS address of ZetaChain (20Bytes,
-Ethereum style). 
+Ethereum style). `authority` is the one who can update
+the TSS address stored in PDA account. 
 
 The `initialize` instruction sets nonce to 0. 

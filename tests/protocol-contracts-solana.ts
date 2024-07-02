@@ -49,12 +49,15 @@ describe("some tests", () => {
     const tssAddress = Array.from(address);
     console.log("tss address", tssAddress);
 
+    const chain_id = 111111;
+    const chain_id_bn = new anchor.BN(chain_id);
+
     it("Initializes the program", async () => {
-        await gatewayProgram.methods.initialize(tssAddress).rpc();
+        await gatewayProgram.methods.initialize(tssAddress, chain_id_bn).rpc();
 
         // repeated initialization should fail
         try {
-            await gatewayProgram.methods.initialize(tssAddress).rpc();
+            await gatewayProgram.methods.initialize(tssAddress,chain_id_bn).rpc();
             throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
         } catch (err) {
             expect(err).to.be.not.null;
@@ -181,6 +184,7 @@ describe("some tests", () => {
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         const buffer = Buffer.concat([
+            chain_id_bn.toArrayLike(Buffer, 'be', 8),
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),
             wallet_ata.toBuffer(),
@@ -247,6 +251,7 @@ describe("some tests", () => {
         const amount = new anchor.BN(500000000);
         const to = wallet.publicKey;
         const buffer = Buffer.concat([
+            chain_id_bn.toArrayLike(Buffer, 'be', 8),
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),
             to.toBuffer(),
@@ -294,6 +299,8 @@ describe("some tests", () => {
             expect(err.message).to.include("SignerIsNotAuthority");
         }
     });
+
+
 });
 
 

@@ -33,11 +33,12 @@ declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
 pub mod gateway {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, tss_address:[u8; 20]) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, tss_address:[u8; 20], chain_id: u64) -> Result<()> {
         let initialized_pda = &mut ctx.accounts.pda;
         initialized_pda.nonce = 0;
         initialized_pda.tss_address = tss_address;
         initialized_pda.authority = ctx.accounts.signer.key();
+        initialized_pda.chain_id = chain_id;
 
         Ok(())
     }
@@ -108,6 +109,7 @@ pub mod gateway {
             return err!(Errors::NonceMismatch);
         }
         let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
@@ -144,6 +146,7 @@ pub mod gateway {
             return err!(Errors::NonceMismatch);
         }
         let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
@@ -272,6 +275,7 @@ pub struct Pda {
     nonce: u64,            // ensure that each signature can only be used once
     tss_address: [u8; 20], // 20 bytes address format of ethereum
     authority: Pubkey,
+    chain_id: u64,
 }
 
 

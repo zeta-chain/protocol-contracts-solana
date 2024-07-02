@@ -75,6 +75,24 @@ and `cargo` package manger must be installed. The program
 is built with the `anchor` framework so it needs to be
 installed as well; see [installation](https://www.anchor-lang.com/docs/installation)
 
+Please install compatible Solana tools and anchor-cli before build, otherwise the program will not be built successfully
+```bash
+$ solana-install init 1.18.15
+
+$ cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.0 anchor-cli --locked
+```
+
+To show the installed versions of the tools
+```bash
+$ cargo-build-sbf --version
+solana-cargo-build-sbf 1.18.15
+platform-tools v1.41
+rustc 1.75.0
+
+$ anchor --version
+anchor-cli 0.30.0
+```
+
 To build (this will require at least 2GB disk space)
 ```bash
 $ anchor build

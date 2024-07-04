@@ -1,0 +1,49 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Install Solana CLI
+      run: |
+        sh -c "$(curl -sSfL https://release.solana.com/v1.8.2/install)"
+        echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+    - name: Install Anchor
+      run: |
+        cargo install --git https://github.com/project-serum/anchor anchor-cli --locked
+
+    - name: Anchor version
+      run: anchor --version
+
+    - name: Solana version
+      run: solana --version
+
+    - name: Setup Solana config
+      run: |
+        solana config set --url https://api.devnet.solana.com
+        solana config set --keypair ~/.config/solana/id.json
+
+    - name: Run Anchor build
+      run: anchor build
+
+    - name: Run Anchor tests
+      run: anchor test

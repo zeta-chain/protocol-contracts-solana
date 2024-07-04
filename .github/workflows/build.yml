@@ -31,8 +31,15 @@ jobs:
       run: |
         cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.0 anchor-cli --locked
 
-    - name: Generate new keygen
-      run: solana-keygen new
+    - name: Generate Solana keypair
+      run: |
+        mkdir -p ~/.config/solana
+        solana-keygen new --outfile ~/.config/solana/id.json
+
+    - name: Setup Solana config
+      run: |
+        solana config set --url https://api.devnet.solana.com
+        solana config set --keypair ~/.config/solana/id.json
 
     - name: Install yarn dependencies
       run: yarn install

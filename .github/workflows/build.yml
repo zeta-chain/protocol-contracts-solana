@@ -24,12 +24,20 @@ jobs:
 
     - name: Install Solana CLI
       run: |
-        sh -c "$(curl -sSfL https://release.solana.com/v1.8.2/install)"
+        sh -c "$(curl -sSfL https://release.solana.com/v1.18.17/install)"
         echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
     - name: Install Anchor
       run: |
-        cargo install --git https://github.com/project-serum/anchor anchor-cli --locked
+        cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+
+    - name: Install Anchor latest version
+      run: |
+        avm install latest
+
+    - name: Set Anchor latest version
+      run: |
+        avm use latest
 
     - name: Anchor version
       run: anchor --version

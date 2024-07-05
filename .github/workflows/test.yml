@@ -1,4 +1,4 @@
-name: build
+name: test
 
 on:
   push:
@@ -14,3 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: metadaoproject/anchor-test@v2
+        with:
+          anchor-version: '0.30.1'
+          solana-cli-version: '1.18.15'
+          node-version: 'v20.15.0'

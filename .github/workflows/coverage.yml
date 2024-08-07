@@ -15,18 +15,10 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
 jobs:
-    required:
-        runs-on: ubuntu-latest
-        name: ${{ matrix.toolchain }}
-        strategy:
-            matrix:
-              # Run on stable and beta to ensure that tests won't break on the next
-              # version of the rust toolchain.
-              toolchain: [ stable, beta ]
-    coverage:
-        runs-on: ubuntu-latest
-        name: stable / coverage
-        steps:
+  coverage:
+      runs-on: ubuntu-latest
+      name: stable / coverage
+      steps:
         - uses: actions/checkout@v4
           with:
             submodules: true
@@ -41,7 +33,7 @@ jobs:
           run: cargo generate-lockfile
         - name: cargo llvm-cov
             # FIXME: Include e2e tests in coverage.
-          run: cargo llvm-cov --locked --features std --lcov --output-path lcov.info
+          run: cargo llvm-cov --locked --lcov --output-path lcov.info
         - name: Record Rust version
           run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
         - name: Upload to codecov.io

@@ -86,7 +86,7 @@ jobs:
     # `cargo-hack` checks combinations of feature flags to ensure that features
     # are all additive which is required for feature unification.
     runs-on: ubuntu-latest
-    name: ubuntu / stable / features
+    name: stable / features
     steps:
       - uses: actions/checkout@v4
         with:
@@ -105,7 +105,7 @@ jobs:
         run: cargo hack check --feature-powerset --depth 2 --release --target wasm32-unknown-unknown --skip std --workspace --exclude e2e --exclude basic-example-script --exclude benches
   typos:
     runs-on: ubuntu-latest
-    name: ubuntu / stable / typos
+    name: stable / typos
     steps:
       - name: Checkout Actions Repository
         uses: actions/checkout@v4

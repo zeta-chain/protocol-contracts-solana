@@ -19,5 +19,5 @@ cargo fmt
 if [[ $? == 0 ]] ; then
     echo "Code is formatted!"
 else
-    echo "An error ocurred during formatting"
+    echo "An error occurred during formatting"
 fi

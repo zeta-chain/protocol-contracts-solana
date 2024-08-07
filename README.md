@@ -54,7 +54,7 @@ https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972d
 
 The TSS signature is a ECDSA secp256k1 signature; its public key therefore address
 (Ethereum compatible hashing from pubkey) is therefore verifiable using the `secp256k1_recover`
-function. Alternatively, Solana runtime also privides a program to provide this verification service
+function. Alternatively, Solana runtime also provides a program to provide this verification service
 via CPI; see [proposal 48](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0048-native-program-for-secp256r1-sigverify.md)
 which might be more cost efficient. 
 

@@ -3,8 +3,8 @@ use anchor_lang::system_program;
 use anchor_spl::token::{transfer, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
-use std::mem::size_of;
 use spl_associated_token_account;
+use std::mem::size_of;
 
 #[error_code]
 pub enum Errors {
@@ -28,12 +28,15 @@ pub enum Errors {
 
 declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
 
-
 #[program]
 pub mod gateway {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, tss_address:[u8; 20], chain_id: u64) -> Result<()> {
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        tss_address: [u8; 20],
+        chain_id: u64,
+    ) -> Result<()> {
         let initialized_pda = &mut ctx.accounts.pda;
         initialized_pda.nonce = 0;
         initialized_pda.tss_address = tss_address;
@@ -45,7 +48,10 @@ pub mod gateway {
 
     pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
-        require!(ctx.accounts.signer.key() == pda.authority, Errors::SignerIsNotAuthority);
+        require!(
+            ctx.accounts.signer.key() == pda.authority,
+            Errors::SignerIsNotAuthority
+        );
         pda.tss_address = tss_address;
         Ok(())
     }
@@ -61,12 +67,20 @@ pub mod gateway {
             },
         );
         system_program::transfer(cpi_context, amount)?;
-        msg!("{:?} deposits {:?} lamports to PDA", ctx.accounts.signer.key(), amount);
+        msg!(
+            "{:?} deposits {:?} lamports to PDA",
+            ctx.accounts.signer.key(),
+            amount
+        );
 
         Ok(())
     }
 
-    pub fn deposit_spl_token(ctx: Context<DepositSplToken>, amount: u64, memo: Vec<u8>) -> Result<()> {
+    pub fn deposit_spl_token(
+        ctx: Context<DepositSplToken>,
+        amount: u64,
+        memo: Vec<u8>,
+    ) -> Result<()> {
         require!(memo.len() >= 20, Errors::MemoLengthTooShort);
         require!(memo.len() <= 512, Errors::MemoLengthExceeded);
         let token = &ctx.accounts.token_program;
@@ -77,7 +91,10 @@ pub mod gateway {
             &from.mint,
         );
         // must deposit to the ATA from PDA in order to receive credit
-        require!(pda_ata == ctx.accounts.to.to_account_info().key(), Errors::DepositToAddressMismatch);
+        require!(
+            pda_ata == ctx.accounts.to.to_account_info().key(),
+            Errors::DepositToAddressMismatch
+        );
 
         let xfer_ctx = CpiContext::new(
             token.to_account_info(),
@@ -113,7 +130,10 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
-        require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
 
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         msg!("recovered address {:?}", address);
@@ -150,7 +170,10 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
-        require!(message_hash == hash(&concatenated_buffer[..]).to_bytes(), Errors::MessageHashMismatch);
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
 
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         msg!("recovered address {:?}", address);
@@ -231,7 +254,7 @@ pub struct DepositSplToken<'info> {
     #[account(mut)]
     pub from: Account<'info, TokenAccount>, // this must be owned by signer; normally the ATA of signer
     #[account(mut)]
-    pub to: Account<'info, TokenAccount>,   // this must be ATA of PDA
+    pub to: Account<'info, TokenAccount>, // this must be ATA of PDA
 }
 
 #[derive(Accounts)]
@@ -277,7 +300,6 @@ pub struct Pda {
     authority: Pubkey,
     chain_id: u64,
 }
-
 
 #[cfg(test)]
 mod tests {

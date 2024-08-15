@@ -70,6 +70,16 @@ pub mod gateway {
         Ok(())
     }
 
+    pub fn update_authority(ctx: Context<UpdateAuthority>, new_authority_address: Pubkey) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(
+            ctx.accounts.signer.key() == pda.authority,
+            Errors::SignerIsNotAuthority
+        );
+        pda.authority = new_authority_address;
+        Ok(())
+    }
+
     pub fn deposit(ctx: Context<Deposit>, amount: u64, memo: Vec<u8>) -> Result<()> {
         require!(memo.len() >= 20, Errors::MemoLengthTooShort);
         require!(memo.len() <= 512, Errors::MemoLengthExceeded);
@@ -308,6 +318,14 @@ pub struct WithdrawSPLToken<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateTss<'info> {
+    #[account(mut)]
+    pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateAuthority<'info> {
     #[account(mut)]
     pub pda: Account<'info, Pda>,
     #[account(mut)]

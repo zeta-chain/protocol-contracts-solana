@@ -1,10 +1,15 @@
 
 # Introduction
 
+Mainnet-beta, testnet, devnet gateway program address: 
+```
+ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis
+```
+
 This repository hosts the smart contracts (program)
 on Solana network to support ZetaChain cross-chain
 functionality. Specifically, it consists of a single
-program deployed (to be deployed; show address here)
+program deployed
 which allows the following two actions: 
 
 1. Users on Solana network can send SOL or selected

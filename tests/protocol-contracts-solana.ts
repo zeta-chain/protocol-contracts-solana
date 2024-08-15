@@ -300,6 +300,45 @@ describe("some tests", () => {
         }
     });
 
+    it("pause deposit and deposit should fail", async () => {
+        const newTss = new Uint8Array(20);
+        randomFillSync(newTss);
+        // console.log("generated new TSS address", newTss);
+        await gatewayProgram.methods.setDepositPaused(true).accounts({
+            pda: pdaAccount,
+        }).rpc();
+
+        // now try deposit, should fail
+        try {
+            await gatewayProgram.methods.deposit(new anchor.BN(1_000_000), address).accounts({pda: pdaAccount}).rpc();
+        } catch (err) {
+            console.log("Error message: ", err.message);
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("DepositPaused");
+        }
+
+    });
+
+    it("update authority", async () => {
+        const newAuthority = anchor.web3.Keypair.generate();
+        await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).accounts({
+            pda: pdaAccount,
+        }).rpc();
+        // const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+        // expect(pdaAccountData.authority).to.be.eq(newAuthority.publicKey);
+
+        // now the old authority cannot update TSS address and will fail
+        try {
+            await gatewayProgram.methods.updateTss(Array.from(new Uint8Array(20))).accounts({
+                pda: pdaAccount,
+            }).rpc();
+        } catch (err) {
+            console.log("Error message: ", err.message);
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("SignerIsNotAuthority");
+        }
+    });
+
 
 });
 

@@ -24,6 +24,8 @@ pub enum Errors {
     MemoLengthExceeded,
     #[msg("MemoLengthTooShort")]
     MemoLengthTooShort,
+    #[msg("DepositPaused")]
+    DepositPaused,
 }
 
 declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
@@ -42,7 +44,19 @@ pub mod gateway {
         initialized_pda.tss_address = tss_address;
         initialized_pda.authority = ctx.accounts.signer.key();
         initialized_pda.chain_id = chain_id;
+        initialized_pda.deposit_paused = false;
 
+        Ok(())
+    }
+
+    pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(
+            ctx.accounts.signer.key() == pda.authority,
+            Errors::SignerIsNotAuthority
+        );
+        pda.deposit_paused = deposit_paused;
+        msg!("set_deposit_paused: {:?}", deposit_paused);
         Ok(())
     }
 
@@ -56,9 +70,26 @@ pub mod gateway {
         Ok(())
     }
 
+    pub fn update_authority(
+        ctx: Context<UpdateAuthority>,
+        new_authority_address: Pubkey,
+    ) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(
+            ctx.accounts.signer.key() == pda.authority,
+            Errors::SignerIsNotAuthority
+        );
+        pda.authority = new_authority_address;
+        Ok(())
+    }
+
     pub fn deposit(ctx: Context<Deposit>, amount: u64, memo: Vec<u8>) -> Result<()> {
         require!(memo.len() >= 20, Errors::MemoLengthTooShort);
         require!(memo.len() <= 512, Errors::MemoLengthExceeded);
+
+        let pda = &mut ctx.accounts.pda;
+        require!(!pda.deposit_paused, Errors::DepositPaused);
+
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -85,6 +116,9 @@ pub mod gateway {
         require!(memo.len() <= 512, Errors::MemoLengthExceeded);
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
+
+        let pda = &mut ctx.accounts.pda;
+        require!(!pda.deposit_paused, Errors::DepositPaused);
 
         let pda_ata = spl_associated_token_account::get_associated_token_address(
             &ctx.accounts.pda.key(),
@@ -293,12 +327,29 @@ pub struct UpdateTss<'info> {
     pub signer: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct UpdateAuthority<'info> {
+    #[account(mut)]
+    pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct UpdatePaused<'info> {
+    #[account(mut)]
+    pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
 #[account]
 pub struct Pda {
     nonce: u64,            // ensure that each signature can only be used once
     tss_address: [u8; 20], // 20 bytes address format of ethereum
     authority: Pubkey,
     chain_id: u64,
+    deposit_paused: bool,
 }
 
 #[cfg(test)]

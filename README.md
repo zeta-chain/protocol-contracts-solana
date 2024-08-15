@@ -128,7 +128,7 @@ The `initialize` instruction sets nonce to 0.
 
 # Troubleshooting
 
-## MacOS error when runngin `anchor test` or `solana-test-validator`
+## MacOS error when running `anchor test` or `solana-test-validator`
 
 If you see errors like
 ```

@@ -70,7 +70,10 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn update_authority(ctx: Context<UpdateAuthority>, new_authority_address: Pubkey) -> Result<()> {
+    pub fn update_authority(
+        ctx: Context<UpdateAuthority>,
+        new_authority_address: Pubkey,
+    ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(
             ctx.accounts.signer.key() == pda.authority,
@@ -339,7 +342,6 @@ pub struct UpdatePaused<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 }
-
 
 #[account]
 pub struct Pda {

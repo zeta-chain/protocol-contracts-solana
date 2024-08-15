@@ -125,3 +125,30 @@ Ethereum style). `authority` is the one who can update
 the TSS address stored in PDA account. 
 
 The `initialize` instruction sets nonce to 0. 
+
+# Troubleshooting
+
+## MacOS error when runngin `anchor test` or `solana-test-validator`
+
+If you see errors like
+```
+Unable to get latest blockhash. Test validator does not look started. Check ".anchor/test-ledger/test-ledger-log.txt" for errors. Consider increasing [test.startup_wait] in Anchor.toml.
+```
+
+or 
+```bash
+% solana-test-validator --reset
+Ledger location: test-ledger
+Log: test-ledger/validator.log
+Error: failed to start validator: Failed to create ledger at test-ledger: io error: Error checking to unpack genesis archive: Archive error: extra entry found: "._genesis.bin" Regular
+```
+
+This is because the BSD tar program is not compatible with the GNU tar program.
+To fix it: 
+
+```bash
+brew install gnu-tar
+# Put this in ~/.zshrc 
+export PATH="/opt/homebrew/opt/gnu-tar/libexec/gnubin:$PATH"
+```
+see https://solana.stackexchange.com/questions/4499/blockstore-error-when-starting-solana-test-validator-on-macos-13-0-1

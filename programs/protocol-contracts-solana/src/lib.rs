@@ -28,7 +28,7 @@ pub enum Errors {
     DepositPaused,
 }
 
-declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
+declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[program]
 pub mod gateway {
@@ -60,6 +60,7 @@ pub mod gateway {
         Ok(())
     }
 
+    // the authority stored in PDA can call this instruction to update tss address
     pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(
@@ -70,6 +71,7 @@ pub mod gateway {
         Ok(())
     }
 
+    // the authority stored in PDA can call this instruction to update the authority address
     pub fn update_authority(
         ctx: Context<UpdateAuthority>,
         new_authority_address: Pubkey,
@@ -145,6 +147,7 @@ pub mod gateway {
         Ok(())
     }
 
+    // only tss address stored in PDA can call this instruction
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
@@ -185,6 +188,7 @@ pub mod gateway {
         Ok(())
     }
 
+    // only tss address stored in PDA can call this instruction
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
         amount: u64,

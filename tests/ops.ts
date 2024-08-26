@@ -47,14 +47,14 @@ const programId = new web3.PublicKey("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGi
     console.log("chain_id_bn:", chain_id_bn.toNumber());
 
     // Uncomment the following to initialize the gateway program;
-    // can only be intialized once
+    // can only be initialized once
     // try {
     //     const inst = await gatewayProgram.methods.initialize(tssAddressArray,chain_id_bn).transaction();
     //     console.log("initialize inst:", inst);
     //     const tx = await anchor.web3.sendAndConfirmTransaction(conn, inst, [wallet]);
     //     console.log("tx:", tx);
     // } catch (err) {
-    //    console.log("intialize err:", err);
+    //    console.log("initialize err:", err);
     // }
 
     const pdaAccountInfo = await conn.getAccountInfo(pdaAccount);

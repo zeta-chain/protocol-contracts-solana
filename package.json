@@ -1,4 +1,11 @@
 {
+  "name": "@zetachain/protocol-contracts-solana",
+  "private": false,
+  "version": "0.0.0-set-on-publish",
+  "description": "Package contains IDL files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
+  "files": [
+    "idl"
+  ],
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"

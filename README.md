@@ -149,11 +149,22 @@ Error: failed to start validator: Failed to create ledger at test-ledger: io err
 ```
 
 This is because the BSD tar program is not compatible with the GNU tar program.
-To fix it: 
+
+FIX: install GNU tar program using homebrew and export it's executable path in your .zshrc file.
+
+## Mac with Apple Silicon
 
 ```bash
 brew install gnu-tar
 # Put this in ~/.zshrc 
 export PATH="/opt/homebrew/opt/gnu-tar/libexec/gnubin:$PATH"
 ```
-see https://solana.stackexchange.com/questions/4499/blockstore-error-when-starting-solana-test-validator-on-macos-13-0-1
+
+## Intel-based Mac
+
+```bash
+brew install gnu-tar
+# Put this in ~/.zshrc 
+export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
+```
+see https://solana.stackexchange.com/questions/4499/blockstore-error-when-starting-solana-test-validator-on-macos-13-0-1/16319#16319

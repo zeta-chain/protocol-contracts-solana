@@ -12,25 +12,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "21"
-          registry-url: "https://registry.npmjs.org"
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Solana CLI
-        run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v1.18.15/install)"
-          export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
-          solana --version
-
-      - name: Install Anchor CLI
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.0 anchor-cli --locked
-          anchor --version
+      - name: Install Node.js, Solana CLI and Anchor
+        uses: metadaoproject/setup-anchor@v2
+        with: 
+          anchor-version: '0.30.0' 
+          solana-cli-version: '1.18.15'
+          node-version: '21.0.0'
 
       - name: Build
         run: anchor build

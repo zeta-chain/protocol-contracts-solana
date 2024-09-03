@@ -34,9 +34,9 @@ jobs:
         run: |
           VERSION_TAG=${GITHUB_REF#refs/tags/v}
           if [[ $VERSION_TAG == *"-"* ]]; then
-            echo ::set-output name=NPM_TAG::${VERSION_TAG#*-}
+            echo "NPM_TAG=${VERSION_TAG#*-}" >> "$GITHUB_ENV"
           else
-            echo ::set-output name=NPM_TAG::latest
+            echo "NPM_TAG=latest" >> "$GITHUB_ENV"
           fi
         env:
           GITHUB_REF: ${{ github.ref }}

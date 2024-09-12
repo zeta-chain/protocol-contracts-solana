@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::token::{transfer, Token, TokenAccount};
+use anchor_spl::token::{Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
-use spl_associated_token_account;
 use std::mem::size_of;
 
 #[error_code]
@@ -109,44 +108,6 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn deposit_spl_token(
-        ctx: Context<DepositSplToken>,
-        amount: u64,
-        memo: Vec<u8>,
-    ) -> Result<()> {
-        require!(memo.len() >= 20, Errors::MemoLengthTooShort);
-        require!(memo.len() <= 512, Errors::MemoLengthExceeded);
-        let token = &ctx.accounts.token_program;
-        let from = &ctx.accounts.from;
-
-        let pda = &mut ctx.accounts.pda;
-        require!(!pda.deposit_paused, Errors::DepositPaused);
-
-        let pda_ata = spl_associated_token_account::get_associated_token_address(
-            &ctx.accounts.pda.key(),
-            &from.mint,
-        );
-        // must deposit to the ATA from PDA in order to receive credit
-        require!(
-            pda_ata == ctx.accounts.to.to_account_info().key(),
-            Errors::DepositToAddressMismatch
-        );
-
-        let xfer_ctx = CpiContext::new(
-            token.to_account_info(),
-            anchor_spl::token::Transfer {
-                from: ctx.accounts.from.to_account_info(),
-                to: ctx.accounts.to.to_account_info(),
-                authority: ctx.accounts.signer.to_account_info(),
-            },
-        );
-        transfer(xfer_ctx, amount)?;
-
-        msg!("deposit spl token successfully");
-
-        Ok(())
-    }
-
     // only tss address stored in PDA can call this instruction
     pub fn withdraw(
         ctx: Context<Withdraw>,
@@ -188,57 +149,6 @@ pub mod gateway {
         Ok(())
     }
 
-    // only tss address stored in PDA can call this instruction
-    pub fn withdraw_spl_token(
-        ctx: Context<WithdrawSPLToken>,
-        amount: u64,
-        signature: [u8; 64],
-        recovery_id: u8,
-        message_hash: [u8; 32],
-        nonce: u64,
-    ) -> Result<()> {
-        let pda = &mut ctx.accounts.pda;
-        // let program_id = &mut ctx.accounts
-        if nonce != pda.nonce {
-            msg!("mismatch nonce");
-            return err!(Errors::NonceMismatch);
-        }
-        let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
-        require!(
-            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
-            Errors::MessageHashMismatch
-        );
-
-        let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
-        msg!("recovered address {:?}", address);
-        if address != pda.tss_address {
-            msg!("ECDSA signature error");
-            return err!(Errors::TSSAuthenticationFailed);
-        }
-
-        let token = &ctx.accounts.token_program;
-        let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
-
-        let xfer_ctx = CpiContext::new_with_signer(
-            token.to_account_info(),
-            anchor_spl::token::Transfer {
-                from: ctx.accounts.from.to_account_info(),
-                to: ctx.accounts.to.to_account_info(),
-                authority: pda.to_account_info(),
-            },
-            signer_seeds,
-        );
-        transfer(xfer_ctx, amount)?;
-        msg!("withdraw spl token successfully");
-
-        pda.nonce += 1;
-
-        Ok(())
-    }
 }
 
 fn recover_eth_address(

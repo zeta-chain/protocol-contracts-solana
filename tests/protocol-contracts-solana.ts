@@ -2,7 +2,6 @@ import * as anchor from "@coral-xyz/anchor";
 import {Program, web3} from "@coral-xyz/anchor";
 import {Gateway} from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
-import * as memo from "@solana/spl-memo";
 import {randomFillSync} from 'crypto';
 import { ec as EC } from 'elliptic';
 import { keccak256 } from 'ethereumjs-util';
@@ -73,28 +72,13 @@ describe("some tests", () => {
 
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
-        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), address).accounts({pda: pdaAccount}).rpc();
-        // const transaction = new anchor.web3.Transaction();
-        // transaction.add(
-        //     web3.SystemProgram.transfer({
-        //         fromPubkey: wallet.publicKey,
-        //         toPubkey: pdaAccount,
-        //         lamports: 1_000_000_000,
-        //     })
-        // );
-        // await anchor.web3.sendAndConfirmTransaction(conn, transaction, [wallet]);
+        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), Array.from(address)).accounts({pda: pdaAccount}).rpc();
         let bal1 = await conn.getBalance(pdaAccount);
         console.log("pda account balance", bal1);
         expect(bal1).to.be.gte(1_000_000_000);
 
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         console.log(`pda account data: nonce ${pdaAccountData.nonce}`);
-        // const message_hash = fromHexString(
-        //     "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
-        // );
-        // const signature = fromHexString(
-        //     "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
-        // );
         const nonce = pdaAccountData.nonce;
         const amount = new anchor.BN(500000000);
         const to = wallet.publicKey;
@@ -123,6 +107,13 @@ describe("some tests", () => {
         expect(bal2).to.be.eq(bal1 - 500_000_000);
         let bal3 = await conn.getBalance(to);
         expect(bal3).to.be.gte(500_000_000);
+    })
+
+    it("deposit and call", async () => {
+        let bal1 = await conn.getBalance(pdaAccount);
+        await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({pda: pdaAccount}).rpc();
+        let bal2 = await conn.getBalance(pdaAccount);
+        expect(bal2-bal1).to.be.gte(1_000_000_000);
     })
 
     it("update TSS address", async () => {
@@ -158,7 +149,7 @@ describe("some tests", () => {
 
         // now try deposit, should fail
         try {
-            await gatewayProgram.methods.deposit(new anchor.BN(1_000_000), address).accounts({pda: pdaAccount}).rpc();
+            await gatewayProgram.methods.deposit(new anchor.BN(1_000_000), Array.from(address)).accounts({pda: pdaAccount}).rpc();
         } catch (err) {
             console.log("Error message: ", err.message);
             expect(err).to.be.instanceof(anchor.AnchorError);

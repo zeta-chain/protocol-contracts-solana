@@ -148,7 +148,6 @@ pub mod gateway {
 
         Ok(())
     }
-
 }
 
 fn recover_eth_address(

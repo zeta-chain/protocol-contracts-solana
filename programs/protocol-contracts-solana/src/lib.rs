@@ -232,10 +232,11 @@ pub mod gateway {
             },
             signer_seeds,
         );
-        transfer(xfer_ctx, amount)?;
-        msg!("withdraw spl token successfully");
 
         pda.nonce += 1;
+
+        transfer(xfer_ctx, amount)?;
+        msg!("withdraw spl token successfully");
 
         Ok(())
     }

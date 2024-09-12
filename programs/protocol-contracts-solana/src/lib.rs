@@ -106,7 +106,12 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn deposit_and_call(ctx: Context<Deposit>, amount: u64, receiver: [u8; 20], message: Vec<u8>) -> Result<()> {
+    pub fn deposit_and_call(
+        ctx: Context<Deposit>,
+        amount: u64,
+        receiver: [u8; 20],
+        message: Vec<u8>,
+    ) -> Result<()> {
         require!(message.len() <= 512, Errors::MemoLengthExceeded);
 
         let pda = &mut ctx.accounts.pda;
@@ -171,7 +176,6 @@ pub mod gateway {
 
         Ok(())
     }
-
 }
 
 fn recover_eth_address(

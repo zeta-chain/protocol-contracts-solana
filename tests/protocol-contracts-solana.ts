@@ -184,9 +184,11 @@ describe("some tests", () => {
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         const buffer = Buffer.concat([
+            Buffer.from("withdraw_spl_token","utf-8"),
             chain_id_bn.toArrayLike(Buffer, 'be', 8),
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),
+            pda_ata.address.toBuffer(),
             wallet_ata.toBuffer(),
         ]);
         const message_hash = keccak256(buffer);
@@ -251,6 +253,7 @@ describe("some tests", () => {
         const amount = new anchor.BN(500000000);
         const to = wallet.publicKey;
         const buffer = Buffer.concat([
+            Buffer.from("withdraw","utf-8"),
             chain_id_bn.toArrayLike(Buffer, 'be', 8),
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),

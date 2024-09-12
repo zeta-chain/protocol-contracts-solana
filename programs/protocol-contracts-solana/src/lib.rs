@@ -163,6 +163,7 @@ pub mod gateway {
             return err!(Errors::NonceMismatch);
         }
         let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice("withdraw".as_bytes());
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
@@ -203,10 +204,13 @@ pub mod gateway {
             msg!("mismatch nonce");
             return err!(Errors::NonceMismatch);
         }
+
         let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice("withdraw_spl_token".as_bytes());
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.from.key().to_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),

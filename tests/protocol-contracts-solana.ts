@@ -52,6 +52,12 @@ describe("some tests", () => {
     const chain_id = 111111;
     const chain_id_bn = new anchor.BN(chain_id);
 
+    let seeds = [Buffer.from("meta", "utf-8")];
+    [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+        seeds,
+        gatewayProgram.programId,
+    );
+
     it("Initializes the program", async () => {
         await gatewayProgram.methods.initialize(tssAddress, chain_id_bn).rpc();
 
@@ -227,7 +233,7 @@ describe("some tests", () => {
     });
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
-        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), address).accounts({pda: pdaAccount}).rpc();
+        await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), Array.from(address)).accounts({pda: pdaAccount}).rpc();
         // const transaction = new anchor.web3.Transaction();
         // transaction.add(
         //     web3.SystemProgram.transfer({
@@ -280,6 +286,13 @@ describe("some tests", () => {
         expect(bal3).to.be.gte(500_000_000);
     })
 
+    it("deposit and call", async () => {
+        let bal1 = await conn.getBalance(pdaAccount);
+        await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({pda: pdaAccount}).rpc();
+        let bal2 = await conn.getBalance(pdaAccount);
+        expect(bal2-bal1).to.be.gte(1_000_000_000);
+    })
+
     it("update TSS address", async () => {
         const newTss = new Uint8Array(20);
         randomFillSync(newTss);
@@ -313,7 +326,7 @@ describe("some tests", () => {
 
         // now try deposit, should fail
         try {
-            await gatewayProgram.methods.deposit(new anchor.BN(1_000_000), address).accounts({pda: pdaAccount}).rpc();
+            await gatewayProgram.methods.deposit(new anchor.BN(1_000_000), Array.from(address)).accounts({pda: pdaAccount}).rpc();
         } catch (err) {
             console.log("Error message: ", err.message);
             expect(err).to.be.instanceof(anchor.AnchorError);

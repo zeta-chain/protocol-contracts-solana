@@ -3,7 +3,6 @@ use anchor_lang::system_program;
 use anchor_spl::token::{transfer, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
-use spl_associated_token_account;
 use std::mem::size_of;
 
 #[error_code]
@@ -85,9 +84,35 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn deposit(ctx: Context<Deposit>, amount: u64, memo: Vec<u8>) -> Result<()> {
-        require!(memo.len() >= 20, Errors::MemoLengthTooShort);
-        require!(memo.len() <= 512, Errors::MemoLengthExceeded);
+    pub fn deposit(ctx: Context<Deposit>, amount: u64, receiver: [u8; 20]) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(!pda.deposit_paused, Errors::DepositPaused);
+
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.signer.to_account_info().clone(),
+                to: ctx.accounts.pda.to_account_info().clone(),
+            },
+        );
+        system_program::transfer(cpi_context, amount)?;
+        msg!(
+            "{:?} deposits {:?} lamports to PDA; receiver {:?}",
+            ctx.accounts.signer.key(),
+            amount,
+            receiver,
+        );
+
+        Ok(())
+    }
+
+    pub fn deposit_and_call(
+        ctx: Context<Deposit>,
+        amount: u64,
+        receiver: [u8; 20],
+        message: Vec<u8>,
+    ) -> Result<()> {
+        require!(message.len() <= 512, Errors::MemoLengthExceeded);
 
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
@@ -101,9 +126,11 @@ pub mod gateway {
         );
         system_program::transfer(cpi_context, amount)?;
         msg!(
-            "{:?} deposits {:?} lamports to PDA",
+            "{:?} deposits {:?} lamports to PDA and call contract {:?} with message {:?}",
             ctx.accounts.signer.key(),
-            amount
+            amount,
+            receiver,
+            message,
         );
 
         Ok(())
@@ -163,6 +190,7 @@ pub mod gateway {
             return err!(Errors::NonceMismatch);
         }
         let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice("withdraw".as_bytes());
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
@@ -203,10 +231,13 @@ pub mod gateway {
             msg!("mismatch nonce");
             return err!(Errors::NonceMismatch);
         }
+
         let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice("withdraw_spl_token".as_bytes());
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.from.key().to_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),

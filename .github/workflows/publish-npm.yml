@@ -15,36 +15,41 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Node.js, Solana CLI and Anchor
+      - name: Install Node.js, Solana CLI, and Anchor
         uses: metadaoproject/setup-anchor@v2
-        with: 
-          anchor-version: '0.30.0' 
+        with:
+          anchor-version: '0.30.0'
           solana-cli-version: '1.18.15'
           node-version: '21.0.0'
+
+      - name: Setup Node.js for NPM Publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21.0.0'
+          registry-url: 'https://registry.npmjs.org'
+          auth-token: ${{ secrets.NPM_TOKEN }}
 
       - name: Build
         run: anchor build
 
       - name: Prepare IDL Files
-        run: |
-          mv target/idl ./
+        run: mv target/idl ./
 
       - name: Determine NPM Tag
         id: determine-npm-tag
         run: |
-          VERSION_TAG=${GITHUB_REF#refs/tags/v}
+          VERSION_TAG=${{ github.ref_name }}
           if [[ $VERSION_TAG == *"-"* ]]; then
-            echo "NPM_TAG=${VERSION_TAG#*-}" >> "$GITHUB_ENV"
+            NPM_TAG=${VERSION_TAG#*-}
           else
-            echo "NPM_TAG=latest" >> "$GITHUB_ENV"
+            NPM_TAG=latest
           fi
-        env:
-          GITHUB_REF: ${{ github.ref }}
+          echo "NPM_TAG=$NPM_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Publish to NPM
         run: |
-          yarn publish --access public --new-version ${GITHUB_REF#refs/tags/v} --tag ${{
-          steps.determine-npm-tag.outputs.NPM_TAG }} --no-git-tag-version
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_REF: ${{ github.ref }}
+          yarn publish \
+            --access public \
+            --new-version "${{ github.ref_name }}" \
+            --tag "${{ steps.determine-npm-tag.outputs.NPM_TAG }}" \
+            --no-git-tag-version

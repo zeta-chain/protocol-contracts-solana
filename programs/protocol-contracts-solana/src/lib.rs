@@ -48,6 +48,7 @@ pub mod gateway {
         Ok(())
     }
 
+    // admin function to pause or unpause deposit
     pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(
@@ -84,6 +85,10 @@ pub mod gateway {
         Ok(())
     }
 
+    // deposit SOL into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit.
+    // amount: amount of lamports (10^-9 SOL) to deposit
+    // receiver: ethereum address (20Bytes) of the receiver on ZetaChain zEVM
     pub fn deposit(
         ctx: Context<Deposit>,
         amount: u64,
@@ -110,6 +115,10 @@ pub mod gateway {
         Ok(())
     }
 
+    // deposit SOL into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit. The `receiver` should be a contract
+    // on zEVM and the `message` will be used as input data for the contract call.
+    // The `receiver` contract on zEVM will get the SOL ZRC20 credit and receive the `message`.
     pub fn deposit_and_call(
         ctx: Context<Deposit>,
         amount: u64,
@@ -121,6 +130,10 @@ pub mod gateway {
         Ok(())
     }
 
+    // deposit SPL token into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit.
+    // amount: amount of SPL token to deposit
+    // receiver: ethereum address (20Bytes) of the receiver on ZetaChain zEVM
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -157,6 +170,11 @@ pub mod gateway {
         Ok(())
     }
 
+    // like `deposit_spl_token` instruction,
+    // deposit SPL token into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit. The `receiver` should be a contract
+    // on zEVM and the `message` will be used as input data for the contract call.
+    // The `receiver` contract on zEVM will get the SPL token ZRC20 credit and receive the `message`.
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,
         amount: u64,

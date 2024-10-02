@@ -146,7 +146,7 @@ describe("some tests", () => {
         );
         tx.add(memoInst);
         const depositInst = await gatewayProgram.methods.depositSplToken(
-            new anchor.BN(1_000_000), address).accounts(
+            new anchor.BN(1_000_000), Array.from(address)).accounts(
             {
                 from: tokenAccount.address,
                 to: pda_ata.address,
@@ -157,7 +157,7 @@ describe("some tests", () => {
 
 
         try {
-            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), address).accounts(
+            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts(
                 {
                     from: tokenAccount.address,
                     to: wallet_ata,

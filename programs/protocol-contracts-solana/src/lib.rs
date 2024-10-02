@@ -84,7 +84,11 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn deposit(ctx: Context<Deposit>, amount: u64, receiver: [u8; 20]) -> Result<()> {
+    pub fn deposit(
+        ctx: Context<Deposit>,
+        amount: u64,
+        receiver: [u8; 20], // not used in this program; for directing zetachain protocol only
+    ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
 
@@ -114,13 +118,13 @@ pub mod gateway {
     ) -> Result<()> {
         require!(message.len() <= 512, Errors::MemoLengthExceeded);
         deposit(ctx, amount, receiver)?;
-        return Ok(());
+        Ok(())
     }
 
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
-        receiver: [u8; 20],
+        receiver: [u8; 20], // unused in this program; for directing zetachain protocol only
     ) -> Result<()> {
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
@@ -161,7 +165,7 @@ pub mod gateway {
     ) -> Result<()> {
         require!(message.len() <= 512, Errors::MemoLengthExceeded);
         deposit_spl_token(ctx, amount, receiver)?;
-        return Ok(());
+        Ok(())
     }
 
     // require tss address signature on the internal message defined in the following

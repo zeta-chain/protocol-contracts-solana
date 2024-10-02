@@ -122,7 +122,6 @@ pub mod gateway {
         amount: u64,
         receiver: [u8; 20],
     ) -> Result<()> {
-
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
 
@@ -153,7 +152,6 @@ pub mod gateway {
 
         Ok(())
     }
-
 
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,

@@ -139,10 +139,9 @@ pub mod gateway {
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
-        memo: Vec<u8>,
+        receiver: [u8; 20],
     ) -> Result<()> {
-        require!(memo.len() >= 20, Errors::MemoLengthTooShort);
-        require!(memo.len() <= 512, Errors::MemoLengthExceeded);
+
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
 

@@ -134,6 +134,7 @@ pub mod gateway {
     // will get corresponding ZRC20 credit.
     // amount: amount of SPL token to deposit
     // receiver: ethereum address (20Bytes) of the receiver on ZetaChain zEVM
+    #[allow(unused)]
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -175,6 +176,7 @@ pub mod gateway {
     // will get corresponding ZRC20 credit. The `receiver` should be a contract
     // on zEVM and the `message` will be used as input data for the contract call.
     // The `receiver` contract on zEVM will get the SPL token ZRC20 credit and receive the `message`.
+    #[allow(unused)]
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,
         amount: u64,

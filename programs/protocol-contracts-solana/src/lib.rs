@@ -164,7 +164,8 @@ pub mod gateway {
         return Ok(());
     }
 
-    // only tss address stored in PDA can call this instruction
+    // require tss address signature on the internal message defined in the following
+    // concatenated_buffer vec.
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
@@ -206,7 +207,8 @@ pub mod gateway {
         Ok(())
     }
 
-    // only tss address stored in PDA can call this instruction
+    // require tss address signature on the internal message defined in the following
+    // concatenated_buffer vec.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
         amount: u64,

@@ -350,8 +350,9 @@ pub struct Withdraw<'info> {
 
     #[account(mut)]
     pub pda: Account<'info, Pda>,
+    /// CHECK: to account is not read so it's not dangerous
     #[account(mut)]
-    pub to: SystemAccount<'info>,
+    pub to: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]

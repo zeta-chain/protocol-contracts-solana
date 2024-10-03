@@ -48,6 +48,7 @@ pub mod gateway {
         Ok(())
     }
 
+    // admin function to pause or unpause deposit
     pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(
@@ -84,7 +85,15 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn deposit(ctx: Context<Deposit>, amount: u64, receiver: [u8; 20]) -> Result<()> {
+    // deposit SOL into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit.
+    // amount: amount of lamports (10^-9 SOL) to deposit
+    // receiver: ethereum address (20Bytes) of the receiver on ZetaChain zEVM
+    pub fn deposit(
+        ctx: Context<Deposit>,
+        amount: u64,
+        receiver: [u8; 20], // not used in this program; for directing zetachain protocol only
+    ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
 
@@ -106,6 +115,10 @@ pub mod gateway {
         Ok(())
     }
 
+    // deposit SOL into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit. The `receiver` should be a contract
+    // on zEVM and the `message` will be used as input data for the contract call.
+    // The `receiver` contract on zEVM will get the SOL ZRC20 credit and receive the `message`.
     pub fn deposit_and_call(
         ctx: Context<Deposit>,
         amount: u64,
@@ -113,36 +126,20 @@ pub mod gateway {
         message: Vec<u8>,
     ) -> Result<()> {
         require!(message.len() <= 512, Errors::MemoLengthExceeded);
-
-        let pda = &mut ctx.accounts.pda;
-        require!(!pda.deposit_paused, Errors::DepositPaused);
-
-        let cpi_context = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.signer.to_account_info().clone(),
-                to: ctx.accounts.pda.to_account_info().clone(),
-            },
-        );
-        system_program::transfer(cpi_context, amount)?;
-        msg!(
-            "{:?} deposits {:?} lamports to PDA and call contract {:?} with message {:?}",
-            ctx.accounts.signer.key(),
-            amount,
-            receiver,
-            message,
-        );
-
+        deposit(ctx, amount, receiver)?;
         Ok(())
     }
 
+    // deposit SPL token into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit.
+    // amount: amount of SPL token to deposit
+    // receiver: ethereum address (20Bytes) of the receiver on ZetaChain zEVM
+    #[allow(unused)]
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
-        memo: Vec<u8>,
+        receiver: [u8; 20], // unused in this program; for directing zetachain protocol only
     ) -> Result<()> {
-        require!(memo.len() >= 20, Errors::MemoLengthTooShort);
-        require!(memo.len() <= 512, Errors::MemoLengthExceeded);
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
 
@@ -174,7 +171,25 @@ pub mod gateway {
         Ok(())
     }
 
-    // only tss address stored in PDA can call this instruction
+    // like `deposit_spl_token` instruction,
+    // deposit SPL token into this program and the `receiver` on ZetaChain zEVM
+    // will get corresponding ZRC20 credit. The `receiver` should be a contract
+    // on zEVM and the `message` will be used as input data for the contract call.
+    // The `receiver` contract on zEVM will get the SPL token ZRC20 credit and receive the `message`.
+    #[allow(unused)]
+    pub fn deposit_spl_token_and_call(
+        ctx: Context<DepositSplToken>,
+        amount: u64,
+        receiver: [u8; 20],
+        message: Vec<u8>,
+    ) -> Result<()> {
+        require!(message.len() <= 512, Errors::MemoLengthExceeded);
+        deposit_spl_token(ctx, amount, receiver)?;
+        Ok(())
+    }
+
+    // require tss address signature on the internal message defined in the following
+    // concatenated_buffer vec.
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
@@ -216,7 +231,8 @@ pub mod gateway {
         Ok(())
     }
 
-    // only tss address stored in PDA can call this instruction
+    // require tss address signature on the internal message defined in the following
+    // concatenated_buffer vec.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
         amount: u64,

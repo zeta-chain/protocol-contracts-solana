@@ -139,21 +139,16 @@ describe("some tests", () => {
             true
         );
         console.log("pda_ata address", pda_ata.address.toString());
-        const tx = new web3.Transaction();
-        const memoInst = memo.createMemoInstruction(
-            "this is a memo",
-            [wallet.publicKey],
-        );
-        tx.add(memoInst);
-        const depositInst = await gatewayProgram.methods.depositSplToken(
-            new anchor.BN(1_000_000), Array.from(address)).accounts(
-            {
-                from: tokenAccount.address,
-                to: pda_ata.address,
-            }
-        ).instruction();
-        tx.add(depositInst);
-        const txsig = await anchor.web3.sendAndConfirmTransaction(conn, tx, [wallet]);
+
+        let acct = await spl.getAccount(conn, pda_ata.address);
+        let bal0 = acct.amount;
+        await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts({
+            from: tokenAccount.address,
+            to: pda_ata.address,
+        }).rpc({commitment: 'confirmed'});
+        acct = await spl.getAccount(conn, pda_ata.address);
+        let bal1 = acct.amount;
+        expect(bal1-bal0).to.be.eq(1_000_000n);
 
 
         try {
@@ -169,12 +164,31 @@ describe("some tests", () => {
             expect(err.message).to.include("DepositToAddressMismatch");
             // console.log("Error message: ", err.message);
         }
+
+        // test depositSplTokenAndCall
+        acct = await spl.getAccount(conn, pda_ata.address);
+        bal0 = acct.amount;
+        await gatewayProgram.methods.depositSplTokenAndCall(new anchor.BN(2_000_000), Array.from(address), Buffer.from('hi', 'utf-8')).accounts({
+            from: tokenAccount.address,
+            to: pda_ata.address,
+        }).rpc({commitment: 'confirmed'});
+        acct = await spl.getAccount(conn, pda_ata.address);
+        bal1 = acct.amount;
+        expect(bal1-bal0).to.be.eq(2_000_000n);
+
+        // try {
+        //     await gatewayProgram.methods.depositSplTokenAndCall(new anchor.BN(1_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({
+        //         from: tokenAccount.address,
+        //         to: pda_ata.address,
+        //     }).rpc();
+        //
+        // }
     });
 
     it("Withdraw 500_000 USDC from Gateway with ECDSA signature", async () => {
         const account2 = await spl.getAccount(conn, pda_ata.address);
-        expect(account2.amount).to.be.eq(1_000_000n);
-        // console.log("B4 withdraw: Account balance:", account2.amount.toString());
+        // expect(account2.amount).to.be.eq(1_000_000n);
+        console.log("B4 withdraw: Account balance:", account2.amount.toString());
 
 
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
@@ -212,7 +226,7 @@ describe("some tests", () => {
             }).rpc();
 
         const account3 = await spl.getAccount(conn, pda_ata.address);
-        expect(account3.amount).to.be.eq(500_000n);
+        expect(account3.amount-account2.amount).to.be.eq(-500_000n);
 
 
         try {
@@ -227,7 +241,7 @@ describe("some tests", () => {
             expect(err.message).to.include("NonceMismatch");
             const account4 = await spl.getAccount(conn, pda_ata.address);
             console.log("After 2nd withdraw: Account balance:", account4.amount.toString());
-            expect(account4.amount).to.be.eq(500_000n);
+            expect(account4.amount).to.be.eq(2_500_000n);
         }
 
     });
@@ -288,10 +302,13 @@ describe("some tests", () => {
 
     it("deposit and call", async () => {
         let bal1 = await conn.getBalance(pdaAccount);
-        await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({pda: pdaAccount}).rpc();
+        const txsig = await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({pda: pdaAccount}).rpc({commitment: 'confirmed'});
+        const tx =  await conn.getParsedTransaction(txsig, 'confirmed');
+        console.log("deposit and call parsed tx", tx);
         let bal2 = await conn.getBalance(pdaAccount);
         expect(bal2-bal1).to.be.gte(1_000_000_000);
     })
+
 
     it("update TSS address", async () => {
         const newTss = new Uint8Array(20);
@@ -326,13 +343,12 @@ describe("some tests", () => {
 
         // now try deposit, should fail
         try {
-            await gatewayProgram.methods.deposit(new anchor.BN(1_000_000), Array.from(address)).accounts({pda: pdaAccount}).rpc();
+            await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000), Array.from(address), Buffer.from('hi', 'utf-8')).accounts({pda: pdaAccount}).rpc();
         } catch (err) {
             console.log("Error message: ", err.message);
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("DepositPaused");
         }
-
     });
 
     it("update authority", async () => {

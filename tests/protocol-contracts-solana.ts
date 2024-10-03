@@ -248,15 +248,6 @@ describe("some tests", () => {
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
         await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), Array.from(address)).accounts({pda: pdaAccount}).rpc();
-        // const transaction = new anchor.web3.Transaction();
-        // transaction.add(
-        //     web3.SystemProgram.transfer({
-        //         fromPubkey: wallet.publicKey,
-        //         toPubkey: pdaAccount,
-        //         lamports: 1_000_000_000,
-        //     })
-        // );
-        // await anchor.web3.sendAndConfirmTransaction(conn, transaction, [wallet]);
         let bal1 = await conn.getBalance(pdaAccount);
         console.log("pda account balance", bal1);
         expect(bal1).to.be.gte(1_000_000_000);
@@ -271,7 +262,8 @@ describe("some tests", () => {
         // );
         const nonce = pdaAccountData.nonce;
         const amount = new anchor.BN(500000000);
-        const to = wallet.publicKey;
+        // const to = wallet.publicKey;
+        const to = pda_ata.address;
         const buffer = Buffer.concat([
             Buffer.from("withdraw","utf-8"),
             chain_id_bn.toArrayLike(Buffer, 'be', 8),

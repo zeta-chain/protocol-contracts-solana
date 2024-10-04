@@ -350,8 +350,9 @@ pub struct Withdraw<'info> {
 
     #[account(mut)]
     pub pda: Account<'info, Pda>,
+    /// CHECK: to account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
     #[account(mut)]
-    pub to: SystemAccount<'info>,
+    pub to: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]

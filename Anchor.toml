@@ -5,6 +5,8 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
+callable-test = "HyJgPvyuHtXbVkttTbaBUU87sT7iPyHcD6UgUx82gEBq"
+callable-test-2 = "B7apRShjWeCk2j64MFurBzjpnh5YYuNieMVkMZA7joVv"
 protocol_contracts_solana = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
 
 [registry]

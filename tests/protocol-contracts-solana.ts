@@ -9,8 +9,7 @@ import { keccak256 } from 'ethereumjs-util';
 import { bufferToHex } from 'ethereumjs-util';
 import {expect} from 'chai';
 import {ecdsaRecover} from 'secp256k1';
-
-
+import { CallableTest } from "../target/types/callable_test";
 
 const ec = new EC('secp256k1');
 // const keyPair = ec.genKeyPair();
@@ -22,6 +21,8 @@ describe("some tests", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const conn = anchor.getProvider().connection;
     const gatewayProgram = anchor.workspace.Gateway as Program<Gateway>;
+    const callableProgram = anchor.workspace.CallableTest as Program<CallableTest>;
+
     const wallet = anchor.workspace.Gateway.provider.wallet.payer;
     const mint = anchor.web3.Keypair.generate();
     let tokenAccount: spl.Account;
@@ -69,6 +70,26 @@ describe("some tests", () => {
             expect(err).to.be.not.null;
             // console.log("Error message: ", err.message)
         }
+    });
+
+    it("Calls execute and onCall", async () => {
+        await callableProgram.methods.initialize().rpc();
+
+        // Define the sender's public key and the arbitrary data to pass
+        const senderPubkey = wallet.publicKey;
+        const data = keccak256(Buffer.from("hello"));
+        
+        // Call the `execute` function in the gateway program
+        const tx = await gatewayProgram.methods
+        .execute(senderPubkey, data)
+            .accounts({
+            pda: pdaAccount,
+            destinationProgram: callableProgram.programId, // Pass the callable program's ID
+            signer: wallet.publicKey, // The signer of the transaction
+            })
+        .rpc();
+
+        console.log("Transaction signature:", tx);
     });
 
     it("Mint a SPL USDC token", async () => {

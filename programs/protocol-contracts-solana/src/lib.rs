@@ -350,6 +350,7 @@ pub mod gateway {
             data: instruction_data, 
         };
 
+        // NOTE: one more point is that we are doing arbitrary CPI here without checks about target program, which should be fine if we dont send any accounts, but if we decide to send, might be a problem
         invoke(
             &ix,
             &[],

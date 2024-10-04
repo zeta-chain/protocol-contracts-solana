@@ -262,7 +262,6 @@ describe("some tests", () => {
         // );
         const nonce = pdaAccountData.nonce;
         const amount = new anchor.BN(500000000);
-        // const to = wallet.publicKey;
         const to = pda_ata.address;
         const buffer = Buffer.concat([
             Buffer.from("withdraw","utf-8"),

@@ -17,6 +17,8 @@ const ec = new EC('secp256k1');
 // read private key from hex dump
 const keyPair = ec.keyFromPrivate('5b81cdf52ba0766983acf8dd0072904733d92afe4dd3499e83e879b43ccb73e8');
 
+const usdcDecimals = 6;
+
 describe("some tests", () => {
     // Configure the client to use the local cluster.
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -86,7 +88,7 @@ describe("some tests", () => {
             }),
             spl.createInitializeMintInstruction(
                 mint.publicKey,
-                6,
+                usdcDecimals,
                 wallet.publicKey,
                 null,
             )
@@ -208,7 +210,7 @@ describe("some tests", () => {
             chain_id_bn.toArrayLike(Buffer, 'be', 8),
             nonce.toArrayLike(Buffer, 'be', 8),
             amount.toArrayLike(Buffer, 'be', 8),
-            pda_ata.address.toBuffer(),
+            mint.publicKey.toBuffer(),
             wallet_ata.toBuffer(),
         ]);
         const message_hash = keccak256(buffer);
@@ -219,9 +221,10 @@ describe("some tests", () => {
             s.toArrayLike(Buffer, 'be', 32),
         ]);
 
-        await gatewayProgram.methods.withdrawSplToken(amount, Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
+        await gatewayProgram.methods.withdrawSplToken(usdcDecimals,amount, Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
             .accounts({
-                from: pda_ata.address,
+                pdaAta: pda_ata.address,
+                mintAccount: mint.publicKey,
                 to: wallet_ata,
             }).rpc();
 
@@ -230,9 +233,10 @@ describe("some tests", () => {
 
 
         try {
-            (await gatewayProgram.methods.withdrawSplToken(new anchor.BN(500_000), Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
+            (await gatewayProgram.methods.withdrawSplToken(usdcDecimals,new anchor.BN(500_000), Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
                 .accounts({
-                    from: pda_ata.address,
+                    pdaAta: pda_ata.address,
+                    mintAccount: mint.publicKey,
                     to: wallet_ata,
                 }).rpc());
             throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown

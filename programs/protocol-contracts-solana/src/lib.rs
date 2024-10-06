@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::token::{transfer, Token, TokenAccount, Mint};
+use anchor_spl::associated_token::get_associated_token_address;
+use anchor_spl::token::{transfer, Mint, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
 use std::mem::size_of;
-use anchor_spl::associated_token::get_associated_token_address;
 
 #[error_code]
 pub enum Errors {
@@ -28,7 +28,6 @@ pub enum Errors {
     DepositPaused,
     #[msg("SPLAtaAndMintAddressMismatch")]
     SPLAtaAndMintAddressMismatch,
-
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
@@ -282,7 +281,6 @@ pub mod gateway {
 
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
-
 
         let xfer_ctx = CpiContext::new_with_signer(
             token.to_account_info(),

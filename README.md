@@ -6,7 +6,7 @@ Mainnet-beta, testnet, devnet gateway program address:
 ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis
 ```
 
-The PDA account address (derived from seeds `b"meta"` and standup bump) is
+The PDA account address (derived from seeds `b"meta"` and canonical bump) is
 ```
 2f9SLuUNb7TNeM6gzBwT4ZjbL5ZyKzzHg1Ce9yiquEjj
 ```

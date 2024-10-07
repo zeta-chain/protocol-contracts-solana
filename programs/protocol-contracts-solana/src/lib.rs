@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::token::{transfer, Token, TokenAccount};
+use anchor_spl::associated_token::get_associated_token_address;
+use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
 use std::mem::size_of;
@@ -25,12 +26,15 @@ pub enum Errors {
     MemoLengthTooShort,
     #[msg("DepositPaused")]
     DepositPaused,
+    #[msg("SPLAtaAndMintAddressMismatch")]
+    SPLAtaAndMintAddressMismatch,
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[program]
 pub mod gateway {
+
     use super::*;
 
     pub fn initialize(
@@ -235,6 +239,7 @@ pub mod gateway {
     // concatenated_buffer vec.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
+        decimals: u8,
         amount: u64,
         signature: [u8; 64],
         recovery_id: u8,
@@ -253,7 +258,7 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&ctx.accounts.from.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),
@@ -267,13 +272,23 @@ pub mod gateway {
             return err!(Errors::TSSAuthenticationFailed);
         }
 
+        // associated token address (ATA) of the program PDA
+        // the PDA is the "wallet" (owner) of the token account
+        // the token is stored in ATA account owned by the PDA
+        let pda_ata = get_associated_token_address(&pda.key(), &ctx.accounts.mint_account.key());
+        require!(
+            pda_ata == ctx.accounts.pda_ata.to_account_info().key(),
+            Errors::SPLAtaAndMintAddressMismatch
+        );
+
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
 
         let xfer_ctx = CpiContext::new_with_signer(
             token.to_account_info(),
-            anchor_spl::token::Transfer {
-                from: ctx.accounts.from.to_account_info(),
+            anchor_spl::token::TransferChecked {
+                from: ctx.accounts.pda_ata.to_account_info(),
+                mint: ctx.accounts.mint_account.to_account_info(),
                 to: ctx.accounts.to.to_account_info(),
                 authority: pda.to_account_info(),
             },
@@ -282,7 +297,7 @@ pub mod gateway {
 
         pda.nonce += 1;
 
-        transfer(xfer_ctx, amount)?;
+        transfer_checked(xfer_ctx, amount, decimals)?;
         msg!("withdraw spl token successfully");
 
         Ok(())
@@ -364,7 +379,10 @@ pub struct WithdrawSPLToken<'info> {
     pub pda: Account<'info, Pda>,
 
     #[account(mut)]
-    pub from: Account<'info, TokenAccount>,
+    pub pda_ata: Account<'info, TokenAccount>, // associated token address of PDA
+
+    #[account()]
+    pub mint_account: Account<'info, Mint>,
 
     #[account(mut)]
     pub to: Account<'info, TokenAccount>,

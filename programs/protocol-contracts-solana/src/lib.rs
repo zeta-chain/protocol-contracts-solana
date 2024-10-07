@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::get_associated_token_address;
-use anchor_spl::token::{transfer, Mint, Token, TokenAccount};
+use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
 use std::mem::size_of;
@@ -34,7 +34,6 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[program]
 pub mod gateway {
-    use anchor_spl::token::transfer_checked;
 
     use super::*;
 

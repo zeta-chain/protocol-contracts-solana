@@ -169,7 +169,7 @@ describe("some tests", () => {
         await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts({
             from: tokenAccount.address,
             to: pda_ata.address,
-        }).rpc({commitment: 'confirmed'});
+        }).rpc({commitment: 'processed'});
         acct = await spl.getAccount(conn, pda_ata.address);
         let bal1 = acct.amount;
         expect(bal1-bal0).to.be.eq(1_000_000n);
@@ -298,7 +298,7 @@ describe("some tests", () => {
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             console.log("Error message: ", err.message);
-            expect(err.message).to.include("SPLAtaAndMintAddressMismatch");
+            expect(err.message).to.include("ConstraintTokenMint");
             const account4 = await spl.getAccount(conn, pda_ata.address);
             console.log("After 2nd withdraw: Account balance:", account4.amount.toString());
             expect(account4.amount).to.be.eq(2_500_000n);
@@ -365,7 +365,7 @@ describe("some tests", () => {
         randomFillSync(newTss);
         // console.log("generated new TSS address", newTss);
         await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
-
+            pda: pdaAccount,
         }).rpc();
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         // console.log("updated TSS address", pdaAccountData.tssAddress);
@@ -417,6 +417,38 @@ describe("some tests", () => {
             console.log("Error message: ", err.message);
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("SignerIsNotAuthority");
+        }
+    });
+
+    it("create an account owned by the gateway program", async () => {
+        const gateway_id =gatewayProgram.programId;
+        console.log("gateway program id", gateway_id.toString());
+        const fake_pda = anchor.web3.Keypair.generate();
+        const rentExemption = await conn.getMinimumBalanceForRentExemption(100);
+        const instr1 = anchor.web3.SystemProgram.createAccount(
+            {
+                fromPubkey: wallet.publicKey,
+                newAccountPubkey: fake_pda.publicKey,
+                lamports: rentExemption,
+                space: 100,
+                programId: gatewayProgram.programId,
+            }
+        )
+        const tx = new anchor.web3.Transaction();
+        tx.add(instr1, );
+        await anchor.web3.sendAndConfirmTransaction(conn, tx, [wallet, fake_pda]);
+
+        const newTss = new Uint8Array(20);
+        randomFillSync(newTss);
+        // console.log("generated new TSS address", newTss);
+        try {
+            await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
+                pda: fake_pda.publicKey,
+            }).rpc();
+        } catch (err) {
+            console.log("Error message: ", err.message);
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("AccountDiscriminatorMismatch.");
         }
     });
 

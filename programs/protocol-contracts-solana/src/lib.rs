@@ -379,7 +379,7 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
-    #[account(mut)]
+    #[account(mut, token::mint = mint_account, token::authority = pda)]
     pub pda_ata: Account<'info, TokenAccount>, // associated token address of PDA
 
     pub mint_account: Account<'info, Mint>,

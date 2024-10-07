@@ -352,7 +352,7 @@ describe("some tests", () => {
 
     it("deposit and call", async () => {
         let bal1 = await conn.getBalance(pdaAccount);
-        const txsig = await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({}).rpc({commitment: 'confirmed'});
+        const txsig = await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({}).rpc({commitment: 'processed'});
         const tx =  await conn.getParsedTransaction(txsig, 'confirmed');
         console.log("deposit and call parsed tx", tx);
         let bal2 = await conn.getBalance(pdaAccount);
@@ -400,8 +400,34 @@ describe("some tests", () => {
         }
     });
 
+    it("add whitelist spl token", async () => {
+        await gatewayProgram.methods.whitelistSplMint().accounts({
+            whitelistCandidate: mint.publicKey,
+        }).signers([]).rpc();
+
+        let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
+        let [entryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            seeds,
+            gatewayProgram.programId,
+        );
+        let entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress)
+        console.log("whitelist entry", entry);
+
+        try {
+            seeds = [Buffer.from("whitelist", "utf-8"), mint_fake.publicKey.toBuffer()];
+            [entryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+                seeds,
+                gatewayProgram.programId,
+            );
+            entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress);
+            console.log("whitelist entry", entry);
+        } catch(err) {
+            expect(err.message).to.include("Account does not exist or has no data");
+        }
+    });
+
+    const newAuthority = anchor.web3.Keypair.generate();
     it("update authority", async () => {
-        const newAuthority = anchor.web3.Keypair.generate();
         await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).accounts({
 
         }).rpc();
@@ -442,6 +468,7 @@ describe("some tests", () => {
         randomFillSync(newTss);
         // console.log("generated new TSS address", newTss);
         try {
+            // @ts-ignore
             await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
                 pda: fake_pda.publicKey,
             }).rpc();
@@ -451,6 +478,7 @@ describe("some tests", () => {
             expect(err.message).to.include("AccountDiscriminatorMismatch.");
         }
     });
+
 
 
 });

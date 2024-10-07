@@ -348,7 +348,7 @@ pub struct DepositSplToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(seeds=[b"meta"], bump)]
+    #[account(seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
     pub token_program: Program<'info, Token>,

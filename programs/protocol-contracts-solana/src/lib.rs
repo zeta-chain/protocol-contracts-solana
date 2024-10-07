@@ -273,6 +273,9 @@ pub mod gateway {
             return err!(Errors::TSSAuthenticationFailed);
         }
 
+        // associated token address (ATA) of the program PDA
+        // the PDA is the "wallet" (owner) of the token account
+        // the token is stored in ATA account owned by the PDA
         let pda_ata = get_associated_token_address(&pda.key(), &ctx.accounts.mint_account.key());
         require!(
             pda_ata == ctx.accounts.pda_ata.to_account_info().key(),

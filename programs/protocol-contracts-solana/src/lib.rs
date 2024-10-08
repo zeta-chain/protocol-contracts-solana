@@ -89,9 +89,13 @@ pub mod gateway {
     }
 
     // whitelisting SPL tokens
-    pub fn whitelist_spl_mint(_ctx: Context<AddToWhitelist>) -> Result<()> { Ok(()) }
+    pub fn whitelist_spl_mint(_ctx: Context<AddToWhitelist>) -> Result<()> {
+        Ok(())
+    }
 
-    pub fn de_whitelist_spl_mint(_ctx: Context<DeleteFromWhitelist>) -> Result<()> { Ok(()) }
+    pub fn de_whitelist_spl_mint(_ctx: Context<DeleteFromWhitelist>) -> Result<()> {
+        Ok(())
+    }
 
     // deposit SOL into this program and the `receiver` on ZetaChain zEVM
     // will get corresponding ZRC20 credit.
@@ -424,7 +428,6 @@ pub struct UpdatePaused<'info> {
     pub signer: Signer<'info>,
 }
 
-
 #[derive(Accounts)]
 pub struct AddToWhitelist<'info> {
     #[account(
@@ -480,8 +483,7 @@ pub struct Pda {
 }
 
 #[account]
-pub struct WhitelistEntry {
-}
+pub struct WhitelistEntry {}
 
 #[cfg(test)]
 mod tests {

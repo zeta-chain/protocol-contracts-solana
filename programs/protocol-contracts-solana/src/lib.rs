@@ -88,6 +88,15 @@ pub mod gateway {
         Ok(())
     }
 
+    // whitelisting SPL tokens
+    pub fn whitelist_spl_mint(_ctx: Context<Whitelist>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn unwhitelist_spl_mint(_ctx: Context<Unwhitelist>) -> Result<()> {
+        Ok(())
+    }
+
     // deposit SOL into this program and the `receiver` on ZetaChain zEVM
     // will get corresponding ZRC20 credit.
     // amount: amount of lamports (10^-9 SOL) to deposit
@@ -351,6 +360,11 @@ pub struct DepositSplToken<'info> {
     #[account(seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    #[account(seeds=[b"whitelist", mint_account.key().as_ref()], bump)]
+    pub whitelist_entry: Account<'info, WhitelistEntry>, // attach whitelist entry to show the mint_account is whitelisted
+
+    pub mint_account: Account<'info, Mint>,
+
     pub token_program: Program<'info, Token>,
 
     #[account(mut)]
@@ -414,6 +428,51 @@ pub struct UpdatePaused<'info> {
     pub signer: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct Whitelist<'info> {
+    #[account(
+        init,
+        space=8,
+        payer=authority,
+        seeds=[
+            b"whitelist",
+            whitelist_candidate.key().as_ref()
+        ],
+        bump
+    )]
+    pub whitelist_entry: Account<'info, WhitelistEntry>,
+    pub whitelist_candidate: Account<'info, Mint>,
+
+    #[account(mut, seeds = [b"meta"], bump, has_one = authority)]
+    pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Unwhitelist<'info> {
+    #[account(
+        mut,
+        seeds=[
+            b"whitelist",
+            whitelist_candidate.key().as_ref()
+        ],
+        bump,
+        close = authority,
+    )]
+    pub whitelist_entry: Account<'info, WhitelistEntry>,
+    pub whitelist_candidate: Account<'info, Mint>,
+
+    #[account(mut, seeds = [b"meta"], bump, has_one = authority)]
+    pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Pda {
     nonce: u64,            // ensure that each signature can only be used once
@@ -422,6 +481,9 @@ pub struct Pda {
     chain_id: u64,
     deposit_paused: bool,
 }
+
+#[account]
+pub struct WhitelistEntry {}
 
 #[cfg(test)]
 mod tests {

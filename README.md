@@ -1,35 +1,11 @@
 
 **Note**: Mainnet-beta, testnet, devnet gateway program address:
 
-Mainnet-beta, testnet, devnet gateway program address: 
 ```
 ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis
 ```
 
-The PDA account address (derived from seeds `b"meta"` and canonical bump) is
-```
-2f9SLuUNb7TNeM6gzBwT4ZjbL5ZyKzzHg1Ce9yiquEjj
-```
-
-This repository hosts the smart contracts (program)
-on Solana network to support ZetaChain cross-chain
-functionality. Specifically, it consists of a single
-program deployed
-which allows the following two actions: 
-
-1. Users on Solana network can send SOL or selected
-SPL tokens to the program to deposit into ZetaChain
-and optionally invoke a ZetaChain EVM contract. 
-2. Allows contracts on ZetaChain EVM to withdraw
-SOL and SPL tokens to users on Solana;
-3. (TO DO) In the withdraw above, optionally allow
-a contract on ZetaChain EVM to withdraw SOL/SPL tokens
-and call a user specified contract (program) with
-parameters. 
-
-
 # Introduction
-
 
 This repository hosts the smart contract (program) deployed on the Solana network to enable ZetaChain's cross-chain functionality. It consists of a single program that supports the following actions:
 

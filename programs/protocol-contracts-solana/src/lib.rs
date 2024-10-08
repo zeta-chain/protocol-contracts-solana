@@ -34,7 +34,6 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[program]
 pub mod gateway {
-
     use super::*;
 
     pub fn initialize(
@@ -338,8 +337,9 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(mut)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -348,8 +348,9 @@ pub struct DepositSplToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     pub token_program: Program<'info, Token>,
 
     #[account(mut)]
@@ -363,7 +364,7 @@ pub struct Withdraw<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(mut)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
     /// CHECK: to account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
     #[account(mut)]
@@ -378,10 +379,9 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
-    #[account(mut)]
+    #[account(mut, token::mint = mint_account, token::authority = pda)]
     pub pda_ata: Account<'info, TokenAccount>, // associated token address of PDA
 
-    #[account()]
     pub mint_account: Account<'info, Mint>,
 
     #[account(mut)]
@@ -392,7 +392,7 @@ pub struct WithdrawSPLToken<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateTss<'info> {
-    #[account(mut)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -400,7 +400,7 @@ pub struct UpdateTss<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateAuthority<'info> {
-    #[account(mut)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -408,7 +408,7 @@ pub struct UpdateAuthority<'info> {
 
 #[derive(Accounts)]
 pub struct UpdatePaused<'info> {
-    #[account(mut)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
     #[account(mut)]
     pub signer: Signer<'info>,

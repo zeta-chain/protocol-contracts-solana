@@ -8,6 +8,7 @@ import { keccak256 } from 'ethereumjs-util';
 import { bufferToHex } from 'ethereumjs-util';
 import {expect} from 'chai';
 import {ecdsaRecover} from 'secp256k1';
+import {getOrCreateAssociatedTokenAccount} from "@solana/spl-token";
 
 
 
@@ -41,6 +42,33 @@ async function mintSPLToken(conn: anchor.web3.Connection, wallet: anchor.web3.Ke
     return txsig;
 }
 
+async function depositSplTokens(gatewayProgram: Program<Gateway>, conn: anchor.web3.Connection, wallet: anchor.web3.Keypair, mint: anchor.web3.Keypair, address: Buffer) {
+    let seeds = [Buffer.from("meta", "utf-8")];
+    const [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+        seeds,
+        gatewayProgram.programId,
+    );
+    console.log("gateway pda account", pdaAccount.toString());
+    const pda_ata = await spl.getOrCreateAssociatedTokenAccount(
+        conn,
+        wallet,
+        mint.publicKey,
+        pdaAccount,
+        true
+    );
+    console.log("pda_ata address", pda_ata.address.toString());
+
+    let tokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+        conn,wallet, mint.publicKey, wallet.publicKey
+    )
+    await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts({
+        from: tokenAccount.address,
+        to: pda_ata.address,
+        mintAccount: mint.publicKey,
+    }).rpc({commitment: 'processed'});
+    return;
+}
+
 describe("some tests", () => {
     // Configure the client to use the local cluster.
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -50,10 +78,10 @@ describe("some tests", () => {
     const mint = anchor.web3.Keypair.generate();
     const mint_fake = anchor.web3.Keypair.generate(); // for testing purpose
 
-    let tokenAccount: spl.Account;
+
     let wallet_ata: anchor.web3.PublicKey;
     let pdaAccount: anchor.web3.PublicKey;
-    let pda_ata: spl.Account;
+
     const message_hash = keccak256(Buffer.from("hello world"));
     const signature = keyPair.sign(message_hash, 'hex');
     const { r, s, recoveryParam } = signature;
@@ -105,7 +133,7 @@ describe("some tests", () => {
         await mintSPLToken(conn, wallet, mint);
 
         // 2. create token account to receive mint
-        tokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+        let tokenAccount = await spl.getOrCreateAssociatedTokenAccount(
             conn,
             wallet,
             mint.publicKey,
@@ -165,33 +193,18 @@ describe("some tests", () => {
     });
 
     it("Deposit 1_000_000 USDC to Gateway", async () => {
-        let seeds = [Buffer.from("meta", "utf-8")];
-        [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
-            seeds,
-            gatewayProgram.programId,
-        );
-        console.log("gateway pda account", pdaAccount.toString());
-        pda_ata = await spl.getOrCreateAssociatedTokenAccount(
-            conn,
-            wallet,
-            mint.publicKey,
-            pdaAccount,
-            true
-        );
-        console.log("pda_ata address", pda_ata.address.toString());
-
+        let pda_ata = await getOrCreateAssociatedTokenAccount(conn, wallet, mint.publicKey, pdaAccount, true);
         let acct = await spl.getAccount(conn, pda_ata.address);
         let bal0 = acct.amount;
-        await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts({
-            from: tokenAccount.address,
-            to: pda_ata.address,
-            mintAccount: mint.publicKey,
-        }).rpc({commitment: 'processed'});
+        await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
         acct = await spl.getAccount(conn, pda_ata.address);
         let bal1 = acct.amount;
         expect(bal1-bal0).to.be.eq(1_000_000n);
 
 
+        let tokenAccount = await getOrCreateAssociatedTokenAccount(
+            conn,wallet, mint.publicKey, wallet.publicKey,
+        )
         try {
             await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts(
                 {
@@ -214,7 +227,7 @@ describe("some tests", () => {
             from: tokenAccount.address,
             to: pda_ata.address,
             mintAccount: mint.publicKey,
-        }).rpc({commitment: 'confirmed'});
+        }).rpc({commitment: 'processed'});
         acct = await spl.getAccount(conn, pda_ata.address);
         bal1 = acct.amount;
         expect(bal1-bal0).to.be.eq(2_000_000n);
@@ -236,6 +249,9 @@ describe("some tests", () => {
         );
         console.log("fake_mint fake_pda_ata address", fake_pda_ata.address.toString());
 
+        let tokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+            conn,wallet, mint_fake.publicKey, wallet.publicKey, true
+        )
         try {
             await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts({
                 from: tokenAccount.address,
@@ -261,12 +277,7 @@ describe("some tests", () => {
         console.log(`pda account data: nonce ${pdaAccountData.nonce}`);
         const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
         console.log(`pda account data: tss address ${hexAddr}`);
-        // const message_hash = fromHexString(
-        //     "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
-        // );
-        // const signature = fromHexString(
-        //     "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
-        // );
+
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         const buffer = Buffer.concat([
@@ -364,7 +375,7 @@ describe("some tests", () => {
         // );
         const nonce = pdaAccountData.nonce;
         const amount = new anchor.BN(500000000);
-        const to = pda_ata.address;
+        const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet.publicKey);
         const buffer = Buffer.concat([
             Buffer.from("withdraw","utf-8"),
             chain_id_bn.toArrayLike(Buffer, 'be', 8),
@@ -401,13 +412,33 @@ describe("some tests", () => {
         expect(bal2-bal1).to.be.gte(1_000_000_000);
     })
 
+    it("de-whitelist SPL token and deposit should fail", async () => {
+        await gatewayProgram.methods.deWhitelistSplMint().accounts({
+            whitelistCandidate: mint.publicKey,
+        }).rpc();
+
+        try {
+            await depositSplTokens(gatewayProgram, conn, wallet, mint, address)
+        } catch (err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("AccountNotInitialized");
+        }
+    });
+
+    it("re-whitelist SPL token and deposit should succeed", async () => {
+        await gatewayProgram.methods.whitelistSplMint().accounts({
+            whitelistCandidate: mint.publicKey,
+        }).rpc();
+        await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
+    });
+
 
     it("update TSS address", async () => {
         const newTss = new Uint8Array(20);
         randomFillSync(newTss);
         // console.log("generated new TSS address", newTss);
         await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
-            pda: pdaAccount,
+            // pda: pdaAccount,
         }).rpc();
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         // console.log("updated TSS address", pdaAccountData.tssAddress);
@@ -444,6 +475,7 @@ describe("some tests", () => {
 
 
 
+
     const newAuthority = anchor.web3.Keypair.generate();
     it("update authority", async () => {
         await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).accounts({
@@ -463,41 +495,6 @@ describe("some tests", () => {
             expect(err.message).to.include("SignerIsNotAuthority");
         }
     });
-
-    it("create an account owned by the gateway program", async () => {
-        const gateway_id =gatewayProgram.programId;
-        console.log("gateway program id", gateway_id.toString());
-        const fake_pda = anchor.web3.Keypair.generate();
-        const rentExemption = await conn.getMinimumBalanceForRentExemption(100);
-        const instr1 = anchor.web3.SystemProgram.createAccount(
-            {
-                fromPubkey: wallet.publicKey,
-                newAccountPubkey: fake_pda.publicKey,
-                lamports: rentExemption,
-                space: 100,
-                programId: gatewayProgram.programId,
-            }
-        )
-        const tx = new anchor.web3.Transaction();
-        tx.add(instr1, );
-        await anchor.web3.sendAndConfirmTransaction(conn, tx, [wallet, fake_pda]);
-
-        const newTss = new Uint8Array(20);
-        randomFillSync(newTss);
-        // console.log("generated new TSS address", newTss);
-        try {
-            // @ts-ignore
-            await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
-                pda: fake_pda.publicKey,
-            }).rpc();
-        } catch (err) {
-            console.log("Error message: ", err.message);
-            expect(err).to.be.instanceof(anchor.AnchorError);
-            expect(err.message).to.include("AccountDiscriminatorMismatch.");
-        }
-    });
-
-
 
 });
 

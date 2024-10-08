@@ -89,10 +89,9 @@ pub mod gateway {
     }
 
     // whitelisting SPL tokens
-    pub fn whitelist_spl_mint(ctx: Context<AddToWhitelist>) -> Result<()> {
+    pub fn whitelist_spl_mint(_ctx: Context<AddToWhitelist>) -> Result<()> { Ok(()) }
 
-        Ok(())
-    }
+    pub fn de_whitelist_spl_mint(_ctx: Context<DeleteFromWhitelist>) -> Result<()> { Ok(()) }
 
     // deposit SOL into this program and the `receiver` on ZetaChain zEVM
     // will get corresponding ZRC20 credit.
@@ -358,7 +357,7 @@ pub struct DepositSplToken<'info> {
     pub pda: Account<'info, Pda>,
 
     #[account(seeds=[b"whitelist", mint_account.key().as_ref()], bump)]
-    pub whitelist_entry: Account<'info, WhitelistEntry>,
+    pub whitelist_entry: Account<'info, WhitelistEntry>, // attach whitelist entry to show the mint_account is whitelisted
 
     pub mint_account: Account<'info, Mint>,
 
@@ -425,9 +424,8 @@ pub struct UpdatePaused<'info> {
     pub signer: Signer<'info>,
 }
 
-// whitelisting, dewhitelisting SPL token (mints)
+
 #[derive(Accounts)]
-// #[instruction(account_to_add: Pubkey)]
 pub struct AddToWhitelist<'info> {
     #[account(
         init,
@@ -448,7 +446,28 @@ pub struct AddToWhitelist<'info> {
     pub authority: Signer<'info>,
 
     pub system_program: Program<'info, System>,
+}
 
+#[derive(Accounts)]
+pub struct DeleteFromWhitelist<'info> {
+    #[account(
+        mut,
+        seeds=[
+            b"whitelist",
+            whitelist_candidate.key().as_ref()
+        ],
+        bump,
+        close = authority,
+    )]
+    pub whitelist_entry: Account<'info, WhitelistEntry>,
+    pub whitelist_candidate: Account<'info, Mint>,
+
+    #[account(mut, seeds = [b"meta"], bump, has_one = authority)]
+    pub pda: Account<'info, Pda>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[account]

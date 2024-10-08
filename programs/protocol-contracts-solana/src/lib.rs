@@ -89,11 +89,11 @@ pub mod gateway {
     }
 
     // whitelisting SPL tokens
-    pub fn whitelist_spl_mint(_ctx: Context<AddToWhitelist>) -> Result<()> {
+    pub fn whitelist_spl_mint(_ctx: Context<Whitelist>) -> Result<()> {
         Ok(())
     }
 
-    pub fn de_whitelist_spl_mint(_ctx: Context<DeleteFromWhitelist>) -> Result<()> {
+    pub fn unwhitelist_spl_mint(_ctx: Context<Unwhitelist>) -> Result<()> {
         Ok(())
     }
 
@@ -429,7 +429,7 @@ pub struct UpdatePaused<'info> {
 }
 
 #[derive(Accounts)]
-pub struct AddToWhitelist<'info> {
+pub struct Whitelist<'info> {
     #[account(
         init,
         space=8,
@@ -452,7 +452,7 @@ pub struct AddToWhitelist<'info> {
 }
 
 #[derive(Accounts)]
-pub struct DeleteFromWhitelist<'info> {
+pub struct Unwhitelist<'info> {
     #[account(
         mut,
         seeds=[

@@ -10,7 +10,7 @@ import {expect} from 'chai';
 import {ecdsaRecover} from 'secp256k1';
 import {getOrCreateAssociatedTokenAccount} from "@solana/spl-token";
 
-
+console.log = function() {}
 
 const ec = new EC('secp256k1');
 // const keyPair = ec.genKeyPair();
@@ -412,8 +412,8 @@ describe("some tests", () => {
         expect(bal2-bal1).to.be.gte(1_000_000_000);
     })
 
-    it("de-whitelist SPL token and deposit should fail", async () => {
-        await gatewayProgram.methods.deWhitelistSplMint().accounts({
+    it("unwhitelist SPL token and deposit should fail", async () => {
+        await gatewayProgram.methods.unwhitelistSplMint().accounts({
             whitelistCandidate: mint.publicKey,
         }).rpc();
 

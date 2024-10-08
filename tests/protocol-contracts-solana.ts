@@ -18,6 +18,8 @@ const ec = new EC('secp256k1');
 const keyPair = ec.keyFromPrivate('5b81cdf52ba0766983acf8dd0072904733d92afe4dd3499e83e879b43ccb73e8');
 
 const usdcDecimals = 6;
+const chain_id = 111111;
+const chain_id_bn = new anchor.BN(chain_id);
 
 async function mintSPLToken(conn: anchor.web3.Connection, wallet: anchor.web3.Keypair, mint: anchor.web3.Keypair) {
     const mintRent = await spl.getMinimumBalanceForRentExemptMint(conn);
@@ -68,6 +70,30 @@ async function depositSplTokens(gatewayProgram: Program<Gateway>, conn: anchor.w
     }).rpc({commitment: 'processed'});
     return;
 }
+async function withdrawSplToken(mint, decimals, amount, nonce,from, to, tssKey, gatewayProgram) {
+    const buffer = Buffer.concat([
+        Buffer.from("withdraw_spl_token","utf-8"),
+        chain_id_bn.toArrayLike(Buffer, 'be', 8),
+        nonce.toArrayLike(Buffer, 'be', 8),
+        amount.toArrayLike(Buffer, 'be', 8),
+        mint.publicKey.toBuffer(),
+        to.toBuffer(),
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, 'hex');
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+        r.toArrayLike(Buffer, 'be', 32),
+        s.toArrayLike(Buffer, 'be', 32),
+    ]);
+    return gatewayProgram.methods.withdrawSplToken(decimals, amount, Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
+        .accounts({
+            pdaAta: from,
+            mintAccount: mint.publicKey,
+            to: to,
+        }).rpc();
+}
+
 
 describe("some tests", () => {
     // Configure the client to use the local cluster.
@@ -103,8 +129,7 @@ describe("some tests", () => {
     const tssAddress = Array.from(address);
     console.log("tss address", tssAddress);
 
-    const chain_id = 111111;
-    const chain_id_bn = new anchor.BN(chain_id);
+
 
     let seeds = [Buffer.from("meta", "utf-8")];
     [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -277,43 +302,16 @@ describe("some tests", () => {
         console.log(`pda account data: nonce ${pdaAccountData.nonce}`);
         const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
         console.log(`pda account data: tss address ${hexAddr}`);
-
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
-        const buffer = Buffer.concat([
-            Buffer.from("withdraw_spl_token","utf-8"),
-            chain_id_bn.toArrayLike(Buffer, 'be', 8),
-            nonce.toArrayLike(Buffer, 'be', 8),
-            amount.toArrayLike(Buffer, 'be', 8),
-            mint.publicKey.toBuffer(),
-            wallet_ata.toBuffer(),
-        ]);
-        const message_hash = keccak256(buffer);
-        const signature = keyPair.sign(message_hash, 'hex');
-        const { r, s, recoveryParam } = signature;
-        const signatureBuffer = Buffer.concat([
-            r.toArrayLike(Buffer, 'be', 32),
-            s.toArrayLike(Buffer, 'be', 32),
-        ]);
-
-        await gatewayProgram.methods.withdrawSplToken(usdcDecimals,amount, Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
-            .accounts({
-                pdaAta: pda_ata,
-                mintAccount: mint.publicKey,
-                to: wallet_ata,
-            }).rpc();
-
+        await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, wallet_ata, keyPair, gatewayProgram);
         const account3 = await spl.getAccount(conn, pda_ata);
         expect(account3.amount-account2.amount).to.be.eq(-500_000n);
 
 
+        // should trigger nonce mismatch in withdraw
         try {
-            (await gatewayProgram.methods.withdrawSplToken(usdcDecimals,new anchor.BN(500_000), Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
-                .accounts({
-                    pdaAta: pda_ata,
-                    mintAccount: mint.publicKey,
-                    to: wallet_ata,
-                }).rpc());
+            await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, wallet_ata, keyPair, gatewayProgram);
             throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
@@ -356,6 +354,10 @@ describe("some tests", () => {
             console.log("After 2nd withdraw: Account balance:", account4.amount.toString());
             expect(account4.amount).to.be.eq(2_500_000n);
         }
+
+    });
+
+    it("withdraw SPL token to a non-existent account", async () => {
 
     });
 

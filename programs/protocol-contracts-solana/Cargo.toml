@@ -17,7 +17,7 @@ no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
-anchor-lang = { version = "=0.30.0" }
+anchor-lang = { version = "=0.30.0", features = ["init-if-needed"] }
 anchor-spl = { version = "=0.30.0" , features = ["idl-build"]}
 anchor-syn = "=0.30.0"
 spl-associated-token-account = "3.0.2"

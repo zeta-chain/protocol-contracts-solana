@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::associated_token::get_associated_token_address;
+use anchor_spl::associated_token::{AssociatedToken, get_associated_token_address};
 use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::secp256k1_recover::secp256k1_recover;
@@ -267,7 +267,7 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
-        concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.recipient_ata.key().to_bytes());
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),
             Errors::MessageHashMismatch
@@ -297,7 +297,7 @@ pub mod gateway {
             anchor_spl::token::TransferChecked {
                 from: ctx.accounts.pda_ata.to_account_info(),
                 mint: ctx.accounts.mint_account.to_account_info(),
-                to: ctx.accounts.to.to_account_info(),
+                to: ctx.accounts.recipient_ata.to_account_info(),
                 authority: pda.to_account_info(),
             },
             signer_seeds,
@@ -393,15 +393,23 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
-    #[account(mut, token::mint = mint_account, token::authority = pda)]
+    #[account(mut, associated_token::mint = mint_account, associated_token::authority = pda)]
     pub pda_ata: Account<'info, TokenAccount>, // associated token address of PDA
 
     pub mint_account: Account<'info, Mint>,
 
-    #[account(mut)]
-    pub to: Account<'info, TokenAccount>,
+    pub recipient: SystemAccount<'info>,
+    #[account(
+        init_if_needed,
+        payer = signer,
+        associated_token::mint = mint_account,
+        associated_token::authority = recipient,
+    )]
+    pub recipient_ata: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]

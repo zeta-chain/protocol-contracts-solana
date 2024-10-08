@@ -65,7 +65,7 @@ async function depositSplTokens(gatewayProgram: Program<Gateway>, conn: anchor.w
     }).rpc({commitment: 'processed'});
     return;
 }
-async function withdrawSplToken(mint, decimals, amount, nonce,from, to, tssKey, gatewayProgram) {
+async function withdrawSplToken(mint, decimals, amount, nonce,from, to, to_owner, tssKey, gatewayProgram) {
     const buffer = Buffer.concat([
         Buffer.from("withdraw_spl_token","utf-8"),
         chain_id_bn.toArrayLike(Buffer, 'be', 8),
@@ -85,7 +85,8 @@ async function withdrawSplToken(mint, decimals, amount, nonce,from, to, tssKey, 
         .accounts({
             pdaAta: from,
             mintAccount: mint.publicKey,
-            to: to,
+            recipientAta: to,
+            recipient: to_owner,
         }).rpc();
 }
 
@@ -278,14 +279,14 @@ describe("some tests", () => {
         const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
-        await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, wallet_ata, keyPair, gatewayProgram);
+        await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, wallet_ata, wallet.publicKey,  keyPair, gatewayProgram);
         const account3 = await spl.getAccount(conn, pda_ata);
         expect(account3.amount-account2.amount).to.be.eq(-500_000n);
 
 
         // should trigger nonce mismatch in withdraw
         try {
-            await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, wallet_ata, keyPair, gatewayProgram);
+            await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, wallet_ata, wallet.publicKey,  keyPair, gatewayProgram);
             throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
@@ -316,7 +317,8 @@ describe("some tests", () => {
                 .accounts({
                     pdaAta: pda_ata,
                     mintAccount: mint_fake.publicKey,
-                    to: wallet_ata,
+                    recipientAta: wallet_ata,
+                    recipient: wallet.publicKey,
                 }).rpc();
             throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
         } catch (err) {
@@ -336,7 +338,7 @@ describe("some tests", () => {
         const nonce = pdaAccountData.nonce;
         const wallet2 = anchor.web3.Keypair.generate();
         const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
-        await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, keyPair, gatewayProgram);
+        await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
 
     });
 

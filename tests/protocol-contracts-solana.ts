@@ -2,7 +2,6 @@ import * as anchor from "@coral-xyz/anchor";
 import {Program, web3} from "@coral-xyz/anchor";
 import {Gateway} from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
-import * as memo from "@solana/spl-memo";
 import {randomFillSync} from 'crypto';
 import { ec as EC } from 'elliptic';
 import { keccak256 } from 'ethereumjs-util';
@@ -18,6 +17,29 @@ const ec = new EC('secp256k1');
 const keyPair = ec.keyFromPrivate('5b81cdf52ba0766983acf8dd0072904733d92afe4dd3499e83e879b43ccb73e8');
 
 const usdcDecimals = 6;
+
+async function mintSPLToken(conn: anchor.web3.Connection, wallet: anchor.web3.Keypair, mint: anchor.web3.Keypair) {
+    const mintRent = await spl.getMinimumBalanceForRentExemptMint(conn);
+    let tokenTransaction = new anchor.web3.Transaction();
+    tokenTransaction.add(
+        anchor.web3.SystemProgram.createAccount({
+            fromPubkey: wallet.publicKey,
+            newAccountPubkey: mint.publicKey,
+            lamports: mintRent,
+            space: spl.MINT_SIZE,
+            programId: spl.TOKEN_PROGRAM_ID
+        }),
+        spl.createInitializeMintInstruction(
+            mint.publicKey,
+            usdcDecimals,
+            wallet.publicKey,
+            null,
+        )
+    );
+    const txsig = await anchor.web3.sendAndConfirmTransaction(conn, tokenTransaction, [wallet, mint]);
+    console.log("mint account created!", mint.publicKey.toString());
+    return txsig;
+}
 
 describe("some tests", () => {
     // Configure the client to use the local cluster.
@@ -75,28 +97,12 @@ describe("some tests", () => {
         }
     });
 
+
+
     it("Mint a SPL USDC token", async () => {
         // now deploying a fake USDC SPL Token
         // 1. create a mint account
-        const mintRent = await spl.getMinimumBalanceForRentExemptMint(conn);
-        let tokenTransaction = new anchor.web3.Transaction();
-        tokenTransaction.add(
-            anchor.web3.SystemProgram.createAccount({
-                fromPubkey: wallet.publicKey,
-                newAccountPubkey: mint.publicKey,
-                lamports: mintRent,
-                space: spl.MINT_SIZE,
-                programId: spl.TOKEN_PROGRAM_ID
-            }),
-            spl.createInitializeMintInstruction(
-                mint.publicKey,
-                usdcDecimals,
-                wallet.publicKey,
-                null,
-            )
-        );
-        await anchor.web3.sendAndConfirmTransaction(conn, tokenTransaction, [wallet, mint]);
-        console.log("mint account created!", mint.publicKey.toString());
+        await mintSPLToken(conn, wallet, mint);
 
         // 2. create token account to receive mint
         tokenAccount = await spl.getOrCreateAssociatedTokenAccount(
@@ -128,25 +134,35 @@ describe("some tests", () => {
         console.log(`wallet_ata: ${wallet_ata.toString()}`);
 
         // create a fake USDC token account
-        tokenTransaction = new anchor.web3.Transaction();
-        tokenTransaction.add(
-            anchor.web3.SystemProgram.createAccount({
-                fromPubkey: wallet.publicKey,
-                newAccountPubkey: mint_fake.publicKey,
-                lamports: mintRent,
-                space: spl.MINT_SIZE,
-                programId: spl.TOKEN_PROGRAM_ID
-            }),
-            spl.createInitializeMintInstruction(
-                mint_fake.publicKey,
-                usdcDecimals,
-                wallet.publicKey,
-                null,
-            )
-        );
-        await anchor.web3.sendAndConfirmTransaction(conn, tokenTransaction, [wallet, mint_fake]);
+        await mintSPLToken(conn, wallet, mint_fake);
         console.log("fake mint account created!", mint_fake.publicKey.toString());
     })
+
+    it("whitelist USDC spl token", async () => {
+        await gatewayProgram.methods.whitelistSplMint().accounts({
+            whitelistCandidate: mint.publicKey,
+        }).signers([]).rpc();
+
+        let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
+        let [entryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            seeds,
+            gatewayProgram.programId,
+        );
+        let entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress)
+        console.log("whitelist entry", entry);
+
+        try {
+            seeds = [Buffer.from("whitelist", "utf-8"), mint_fake.publicKey.toBuffer()];
+            [entryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+                seeds,
+                gatewayProgram.programId,
+            );
+            entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress);
+            console.log("whitelist entry", entry);
+        } catch(err) {
+            expect(err.message).to.include("Account does not exist or has no data");
+        }
+    });
 
     it("Deposit 1_000_000 USDC to Gateway", async () => {
         let seeds = [Buffer.from("meta", "utf-8")];
@@ -169,6 +185,7 @@ describe("some tests", () => {
         await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts({
             from: tokenAccount.address,
             to: pda_ata.address,
+            mintAccount: mint.publicKey,
         }).rpc({commitment: 'processed'});
         acct = await spl.getAccount(conn, pda_ata.address);
         let bal1 = acct.amount;
@@ -180,6 +197,7 @@ describe("some tests", () => {
                 {
                     from: tokenAccount.address,
                     to: wallet_ata,
+                    mintAccount: mint.publicKey,
                 }
             ).rpc();
             throw new Error("Expected error not thrown");
@@ -195,22 +213,46 @@ describe("some tests", () => {
         await gatewayProgram.methods.depositSplTokenAndCall(new anchor.BN(2_000_000), Array.from(address), Buffer.from('hi', 'utf-8')).accounts({
             from: tokenAccount.address,
             to: pda_ata.address,
+            mintAccount: mint.publicKey,
         }).rpc({commitment: 'confirmed'});
         acct = await spl.getAccount(conn, pda_ata.address);
         bal1 = acct.amount;
         expect(bal1-bal0).to.be.eq(2_000_000n);
+    });
 
-        // try {
-        //     await gatewayProgram.methods.depositSplTokenAndCall(new anchor.BN(1_000_000), Array.from(address), Buffer.from("hello", "utf-8")).accounts({
-        //         from: tokenAccount.address,
-        //         to: pda_ata.address,
-        //     }).rpc();
-        //
-        // }
+    it("deposit non-whitelisted SPL tokens should fail", async () => {
+        let seeds = [Buffer.from("meta", "utf-8")];
+        [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+            seeds,
+            gatewayProgram.programId,
+        );
+        console.log("gateway pda account", pdaAccount.toString());
+        let fake_pda_ata = await spl.getOrCreateAssociatedTokenAccount(
+            conn,
+            wallet,
+            mint_fake.publicKey,
+            pdaAccount,
+            true
+        );
+        console.log("fake_mint fake_pda_ata address", fake_pda_ata.address.toString());
+
+        try {
+            await gatewayProgram.methods.depositSplToken(new anchor.BN(1_000_000), Array.from(address)).accounts({
+                from: tokenAccount.address,
+                to: fake_pda_ata.address,
+                mintAccount: mint_fake.publicKey,
+            }).rpc({commitment: 'processed'});
+        } catch (err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("AccountNotInitialized");
+        }
+
     });
 
     it("Withdraw 500_000 USDC from Gateway with ECDSA signature", async () => {
-        const account2 = await spl.getAccount(conn, pda_ata.address);
+        let pda_ata = await spl.getAssociatedTokenAddress(mint.publicKey, pdaAccount, true);
+
+        const account2 = await spl.getAccount(conn, pda_ata);
         // expect(account2.amount).to.be.eq(1_000_000n);
         console.log("B4 withdraw: Account balance:", account2.amount.toString());
 
@@ -245,19 +287,19 @@ describe("some tests", () => {
 
         await gatewayProgram.methods.withdrawSplToken(usdcDecimals,amount, Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
             .accounts({
-                pdaAta: pda_ata.address,
+                pdaAta: pda_ata,
                 mintAccount: mint.publicKey,
                 to: wallet_ata,
             }).rpc();
 
-        const account3 = await spl.getAccount(conn, pda_ata.address);
+        const account3 = await spl.getAccount(conn, pda_ata);
         expect(account3.amount-account2.amount).to.be.eq(-500_000n);
 
 
         try {
             (await gatewayProgram.methods.withdrawSplToken(usdcDecimals,new anchor.BN(500_000), Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
                 .accounts({
-                    pdaAta: pda_ata.address,
+                    pdaAta: pda_ata,
                     mintAccount: mint.publicKey,
                     to: wallet_ata,
                 }).rpc());
@@ -265,7 +307,7 @@ describe("some tests", () => {
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("NonceMismatch");
-            const account4 = await spl.getAccount(conn, pda_ata.address);
+            const account4 = await spl.getAccount(conn, pda_ata);
             console.log("After 2nd withdraw: Account balance:", account4.amount.toString());
             expect(account4.amount).to.be.eq(2_500_000n);
         }
@@ -290,7 +332,7 @@ describe("some tests", () => {
             ]);
             await gatewayProgram.methods.withdrawSplToken(usdcDecimals,amount, Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce2 )
                 .accounts({
-                    pdaAta: pda_ata.address,
+                    pdaAta: pda_ata,
                     mintAccount: mint_fake.publicKey,
                     to: wallet_ata,
                 }).rpc();
@@ -299,7 +341,7 @@ describe("some tests", () => {
             expect(err).to.be.instanceof(anchor.AnchorError);
             console.log("Error message: ", err.message);
             expect(err.message).to.include("ConstraintTokenMint");
-            const account4 = await spl.getAccount(conn, pda_ata.address);
+            const account4 = await spl.getAccount(conn, pda_ata);
             console.log("After 2nd withdraw: Account balance:", account4.amount.toString());
             expect(account4.amount).to.be.eq(2_500_000n);
         }
@@ -400,31 +442,7 @@ describe("some tests", () => {
         }
     });
 
-    it("add whitelist spl token", async () => {
-        await gatewayProgram.methods.whitelistSplMint().accounts({
-            whitelistCandidate: mint.publicKey,
-        }).signers([]).rpc();
 
-        let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
-        let [entryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
-            seeds,
-            gatewayProgram.programId,
-        );
-        let entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress)
-        console.log("whitelist entry", entry);
-
-        try {
-            seeds = [Buffer.from("whitelist", "utf-8"), mint_fake.publicKey.toBuffer()];
-            [entryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
-                seeds,
-                gatewayProgram.programId,
-            );
-            entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress);
-            console.log("whitelist entry", entry);
-        } catch(err) {
-            expect(err.message).to.include("Account does not exist or has no data");
-        }
-    });
 
     const newAuthority = anchor.web3.Keypair.generate();
     it("update authority", async () => {
@@ -482,5 +500,8 @@ describe("some tests", () => {
 
 
 });
+
+
+
 
 

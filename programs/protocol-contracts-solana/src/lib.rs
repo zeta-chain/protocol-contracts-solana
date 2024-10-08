@@ -357,6 +357,11 @@ pub struct DepositSplToken<'info> {
     #[account(seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    #[account(seeds=[b"whitelist", mint_account.key().as_ref()], bump)]
+    pub whitelist_entry: Account<'info, WhitelistEntry>,
+
+    pub mint_account: Account<'info, Mint>,
+
     pub token_program: Program<'info, Token>,
 
     #[account(mut)]

@@ -8,3 +8,13 @@ C_END=\033[0m
 fmt:
 	@echo "$(C_GREEN)# Formatting rust code$(C_END)"
 	@./scripts/fmt.sh
+
+
+# Variables
+GENERATOR_DIR := go-idl/generator
+IDL_FILE := target/idl/gateway.json
+OUTPUT_DIR := go-idl/generated/gateway.go
+
+# Generate go code
+generate:
+	go run $(GENERATOR_DIR) $(IDL_FILE) $(OUTPUT_DIR)

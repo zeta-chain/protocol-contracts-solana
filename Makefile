@@ -10,11 +10,20 @@ fmt:
 	@./scripts/fmt.sh
 
 
-# Variables
-GENERATOR_DIR := go-idl/generator
-IDL_FILE := target/idl/gateway.json
-OUTPUT_DIR := go-idl/generated/gateway.go
+# directories for Go code generation
+IDL_DIR := target/idl
+GENERATED_DIR := generated
 
-# Generate go code
+# generate Go code from IDL files
+.PHONY: generate
 generate:
-	go run $(GENERATOR_DIR) $(IDL_FILE) $(OUTPUT_DIR)
+	@for file in $(wildcard $(IDL_DIR)/*.json); do \
+	    base_name=$$(basename $$file .json); \
+	    output_file="$(GENERATED_DIR)/$$base_name.go"; \
+	    echo "Generating $$output_file from $$file"; \
+	    (cd go-idl && go run generator/main.go "$$file" "$$output_file"); \
+	done
+
+# clean generated files
+clean:
+	rm -rf $(GENERATED_DIR)/*.go

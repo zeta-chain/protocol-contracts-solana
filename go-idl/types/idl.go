@@ -18,7 +18,7 @@ type Metadata struct {
 
 type Instruction struct {
 	Name          string    `json:"name"`
-	Discriminator []byte    `json:"discriminator"`
+	Discriminator [8]byte   `json:"discriminator"`
 	Accounts      []Account `json:"accounts"`
 	Args          []Arg     `json:"args"`
 }

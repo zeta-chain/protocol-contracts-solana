@@ -61,7 +61,7 @@ func writeGoFile(idl *types.IDL, outputPath string) error {
 	}
 
 	// write the Go code to the file
-	_, err = file.WriteString(generateIDLFile("solana", "IDL", idl))
+	_, err = file.WriteString(generateIDLFile("solana", "Gateway", idl))
 	if err != nil {
 		return fmt.Errorf("failed to write to file: %w", err)
 	}

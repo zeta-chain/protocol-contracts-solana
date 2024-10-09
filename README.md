@@ -49,6 +49,11 @@ To run the tests
 $ anchor test
 ```
 
+To generate Go code for program's IDL
+```bash
+$ make generate
+```
+
 # Authentication and Authorization
 
 Anyone can deposit and remote invoke ZetaChain contracts. 

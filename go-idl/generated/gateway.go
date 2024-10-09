@@ -335,3 +335,16 @@ var IDLGateway = types.IDL{
 		{Code: 6009, Name: "SPLAtaAndMintAddressMismatch", Msg: "SPLAtaAndMintAddressMismatch"},
 	},
 }
+
+const (
+	InstructionDeposit                    = "deposit"
+	InstructionDeposit_and_call           = "deposit_and_call"
+	InstructionDeposit_spl_token          = "deposit_spl_token"
+	InstructionDeposit_spl_token_and_call = "deposit_spl_token_and_call"
+	InstructionInitialize                 = "initialize"
+	InstructionSet_deposit_paused         = "set_deposit_paused"
+	InstructionUpdate_authority           = "update_authority"
+	InstructionUpdate_tss                 = "update_tss"
+	InstructionWithdraw                   = "withdraw"
+	InstructionWithdraw_spl_token         = "withdraw_spl_token"
+)

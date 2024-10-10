@@ -307,14 +307,6 @@ pub mod gateway {
             recipient_ata == ctx.accounts.recipient_ata.to_account_info().key(),
             Errors::SPLAtaAndMintAddressMismatch,
         );
-        // DEBUG
-        let lamports = ctx.accounts.recipient.to_account_info().lamports();
-        msg!(
-            "recipient {:?} has lamports {:?}",
-            ctx.accounts.recipient.to_account_info().key(),
-            lamports,
-        );
-        // END DEBUG
 
         // test whether the recipient_ata is created or not; if not, create it
         let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();

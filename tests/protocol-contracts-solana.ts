@@ -65,7 +65,7 @@ async function depositSplTokens(gatewayProgram: Program<Gateway>, conn: anchor.w
     }).rpc({commitment: 'processed'});
     return;
 }
-async function withdrawSplToken(mint, decimals, amount, nonce,from, to, to_owner, tssKey, gatewayProgram) {
+async function withdrawSplToken( mint, decimals, amount, nonce,from, to, to_owner, tssKey, gatewayProgram: Program<Gateway>) {
     const buffer = Buffer.concat([
         Buffer.from("withdraw_spl_token","utf-8"),
         chain_id_bn.toArrayLike(Buffer, 'be', 8),
@@ -87,7 +87,8 @@ async function withdrawSplToken(mint, decimals, amount, nonce,from, to, to_owner
             mintAccount: mint.publicKey,
             recipientAta: to,
             recipient: to_owner,
-        }).rpc();
+
+        }).rpc({commitment: 'processed'});
 }
 
 
@@ -114,17 +115,19 @@ describe("some tests", () => {
     const recoveredPubkey = ecdsaRecover(signatureBuffer, recoveryParam, message_hash, false);
     const publicKeyBuffer = Buffer.from(keyPair.getPublic(false, 'hex').slice(2), 'hex');  // Uncompressed form of public key, remove the '04' prefix
 
-
     const addressBuffer = keccak256(publicKeyBuffer);  // Skip the first byte (format indicator)
     const address = addressBuffer.slice(-20);
     const tssAddress = Array.from(address);
 
-
-
-
     let seeds = [Buffer.from("meta", "utf-8")];
     [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
         seeds,
+        gatewayProgram.programId,
+    );
+
+    let rentPayerSeeds = [Buffer.from("rent-payer", "utf-8")];
+    let [rentPayerPdaAccount] =  anchor.web3.PublicKey.findProgramAddressSync(
+        rentPayerSeeds,
         gatewayProgram.programId,
     );
 
@@ -139,7 +142,17 @@ describe("some tests", () => {
             expect(err).to.be.not.null;
         }
     });
-
+    it("intialize the rent payer PDA",async() => {
+        await gatewayProgram.methods.initializeRentPayer().rpc();
+        let instr = web3.SystemProgram.transfer({
+           fromPubkey: wallet.publicKey,
+           toPubkey: rentPayerPdaAccount,
+           lamports: 100000000,
+        });
+        let tx = new web3.Transaction();
+        tx.add(instr);
+        await web3.sendAndConfirmTransaction(conn,tx,[wallet]);
+    });
 
 
     it("Mint a SPL USDC token", async () => {
@@ -323,7 +336,7 @@ describe("some tests", () => {
             throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
-            expect(err.message).to.include("ConstraintTokenMint");
+            expect(err.message).to.include("ConstraintAssociated");
             const account4 = await spl.getAccount(conn, pda_ata);
             expect(account4.amount).to.be.eq(2_500_000n);
         }
@@ -337,9 +350,16 @@ describe("some tests", () => {
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         const wallet2 = anchor.web3.Keypair.generate();
-        const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
-        await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
+        { // fund the wallet2, otherwise the wallet2 is considered non-existent
+            let sig = await conn.requestAirdrop(wallet2.publicKey, 100000000);
+            await conn.confirmTransaction(sig);
+        }
 
+
+        const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
+        console.log("wallet2 ata: ", to.toBase58());
+        const txsig = await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
+        const tx = await conn.getParsedTransaction(txsig, 'confirmed');
     });
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {

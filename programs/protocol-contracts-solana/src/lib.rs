@@ -1,9 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::associated_token::{AssociatedToken, get_associated_token_address};
+use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
 use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::keccak::hash;
+use solana_program::program::invoke;
 use solana_program::secp256k1_recover::secp256k1_recover;
+use solana_program::sysvar::{rent::Rent, Sysvar};
+use spl_associated_token_account::instruction::create_associated_token_account;
 use std::mem::size_of;
 
 #[error_code]
@@ -94,6 +97,10 @@ pub mod gateway {
     }
 
     pub fn unwhitelist_spl_mint(_ctx: Context<Unwhitelist>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn initialize_rent_payer(_ctx: Context<InitializeRentPayer>) -> Result<()> {
         Ok(())
     }
 
@@ -286,11 +293,78 @@ pub mod gateway {
         let pda_ata = get_associated_token_address(&pda.key(), &ctx.accounts.mint_account.key());
         require!(
             pda_ata == ctx.accounts.pda_ata.to_account_info().key(),
-            Errors::SPLAtaAndMintAddressMismatch
+            Errors::SPLAtaAndMintAddressMismatch,
         );
 
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
+        // make sure that ctx.accounts.recipient_ata is ATA (PDA account of token program)
+        let recipient_ata = get_associated_token_address(
+            &ctx.accounts.recipient.key(),
+            &ctx.accounts.mint_account.key(),
+        );
+        require!(
+            recipient_ata == ctx.accounts.recipient_ata.to_account_info().key(),
+            Errors::SPLAtaAndMintAddressMismatch,
+        );
+        // DEBUG
+        let lamports = ctx.accounts.recipient.to_account_info().lamports();
+        msg!(
+            "recipient {:?} has lamports {:?}",
+            ctx.accounts.recipient.to_account_info().key(),
+            lamports,
+        );
+        // END DEBUG
+
+        // test whether the recipient_ata is created or not; if not, create it
+        let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();
+        if recipient_ata_account.lamports() == 0
+            || *recipient_ata_account.owner == ctx.accounts.system_program.key()
+        {
+            // if lamports of recipient_ata_account is 0 or its owner being system program then it's not created
+            msg!(
+                "Creating associated token account {:?} for recipient {:?}...",
+                recipient_ata_account.key(),
+                ctx.accounts.recipient.key(),
+            );
+            let signer_info = &ctx.accounts.signer.to_account_info();
+            let bal0 = signer_info.lamports();
+            invoke(
+                &create_associated_token_account(
+                    ctx.accounts.signer.to_account_info().key,
+                    ctx.accounts.recipient.to_account_info().key,
+                    ctx.accounts.mint_account.to_account_info().key,
+                    ctx.accounts.token_program.key,
+                ),
+                &[
+                    ctx.accounts.mint_account.to_account_info().clone(),
+                    ctx.accounts.recipient_ata.clone(),
+                    ctx.accounts.recipient.to_account_info().clone(),
+                    ctx.accounts.signer.to_account_info().clone(),
+                    ctx.accounts.system_program.to_account_info().clone(),
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    ctx.accounts
+                        .associated_token_program
+                        .to_account_info()
+                        .clone(),
+                ],
+            )?;
+            let bal1 = signer_info.lamports();
+
+            msg!("Associated token account for recipient created!");
+            msg!(
+                "Refunding the rent paid by the signer {:?}",
+                ctx.accounts.signer.to_account_info().key
+            );
+
+            let rent_payer_info = ctx.accounts.rent_payer_pda.to_account_info();
+            rent_payer_info.sub_lamports(bal0 - bal1)?;
+            signer_info.add_lamports(bal0 - bal1)?;
+            msg!(
+                "Signer refunded the ATA account creation rent amount {:?} lamports",
+                bal0 - bal1
+            );
+        }
 
         let xfer_ctx = CpiContext::new_with_signer(
             token.to_account_info(),
@@ -399,14 +473,13 @@ pub struct WithdrawSPLToken<'info> {
     pub mint_account: Account<'info, Mint>,
 
     pub recipient: SystemAccount<'info>,
-    #[account(
-        init_if_needed,
-        payer = signer,
-        associated_token::mint = mint_account,
-        associated_token::authority = recipient,
-    )]
-    pub recipient_ata: Account<'info, TokenAccount>,
+    /// CHECK: recipient_ata might not have been created; avoid checking its content.
+    /// the validation will be done in the instruction processor.
+    #[account(mut)]
+    pub recipient_ata: AccountInfo<'info>,
 
+    #[account(mut, seeds = [b"rent-payer"], bump)]
+    pub rent_payer_pda: Account<'info, RentPayerPda>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -481,6 +554,15 @@ pub struct Unwhitelist<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+pub struct InitializeRentPayer<'info> {
+    #[account(init, payer = authority, space = 8, seeds = [b"rent-payer"], bump)]
+    pub rent_payer_pda: Account<'info, RentPayerPda>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Pda {
     nonce: u64,            // ensure that each signature can only be used once
@@ -492,6 +574,9 @@ pub struct Pda {
 
 #[account]
 pub struct WhitelistEntry {}
+
+#[account]
+pub struct RentPayerPda {}
 
 #[cfg(test)]
 mod tests {

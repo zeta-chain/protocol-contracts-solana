@@ -350,11 +350,6 @@ describe("some tests", () => {
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         const wallet2 = anchor.web3.Keypair.generate();
-        { // fund the wallet2, otherwise the wallet2 is considered non-existent
-            let sig = await conn.requestAirdrop(wallet2.publicKey, 100000000);
-            await conn.confirmTransaction(sig);
-        }
-
 
         const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
         console.log("wallet2 ata: ", to.toBase58());

@@ -164,10 +164,7 @@ pub mod gateway {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
 
-        let pda_ata = get_associated_token_address(
-            &ctx.accounts.pda.key(),
-            &from.mint,
-        );
+        let pda_ata = get_associated_token_address(&ctx.accounts.pda.key(), &from.mint);
         // must deposit to the ATA from PDA in order to receive credit
         require!(
             pda_ata == ctx.accounts.to.to_account_info().key(),

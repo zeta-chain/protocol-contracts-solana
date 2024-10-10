@@ -5,7 +5,6 @@ use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::keccak::hash;
 use solana_program::program::invoke;
 use solana_program::secp256k1_recover::secp256k1_recover;
-use solana_program::sysvar::{rent::Rent, Sysvar};
 use spl_associated_token_account::instruction::create_associated_token_account;
 use std::mem::size_of;
 
@@ -165,7 +164,7 @@ pub mod gateway {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
 
-        let pda_ata = spl_associated_token_account::get_associated_token_address(
+        let pda_ata = get_associated_token_address(
             &ctx.accounts.pda.key(),
             &from.mint,
         );

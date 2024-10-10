@@ -142,7 +142,7 @@ describe("some tests", () => {
             expect(err).to.be.not.null;
         }
     });
-    it("intialize the rent payer PDA",async() => {
+    it("initialize the rent payer PDA",async() => {
         await gatewayProgram.methods.initializeRentPayer().rpc();
         let instr = web3.SystemProgram.transfer({
            fromPubkey: wallet.publicKey,
@@ -343,7 +343,13 @@ describe("some tests", () => {
 
     });
 
-    it("withdraw SPL token to a non-existent account", async () => {
+    it("withdraw SPL token to a non-existent account should succeed by creating it", async () => {
+        let seeds = [Buffer.from("rent-payer", "utf-8")];
+        const [rentPayerPda] = anchor.web3.PublicKey.findProgramAddressSync(
+            seeds,
+            gatewayProgram.programId,
+        );
+        let rentPayerPdaBal0 = await conn.getBalance(rentPayerPda);
         let pda_ata = await spl.getAssociatedTokenAddress(mint.publicKey, pdaAccount, true);
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
@@ -352,9 +358,17 @@ describe("some tests", () => {
         const wallet2 = anchor.web3.Keypair.generate();
 
         const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
-        console.log("wallet2 ata: ", to.toBase58());
+
+        let to_ata_bal = await conn.getBalance(to);
+        expect(to_ata_bal).to.be.eq(0); // the new ata account (owned by wallet2) should be non-existent;
         const txsig = await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
-        const tx = await conn.getParsedTransaction(txsig, 'confirmed');
+        to_ata_bal = await conn.getBalance(to);
+        expect(to_ata_bal).to.be.gt(2_000_000); // the new ata account (owned by wallet2) should be created
+
+        // rent_payer_pda should have reduced balance
+
+        let rentPayerPdaBal1 = await conn.getBalance(rentPayerPda);
+        expect(rentPayerPdaBal0-rentPayerPdaBal1).to.be.eq(to_ata_bal); // rentPayer pays rent
     });
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
@@ -362,12 +376,6 @@ describe("some tests", () => {
         let bal1 = await conn.getBalance(pdaAccount);
         expect(bal1).to.be.gte(1_000_000_000);
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-        // const message_hash = fromHexString(
-        //     "0a1e2723bd7f1996832b7ed7406df8ad975deba1aa04020b5bfc3e6fe70ecc29"
-        // );
-        // const signature = fromHexString(
-        //     "58be181f57b2d56b0c252127c9874a8fbe5ebd04f7632fb3966935a3e9a765807813692cebcbf3416cb1053ad9c8c83af471ea828242cca22076dd04ddbcd253"
-        // );
         const nonce = pdaAccountData.nonce;
         const amount = new anchor.BN(500000000);
         const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet.publicKey);
@@ -470,9 +478,6 @@ describe("some tests", () => {
         await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).accounts({
 
         }).rpc();
-        // const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-        // expect(pdaAccountData.authority).to.be.eq(newAuthority.publicKey);
-
         // now the old authority cannot update TSS address and will fail
         try {
             await gatewayProgram.methods.updateTss(Array.from(new Uint8Array(20))).accounts({

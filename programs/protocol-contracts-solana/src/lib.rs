@@ -347,8 +347,9 @@ pub mod gateway {
             );
 
             let rent_payer_info = ctx.accounts.rent_payer_pda.to_account_info();
-            rent_payer_info.sub_lamports(bal0 - bal1)?;
-            signer_info.add_lamports(bal0 - bal1)?;
+            let cost = balBefore - balAfter;
+            rent_payer_info.sub_lamports(cost)?;
+            signer_info.add_lamports(cost)?;
             msg!(
                 "Signer refunded the ATA account creation rent amount {:?} lamports",
                 bal0 - bal1

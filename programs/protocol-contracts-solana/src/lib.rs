@@ -317,7 +317,7 @@ pub mod gateway {
                 ctx.accounts.recipient.key(),
             );
             let signer_info = &ctx.accounts.signer.to_account_info();
-            let bal0 = signer_info.lamports();
+            let balBefore = signer_info.lamports();
             invoke(
                 &create_associated_token_account(
                     ctx.accounts.signer.to_account_info().key,

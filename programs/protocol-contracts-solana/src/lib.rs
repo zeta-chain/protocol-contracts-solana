@@ -338,7 +338,7 @@ pub mod gateway {
                         .clone(),
                 ],
             )?;
-            let bal1 = signer_info.lamports();
+            let balAfter = signer_info.lamports();
 
             msg!("Associated token account for recipient created!");
             msg!(

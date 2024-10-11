@@ -294,7 +294,7 @@ pub mod gateway {
 
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
-        
+
         // make sure that ctx.accounts.recipient_ata is ATA (PDA account of token program)
         let recipient_ata = get_associated_token_address(
             &ctx.accounts.recipient.key(),

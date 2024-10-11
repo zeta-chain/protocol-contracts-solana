@@ -317,7 +317,7 @@ pub mod gateway {
                 ctx.accounts.recipient.key(),
             );
             let signer_info = &ctx.accounts.signer.to_account_info();
-            let balBefore = signer_info.lamports();
+            let bal_before = signer_info.lamports();
             invoke(
                 &create_associated_token_account(
                     ctx.accounts.signer.to_account_info().key,
@@ -338,7 +338,7 @@ pub mod gateway {
                         .clone(),
                 ],
             )?;
-            let balAfter = signer_info.lamports();
+            let bal_after = signer_info.lamports();
 
             msg!("Associated token account for recipient created!");
             msg!(
@@ -347,12 +347,12 @@ pub mod gateway {
             );
 
             let rent_payer_info = ctx.accounts.rent_payer_pda.to_account_info();
-            let cost = balBefore - balAfter;
+            let cost = bal_before - bal_after;
             rent_payer_info.sub_lamports(cost)?;
             signer_info.add_lamports(cost)?;
             msg!(
                 "Signer refunded the ATA account creation rent amount {:?} lamports",
-                bal0 - bal1
+                cost,
             );
         }
 

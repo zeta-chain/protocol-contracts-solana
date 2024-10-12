@@ -10,6 +10,12 @@ The PDA account address (derived from seeds `b"meta"` and canonical bump) is
 2f9SLuUNb7TNeM6gzBwT4ZjbL5ZyKzzHg1Ce9yiquEjj
 ```
 
+The PDA account address (derived from seeds `b"rent-payer")
+```
+Am1aA3XQciu3vMG6E9yLa2Y9TcTf2XB3D3akLtjVzu3L
+```
+
+
 # Introduction
 
 This repository hosts the smart contract (program) deployed on the Solana network to enable ZetaChain's cross-chain functionality. It consists of a single program that supports the following actions:

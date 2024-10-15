@@ -1,0 +1,27 @@
+name: Generated Files are Updated
+on:
+  merge_group:
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate Go code, docs and specs
+        env:
+          TEST_ENV: ${{ github.workspace }}
+        run: make generate
+
+      - name: Check for changes
+        run: |
+          if git diff --exit-code --ignore-space-change --ignore-all-space --ignore-cr-at-eol; then
+            echo "Generated Go files are up-to-date."
+          else
+            echo "::error::Generated files are not up-to-date. Please run 'make generate' locally and commit any changes."
+            exit 1
+          fi

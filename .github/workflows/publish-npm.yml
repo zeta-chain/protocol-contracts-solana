@@ -22,12 +22,11 @@ jobs:
           solana-cli-version: '1.18.15'
           node-version: '21.0.0'
 
-      - name: Setup Node.js for NPM Publish
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '21.0.0'
-          registry-url: 'https://registry.npmjs.org'
-          auth-token: ${{ secrets.NPM_TOKEN }}
+          node-version: "21"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Build
         run: anchor build
@@ -38,18 +37,19 @@ jobs:
       - name: Determine NPM Tag
         id: determine-npm-tag
         run: |
-          VERSION_TAG=${{ github.ref_name }}
+          VERSION_TAG=${GITHUB_REF#refs/tags/v}
           if [[ $VERSION_TAG == *"-"* ]]; then
-            NPM_TAG=${VERSION_TAG#*-}
+            echo ::set-output name=NPM_TAG::${VERSION_TAG#*-}
           else
-            NPM_TAG=latest
+            echo ::set-output name=NPM_TAG::latest
           fi
-          echo "NPM_TAG=$NPM_TAG" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_REF: ${{ github.ref }}
 
       - name: Publish to NPM
         run: |
-          yarn publish \
-            --access public \
-            --new-version "${{ github.ref_name }}" \
-            --tag "${{ steps.determine-npm-tag.outputs.NPM_TAG }}" \
-            --no-git-tag-version
+          yarn publish --access public --new-version ${GITHUB_REF#refs/tags/v} --tag ${{
+          steps.determine-npm-tag.outputs.NPM_TAG }} --no-git-tag-version
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_REF: ${{ github.ref }}

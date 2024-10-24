@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/protocol-contracts-solana/go-idl/types"
+	"github.com/zeta-chain/protocol-contracts-solana/go-idl/types"
 )
 
 func main() {

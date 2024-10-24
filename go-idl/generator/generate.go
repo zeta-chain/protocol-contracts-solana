@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/protocol-contracts-solana/go-idl/types"
+	"github.com/zeta-chain/protocol-contracts-solana/go-idl/types"
 )
 
 const (
@@ -21,7 +21,7 @@ func generateIDLFile(packagename, varname string, idl *types.IDL) string {
 	sb.WriteString(fmt.Sprintf("%s\n", codeGenerationDisclaimer))
 	sb.WriteString(fmt.Sprintf("package %s\n\n", packagename))
 	sb.WriteString("import (\n")
-	sb.WriteString("    \"github.com/protocol-contracts-solana/go-idl/types\"\n")
+	sb.WriteString("    \"github.com/zeta-chain/protocol-contracts-solana/go-idl/types\"\n")
 	sb.WriteString(")\n\n")
 
 	// IDL struct

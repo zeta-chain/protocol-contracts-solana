@@ -2,7 +2,7 @@
 package solana
 
 import (
-	"github.com/protocol-contracts-solana/go-idl/types"
+	"github.com/zeta-chain/protocol-contracts-solana/go-idl/types"
 )
 
 var IDLGateway = types.IDL{
@@ -81,7 +81,21 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "pda",
-					Writable: true,
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "whitelist_entry",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "mint_account",
+					Writable: false,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,
@@ -122,7 +136,21 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "pda",
-					Writable: true,
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "whitelist_entry",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "mint_account",
+					Writable: false,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,
@@ -198,6 +226,47 @@ var IDLGateway = types.IDL{
 			},
 		},
 		{
+			Name:          "unwhitelist_spl_mint",
+			Discriminator: [8]byte{73, 142, 63, 191, 233, 238, 170, 104},
+			Accounts: []types.Account{
+				{
+					Name:     "whitelist_entry",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "whitelist_candidate",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "authority",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
+					PDA:      nil,
+				},
+			},
+		},
+		{
 			Name:          "update_authority",
 			Discriminator: [8]byte{32, 46, 64, 28, 149, 75, 243, 88},
 			Accounts: []types.Account{
@@ -233,6 +302,47 @@ var IDLGateway = types.IDL{
 					Writable: true,
 					Signer:   true,
 					Address:  "",
+					PDA:      nil,
+				},
+			},
+		},
+		{
+			Name:          "whitelist_spl_mint",
+			Discriminator: [8]byte{30, 110, 162, 42, 208, 147, 254, 219},
+			Accounts: []types.Account{
+				{
+					Name:     "whitelist_entry",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "whitelist_candidate",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "authority",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
 					PDA:      nil,
 				},
 			},
@@ -321,6 +431,13 @@ var IDLGateway = types.IDL{
 			Address:  "",
 			PDA:      nil,
 		},
+		{
+			Name:     "WhitelistEntry",
+			Writable: false,
+			Signer:   false,
+			Address:  "",
+			PDA:      nil,
+		},
 	},
 	Errors: []types.Error{
 		{Code: 6000, Name: "SignerIsNotAuthority", Msg: "SignerIsNotAuthority"},
@@ -343,8 +460,10 @@ const (
 	InstructionDeposit_spl_token_and_call = "deposit_spl_token_and_call"
 	InstructionInitialize                 = "initialize"
 	InstructionSet_deposit_paused         = "set_deposit_paused"
+	InstructionUnwhitelist_spl_mint       = "unwhitelist_spl_mint"
 	InstructionUpdate_authority           = "update_authority"
 	InstructionUpdate_tss                 = "update_tss"
+	InstructionWhitelist_spl_mint         = "whitelist_spl_mint"
 	InstructionWithdraw                   = "withdraw"
 	InstructionWithdraw_spl_token         = "withdraw_spl_token"
 )

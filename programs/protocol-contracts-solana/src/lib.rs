@@ -91,11 +91,11 @@ pub mod gateway {
     }
 
     pub fn whitelist_spl_mint(
-        ctx: Context<Whitelist>, 
-        signature: [u8; 64],     
-        recovery_id: u8,         
-        message_hash: [u8; 32],   
-        nonce: u64                
+        ctx: Context<Whitelist>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
 
@@ -106,21 +106,21 @@ pub mod gateway {
             recovery_id,
             message_hash,
             nonce,
-            "whitelist_spl_mint"
+            "whitelist_spl_mint",
         )?;
-    
+
         Ok(())
     }
-    
+
     pub fn unwhitelist_spl_mint(
-        ctx: Context<Unwhitelist>, 
-        signature: [u8; 64],     
-        recovery_id: u8,         
-        message_hash: [u8; 32],   
-        nonce: u64
+        ctx: Context<Unwhitelist>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
-        
+
         validate_signature_or_authority(
             pda,
             &ctx.accounts.authority,
@@ -128,7 +128,7 @@ pub mod gateway {
             recovery_id,
             message_hash,
             nonce,
-            "unwhitelist_spl_mint"
+            "unwhitelist_spl_mint",
         )?;
 
         Ok(())
@@ -458,7 +458,7 @@ fn validate_signature_or_authority(
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
         }
-        
+
         pda.nonce += 1;
     } else {
         // no signature provided, fallback to authority check

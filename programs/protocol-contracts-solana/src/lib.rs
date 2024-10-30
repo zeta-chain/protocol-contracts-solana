@@ -90,12 +90,47 @@ pub mod gateway {
         Ok(())
     }
 
-    // whitelisting SPL tokens
-    pub fn whitelist_spl_mint(_ctx: Context<Whitelist>) -> Result<()> {
+    pub fn whitelist_spl_mint(
+        ctx: Context<Whitelist>, 
+        signature: [u8; 64],     
+        recovery_id: u8,         
+        message_hash: [u8; 32],   
+        nonce: u64                
+    ) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+
+        validate_signature_or_authority(
+            pda,
+            &ctx.accounts.authority,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+            "whitelist_spl_mint"
+        )?;
+    
         Ok(())
     }
+    
+    pub fn unwhitelist_spl_mint(
+        ctx: Context<Unwhitelist>, 
+        signature: [u8; 64],     
+        recovery_id: u8,         
+        message_hash: [u8; 32],   
+        nonce: u64
+    ) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        
+        validate_signature_or_authority(
+            pda,
+            &ctx.accounts.authority,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+            "unwhitelist_spl_mint"
+        )?;
 
-    pub fn unwhitelist_spl_mint(_ctx: Context<Unwhitelist>) -> Result<()> {
         Ok(())
     }
 
@@ -393,6 +428,49 @@ fn recover_eth_address(
     Ok(eth_address)
 }
 
+fn validate_signature_or_authority(
+    pda: &mut Account<Pda>,
+    authority: &Signer,
+    signature: [u8; 64],
+    recovery_id: u8,
+    message_hash: [u8; 32],
+    nonce: u64,
+    purpose: &str,
+) -> Result<()> {
+    // signature provided, recover and verify that tss is the signer
+    if signature != [0u8; 64] {
+        if nonce != pda.nonce {
+            msg!("mismatch nonce");
+            return err!(Errors::NonceMismatch);
+        }
+
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(purpose.as_bytes());
+        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
+
+        let address = recover_eth_address(&message_hash, recovery_id, &signature)?;
+        if address != pda.tss_address {
+            msg!("ECDSA signature error");
+            return err!(Errors::TSSAuthenticationFailed);
+        }
+        
+        pda.nonce += 1;
+    } else {
+        // no signature provided, fallback to authority check
+        require!(
+            authority.key() == pda.authority,
+            Errors::SignerIsNotAuthority
+        );
+    }
+
+    Ok(())
+}
+
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(mut)]
@@ -513,7 +591,7 @@ pub struct Whitelist<'info> {
     pub whitelist_entry: Account<'info, WhitelistEntry>,
     pub whitelist_candidate: Account<'info, Mint>,
 
-    #[account(mut, seeds = [b"meta"], bump, has_one = authority)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -535,7 +613,7 @@ pub struct Unwhitelist<'info> {
     pub whitelist_entry: Account<'info, WhitelistEntry>,
     pub whitelist_candidate: Account<'info, Mint>,
 
-    #[account(mut, seeds = [b"meta"], bump, has_one = authority)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
     #[account(mut)]
     pub authority: Signer<'info>,

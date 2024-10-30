@@ -190,7 +190,7 @@ describe("some tests", () => {
     })
 
     it("whitelist USDC spl token", async () => {
-        await gatewayProgram.methods.whitelistSplMint().accounts({
+        await gatewayProgram.methods.whitelistSplMint([], 0, [], new anchor.BN(0)).accounts({
             whitelistCandidate: mint.publicKey,
         }).signers([]).rpc();
 
@@ -199,7 +199,6 @@ describe("some tests", () => {
             seeds,
             gatewayProgram.programId,
         );
-        let entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress)
 
         try {
             seeds = [Buffer.from("whitelist", "utf-8"), mint_fake.publicKey.toBuffer()];
@@ -207,7 +206,7 @@ describe("some tests", () => {
                 seeds,
                 gatewayProgram.programId,
             );
-            entry = await gatewayProgram.account.whitelistEntry.fetch(entryAddress);
+            await gatewayProgram.account.whitelistEntry.fetch(entryAddress);
         } catch(err) {
             expect(err.message).to.include("Account does not exist or has no data");
         }
@@ -289,7 +288,6 @@ describe("some tests", () => {
         // expect(account2.amount).to.be.eq(1_000_000n);
 
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-        const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, wallet_ata, wallet.publicKey,  keyPair, gatewayProgram);
@@ -414,7 +412,7 @@ describe("some tests", () => {
     })
 
     it("unwhitelist SPL token and deposit should fail", async () => {
-        await gatewayProgram.methods.unwhitelistSplMint().accounts({
+        await gatewayProgram.methods.unwhitelistSplMint([], 0, [], new anchor.BN(0)).accounts({
             whitelistCandidate: mint.publicKey,
         }).rpc();
 
@@ -427,12 +425,73 @@ describe("some tests", () => {
     });
 
     it("re-whitelist SPL token and deposit should succeed", async () => {
-        await gatewayProgram.methods.whitelistSplMint().accounts({
+        await gatewayProgram.methods.whitelistSplMint([], 0, [], new anchor.BN(0)).accounts({
             whitelistCandidate: mint.publicKey,
         }).rpc();
         await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
     });
 
+    it("unwhitelist SPL token using tss signature and deposit should fail", async () => {
+        const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+        const nonce = pdaAccountData.nonce;
+
+        const buffer = Buffer.concat([
+            Buffer.from("unwhitelist_spl_mint","utf-8"),
+            chain_id_bn.toArrayLike(Buffer, 'be', 8),
+            nonce.toArrayLike(Buffer, 'be', 8),
+        ]);
+        const message_hash = keccak256(buffer);
+        const signature = keyPair.sign(message_hash, 'hex');
+        const { r, s, recoveryParam } = signature;
+        const signatureBuffer = Buffer.concat([
+            r.toArrayLike(Buffer, 'be', 32),
+            s.toArrayLike(Buffer, 'be', 32),
+        ]);
+
+        await gatewayProgram.methods.unwhitelistSplMint(
+            Array.from(signatureBuffer),
+            Number(recoveryParam),
+            Array.from(message_hash),
+            nonce,
+        ).accounts({
+            whitelistCandidate: mint.publicKey,
+        }).rpc();
+
+        try {
+            await depositSplTokens(gatewayProgram, conn, wallet, mint, address)
+        } catch (err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("AccountNotInitialized");
+        }
+    });
+
+    it("re-whitelist SPL token using tss signature and deposit should succeed", async () => {
+        const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+        const nonce = pdaAccountData.nonce;
+
+        const buffer = Buffer.concat([
+            Buffer.from("whitelist_spl_mint","utf-8"),
+            chain_id_bn.toArrayLike(Buffer, 'be', 8),
+            nonce.toArrayLike(Buffer, 'be', 8),
+        ]);
+        const message_hash = keccak256(buffer);
+        const signature = keyPair.sign(message_hash, 'hex');
+        const { r, s, recoveryParam } = signature;
+        const signatureBuffer = Buffer.concat([
+            r.toArrayLike(Buffer, 'be', 32),
+            s.toArrayLike(Buffer, 'be', 32),
+        ]);
+
+        await gatewayProgram.methods.whitelistSplMint(
+            Array.from(signatureBuffer),
+            Number(recoveryParam),
+            Array.from(message_hash),
+            nonce,
+        ).accounts({
+            whitelistCandidate: mint.publicKey,
+        }).rpc();
+        await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
+    });
 
     it("update TSS address", async () => {
         const newTss = new Uint8Array(20);
@@ -469,9 +528,6 @@ describe("some tests", () => {
             expect(err.message).to.include("DepositPaused");
         }
     });
-
-
-
 
     const newAuthority = anchor.web3.Keypair.generate();
     it("update authority", async () => {

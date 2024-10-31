@@ -102,7 +102,7 @@ pub mod gateway {
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         let whitelist_candidate = &mut ctx.accounts.whitelist_candidate;
-        let authority =  &ctx.accounts.authority;
+        let authority = &ctx.accounts.authority;
 
         // signature provided, recover and verify that tss is the signer
         if signature != [0u8; 64] {
@@ -115,15 +115,14 @@ pub mod gateway {
                 nonce,
                 "whitelist_spl_mint",
             )?;
-        }
-        else {
+        } else {
             // no signature provided, fallback to authority check
             require!(
                 authority.key() == pda.authority,
                 Errors::SignerIsNotAuthority
             );
         }
-    
+
         Ok(())
     }
 
@@ -139,7 +138,7 @@ pub mod gateway {
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         let whitelist_candidate: &mut Account<'_, Mint> = &mut ctx.accounts.whitelist_candidate;
-        let authority =  &ctx.accounts.authority;
+        let authority = &ctx.accounts.authority;
 
         // signature provided, recover and verify that tss is the signer
         if signature != [0u8; 64] {
@@ -152,8 +151,7 @@ pub mod gateway {
                 nonce,
                 "unwhitelist_spl_mint",
             )?;
-        }
-        else {
+        } else {
             // no signature provided, fallback to authority check
             require!(
                 authority.key() == pda.authority,
@@ -458,7 +456,7 @@ fn recover_eth_address(
     Ok(eth_address)
 }
 
-// recover and verify tss signature for whitelist and unwhitelist instructions 
+// recover and verify tss signature for whitelist and unwhitelist instructions
 fn validate_whitelist_tss_signature(
     pda: &mut Account<Pda>,
     whitelist_candidate: &mut Account<Mint>,

@@ -90,6 +90,9 @@ pub mod gateway {
         Ok(())
     }
 
+    // whitelist new spl token
+    // in case signature is provided, check if tss is the signer, otherwise check if authority is pda.authority
+    // if succeeds, new whitelist entry account is created
     pub fn whitelist_spl_mint(
         ctx: Context<Whitelist>,
         signature: [u8; 64],
@@ -98,9 +101,11 @@ pub mod gateway {
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
+        let whitelist_candidate = &mut ctx.accounts.whitelist_candidate;
 
         validate_signature_or_authority(
             pda,
+            whitelist_candidate,
             &ctx.accounts.authority,
             signature,
             recovery_id,
@@ -112,6 +117,9 @@ pub mod gateway {
         Ok(())
     }
 
+    // unwhitelist new spl token
+    // in case signature is provided, check if tss is the signer, otherwise check if authority is pda.authority
+    // if succeeds, whitelist entry account is deleted
     pub fn unwhitelist_spl_mint(
         ctx: Context<Unwhitelist>,
         signature: [u8; 64],
@@ -120,9 +128,11 @@ pub mod gateway {
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
+        let whitelist_candidate: &mut Account<'_, Mint> = &mut ctx.accounts.whitelist_candidate;
 
         validate_signature_or_authority(
             pda,
+            whitelist_candidate,
             &ctx.accounts.authority,
             signature,
             recovery_id,
@@ -430,12 +440,13 @@ fn recover_eth_address(
 
 fn validate_signature_or_authority(
     pda: &mut Account<Pda>,
+    whitelist_candidate: &mut Account<Mint>,
     authority: &Signer,
     signature: [u8; 64],
     recovery_id: u8,
     message_hash: [u8; 32],
     nonce: u64,
-    purpose: &str,
+    instruction_name: &str,
 ) -> Result<()> {
     // signature provided, recover and verify that tss is the signer
     if signature != [0u8; 64] {
@@ -445,8 +456,9 @@ fn validate_signature_or_authority(
         }
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(purpose.as_bytes());
+        concatenated_buffer.extend_from_slice(instruction_name.as_bytes());
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&whitelist_candidate.key().to_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),

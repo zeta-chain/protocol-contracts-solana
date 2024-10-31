@@ -431,13 +431,14 @@ describe("some tests", () => {
         await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
     });
 
-    it("unwhitelist SPL token using tss signature and deposit should fail", async () => {
+    it("unwhitelist SPL token using TSS signature and deposit should fail", async () => {
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         const nonce = pdaAccountData.nonce;
 
         const buffer = Buffer.concat([
             Buffer.from("unwhitelist_spl_mint","utf-8"),
             chain_id_bn.toArrayLike(Buffer, 'be', 8),
+            mint.publicKey.toBuffer(),
             nonce.toArrayLike(Buffer, 'be', 8),
         ]);
         const message_hash = keccak256(buffer);
@@ -465,13 +466,14 @@ describe("some tests", () => {
         }
     });
 
-    it("re-whitelist SPL token using tss signature and deposit should succeed", async () => {
+    it("re-whitelist SPL token using TSS signature and deposit should succeed", async () => {
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         const nonce = pdaAccountData.nonce;
 
         const buffer = Buffer.concat([
             Buffer.from("whitelist_spl_mint","utf-8"),
             chain_id_bn.toArrayLike(Buffer, 'be', 8),
+            mint.publicKey.toBuffer(),
             nonce.toArrayLike(Buffer, 'be', 8),
         ]);
         const message_hash = keccak256(buffer);

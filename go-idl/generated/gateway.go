@@ -206,6 +206,33 @@ var IDLGateway = types.IDL{
 			},
 		},
 		{
+			Name:          "initialize_rent_payer",
+			Discriminator: [8]byte{225, 73, 166, 180, 25, 245, 183, 96},
+			Accounts: []types.Account{
+				{
+					Name:     "rent_payer_pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "authority",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
+					PDA:      nil,
+				},
+			},
+		},
+		{
 			Name:          "set_deposit_paused",
 			Discriminator: [8]byte{98, 179, 141, 24, 246, 120, 164, 143},
 			Accounts: []types.Account{
@@ -407,7 +434,21 @@ var IDLGateway = types.IDL{
 					PDA:      nil,
 				},
 				{
-					Name:     "to",
+					Name:     "recipient",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "recipient_ata",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "rent_payer_pda",
 					Writable: true,
 					Signer:   false,
 					Address:  "",
@@ -420,12 +461,33 @@ var IDLGateway = types.IDL{
 					Address:  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
 					PDA:      nil,
 				},
+				{
+					Name:     "associated_token_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
+					PDA:      nil,
+				},
 			},
 		},
 	},
 	Accounts: []types.Account{
 		{
 			Name:     "Pda",
+			Writable: false,
+			Signer:   false,
+			Address:  "",
+			PDA:      nil,
+		},
+		{
+			Name:     "RentPayerPda",
 			Writable: false,
 			Signer:   false,
 			Address:  "",
@@ -459,6 +521,7 @@ const (
 	InstructionDeposit_spl_token          = "deposit_spl_token"
 	InstructionDeposit_spl_token_and_call = "deposit_spl_token_and_call"
 	InstructionInitialize                 = "initialize"
+	InstructionInitialize_rent_payer      = "initialize_rent_payer"
 	InstructionSet_deposit_paused         = "set_deposit_paused"
 	InstructionUnwhitelist_spl_mint       = "unwhitelist_spl_mint"
 	InstructionUpdate_authority           = "update_authority"

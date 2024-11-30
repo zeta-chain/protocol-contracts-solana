@@ -540,7 +540,7 @@ pub struct Initialize<'info> {
 pub struct SetDepositFee<'info> {
     #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
-    
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }

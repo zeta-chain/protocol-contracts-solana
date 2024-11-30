@@ -341,16 +341,9 @@ describe("some tests", () => {
 
     });
 
-    it("withdraw SPL token to a non-existent account should succeed by creating it", async () => {
-        let seeds = [Buffer.from("rent-payer", "utf-8")];
-        const [rentPayerPda] = anchor.web3.PublicKey.findProgramAddressSync(
-            seeds,
-            gatewayProgram.programId,
-        );
-        let rentPayerPdaBal0 = await conn.getBalance(rentPayerPda);
+    it("withdraw SPL token to a non-existent account should succeed by returning without transfer", async () => {
         let pda_ata = await spl.getAssociatedTokenAddress(mint.publicKey, pdaAccount, true);
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-        const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         const wallet2 = anchor.web3.Keypair.generate();
@@ -359,14 +352,9 @@ describe("some tests", () => {
 
         let to_ata_bal = await conn.getBalance(to);
         expect(to_ata_bal).to.be.eq(0); // the new ata account (owned by wallet2) should be non-existent;
-        const txsig = await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
+        await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
         to_ata_bal = await conn.getBalance(to);
-        expect(to_ata_bal).to.be.gt(2_000_000); // the new ata account (owned by wallet2) should be created
-
-        // rent_payer_pda should have reduced balance
-
-        let rentPayerPdaBal1 = await conn.getBalance(rentPayerPda);
-        expect(rentPayerPdaBal0-rentPayerPdaBal1).to.be.eq(to_ata_bal); // rentPayer pays rent
+        expect(to_ata_bal).to.be.eq(0); // still 0 balance
     });
 
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {

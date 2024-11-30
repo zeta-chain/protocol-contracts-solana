@@ -3,9 +3,7 @@ use anchor_lang::system_program;
 use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
 use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::keccak::hash;
-use solana_program::program::invoke;
 use solana_program::secp256k1_recover::secp256k1_recover;
-use spl_associated_token_account::instruction::create_associated_token_account;
 use std::mem::size_of;
 
 #[error_code]
@@ -339,7 +337,6 @@ pub mod gateway {
         );
 
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
-        msg!("recovered address {:?}", address);
         if address != pda.tss_address {
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
@@ -367,73 +364,30 @@ pub mod gateway {
             Errors::SPLAtaAndMintAddressMismatch,
         );
 
-        // test whether the recipient_ata is created or not; if not, create it
+        // test whether the recipient_ata is created or not; if not log and exit successfully
         let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();
         if recipient_ata_account.lamports() == 0
             || *recipient_ata_account.owner == ctx.accounts.system_program.key()
         {
             // if lamports of recipient_ata_account is 0 or its owner being system program then it's not created
-            msg!(
-                "Creating associated token account {:?} for recipient {:?}...",
-                recipient_ata_account.key(),
-                ctx.accounts.recipient.key(),
-            );
-            let signer_info = &ctx.accounts.signer.to_account_info();
-            let bal_before = signer_info.lamports();
-            invoke(
-                &create_associated_token_account(
-                    ctx.accounts.signer.to_account_info().key,
-                    ctx.accounts.recipient.to_account_info().key,
-                    ctx.accounts.mint_account.to_account_info().key,
-                    ctx.accounts.token_program.key,
-                ),
-                &[
-                    ctx.accounts.mint_account.to_account_info().clone(),
-                    ctx.accounts.recipient_ata.clone(),
-                    ctx.accounts.recipient.to_account_info().clone(),
-                    ctx.accounts.signer.to_account_info().clone(),
-                    ctx.accounts.system_program.to_account_info().clone(),
-                    ctx.accounts.token_program.to_account_info().clone(),
-                    ctx.accounts
-                        .associated_token_program
-                        .to_account_info()
-                        .clone(),
-                ],
-            )?;
-            let bal_after = signer_info.lamports();
-
-            msg!("Associated token account for recipient created!");
-            msg!(
-                "Refunding the rent paid by the signer {:?}",
-                ctx.accounts.signer.to_account_info().key
+            msg!("recipient ATA account does not exist");
+        } else {
+            let xfer_ctx = CpiContext::new_with_signer(
+                token.to_account_info(),
+                anchor_spl::token::TransferChecked {
+                    from: ctx.accounts.pda_ata.to_account_info(),
+                    mint: ctx.accounts.mint_account.to_account_info(),
+                    to: ctx.accounts.recipient_ata.to_account_info(),
+                    authority: pda.to_account_info(),
+                },
+                signer_seeds,
             );
 
-            let rent_payer_info = ctx.accounts.rent_payer_pda.to_account_info();
-            let cost = bal_before - bal_after;
-            rent_payer_info.sub_lamports(cost)?;
-            signer_info.add_lamports(cost)?;
-            msg!(
-                "Signer refunded the ATA account creation rent amount {:?} lamports",
-                cost,
-            );
+            transfer_checked(xfer_ctx, amount, decimals)?;
+            msg!("withdraw spl token successfully");
         }
 
-        let xfer_ctx = CpiContext::new_with_signer(
-            token.to_account_info(),
-            anchor_spl::token::TransferChecked {
-                from: ctx.accounts.pda_ata.to_account_info(),
-                mint: ctx.accounts.mint_account.to_account_info(),
-                to: ctx.accounts.recipient_ata.to_account_info(),
-                authority: pda.to_account_info(),
-            },
-            signer_seeds,
-        );
-
         pda.nonce += 1;
-
-        transfer_checked(xfer_ctx, amount, decimals)?;
-        msg!("withdraw spl token successfully");
-
         Ok(())
     }
 }
@@ -566,8 +520,6 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut)]
     pub recipient_ata: AccountInfo<'info>,
 
-    #[account(mut, seeds = [b"rent-payer"], bump)]
-    pub rent_payer_pda: Account<'info, RentPayerPda>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,

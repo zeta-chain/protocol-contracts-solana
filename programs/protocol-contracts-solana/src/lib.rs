@@ -30,6 +30,8 @@ pub enum Errors {
     DepositPaused,
     #[msg("SPLAtaAndMintAddressMismatch")]
     SPLAtaAndMintAddressMismatch,
+    #[msg("EmptyReceiver")]
+    EmptyReceiver,
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
@@ -44,12 +46,27 @@ pub mod gateway {
         chain_id: u64,
     ) -> Result<()> {
         let initialized_pda = &mut ctx.accounts.pda;
+
         initialized_pda.nonce = 0;
         initialized_pda.tss_address = tss_address;
         initialized_pda.authority = ctx.accounts.signer.key();
         initialized_pda.chain_id = chain_id;
         initialized_pda.deposit_paused = false;
+        initialized_pda.deposit_fee = 2_000_000; // 0.002 SOL
+        initialized_pda.bump = ctx.bumps.pda;
 
+        Ok(())
+    }
+
+    // admin function to change deposit fee
+    pub fn set_deposit_fee(ctx: Context<SetDepositFee>, fee: u64) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(
+            ctx.accounts.signer.key() == pda.authority,
+            Errors::SignerIsNotAuthority
+        );
+        pda.deposit_fee = fee;
+        msg!("Deposit fee set to: {} lamports", fee);
         Ok(())
     }
 
@@ -103,6 +120,8 @@ pub mod gateway {
         let pda = &mut ctx.accounts.pda;
         let whitelist_candidate = &mut ctx.accounts.whitelist_candidate;
         let authority = &ctx.accounts.authority;
+
+        ctx.accounts.whitelist_entry.bump = ctx.bumps.whitelist_entry;
 
         // signature provided, recover and verify that tss is the signer
         if signature != [0u8; 64] {
@@ -162,7 +181,8 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn initialize_rent_payer(_ctx: Context<InitializeRentPayer>) -> Result<()> {
+    pub fn initialize_rent_payer(ctx: Context<InitializeRentPayer>) -> Result<()> {
+        ctx.accounts.rent_payer_pda.bump = ctx.bumps.rent_payer_pda;
         Ok(())
     }
 
@@ -177,7 +197,9 @@ pub mod gateway {
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
+        require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
+        let total_amount = amount + pda.deposit_fee;
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -185,11 +207,11 @@ pub mod gateway {
                 to: ctx.accounts.pda.to_account_info().clone(),
             },
         );
-        system_program::transfer(cpi_context, amount)?;
+        system_program::transfer(cpi_context, total_amount)?;
         msg!(
             "{:?} deposits {:?} lamports to PDA; receiver {:?}",
             ctx.accounts.signer.key(),
-            amount,
+            total_amount,
             receiver,
         );
 
@@ -226,6 +248,17 @@ pub mod gateway {
 
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
+        require!(receiver != [0u8; 20], Errors::EmptyReceiver);
+
+        // transfer deposit_fee
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.signer.to_account_info().clone(),
+                to: pda.to_account_info().clone(),
+            },
+        );
+        system_program::transfer(cpi_context, pda.deposit_fee)?;
 
         let pda_ata = get_associated_token_address(&ctx.accounts.pda.key(), &from.mint);
         // must deposit to the ATA from PDA in order to receive credit
@@ -355,7 +388,7 @@ pub mod gateway {
         );
 
         let token = &ctx.accounts.token_program;
-        let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
+        let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[pda.bump]]];
 
         // make sure that ctx.accounts.recipient_ata is ATA (PDA account of token program)
         let recipient_ata = get_associated_token_address(
@@ -504,11 +537,20 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
+pub struct SetDepositFee<'info> {
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
+    pub pda: Account<'info, Pda>,
+    
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     pub system_program: Program<'info, System>,
@@ -519,10 +561,10 @@ pub struct DepositSplToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
-    #[account(seeds=[b"whitelist", mint_account.key().as_ref()], bump)]
+    #[account(seeds = [b"whitelist", mint_account.key().as_ref()], bump = whitelist_entry.bump)]
     pub whitelist_entry: Account<'info, WhitelistEntry>, // attach whitelist entry to show the mint_account is whitelisted
 
     pub mint_account: Account<'info, Mint>,
@@ -531,8 +573,11 @@ pub struct DepositSplToken<'info> {
 
     #[account(mut)]
     pub from: Account<'info, TokenAccount>, // this must be owned by signer; normally the ATA of signer
+
     #[account(mut)]
     pub to: Account<'info, TokenAccount>, // this must be ATA of PDA
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -540,8 +585,9 @@ pub struct Withdraw<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
+
     /// CHECK: to account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
     #[account(mut)]
     pub to: UncheckedAccount<'info>,
@@ -552,7 +598,7 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     #[account(mut, associated_token::mint = mint_account, associated_token::authority = pda)]
@@ -566,33 +612,39 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut)]
     pub recipient_ata: AccountInfo<'info>,
 
-    #[account(mut, seeds = [b"rent-payer"], bump)]
+    #[account(mut, seeds = [b"rent-payer"], bump = rent_payer_pda.bump)]
     pub rent_payer_pda: Account<'info, RentPayerPda>,
+
     pub token_program: Program<'info, Token>,
+
     pub associated_token_program: Program<'info, AssociatedToken>,
+
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateTss<'info> {
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateAuthority<'info> {
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct UpdatePaused<'info> {
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
@@ -601,19 +653,21 @@ pub struct UpdatePaused<'info> {
 pub struct Whitelist<'info> {
     #[account(
         init,
-        space=8,
+        space = size_of::< WhitelistEntry > () + 8,
         payer=authority,
-        seeds=[
+        seeds = [
             b"whitelist",
             whitelist_candidate.key().as_ref()
         ],
         bump
     )]
     pub whitelist_entry: Account<'info, WhitelistEntry>,
+
     pub whitelist_candidate: Account<'info, Mint>,
 
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub authority: Signer<'info>,
 
@@ -624,7 +678,7 @@ pub struct Whitelist<'info> {
 pub struct Unwhitelist<'info> {
     #[account(
         mut,
-        seeds=[
+        seeds = [
             b"whitelist",
             whitelist_candidate.key().as_ref()
         ],
@@ -632,10 +686,12 @@ pub struct Unwhitelist<'info> {
         close = authority,
     )]
     pub whitelist_entry: Account<'info, WhitelistEntry>,
+
     pub whitelist_candidate: Account<'info, Mint>,
 
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub authority: Signer<'info>,
 
@@ -644,10 +700,12 @@ pub struct Unwhitelist<'info> {
 
 #[derive(Accounts)]
 pub struct InitializeRentPayer<'info> {
-    #[account(init, payer = authority, space = 8, seeds = [b"rent-payer"], bump)]
+    #[account(init, payer = authority, space = size_of::< RentPayerPda > () + 8, seeds = [b"rent-payer"], bump)]
     pub rent_payer_pda: Account<'info, RentPayerPda>,
+
     #[account(mut)]
     pub authority: Signer<'info>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -658,13 +716,19 @@ pub struct Pda {
     authority: Pubkey,
     chain_id: u64,
     deposit_paused: bool,
+    deposit_fee: u64,
+    bump: u8,
 }
 
 #[account]
-pub struct WhitelistEntry {}
+pub struct WhitelistEntry {
+    bump: u8,
+}
 
 #[account]
-pub struct RentPayerPda {}
+pub struct RentPayerPda {
+    bump: u8,
+}
 
 #[cfg(test)]
 mod tests {

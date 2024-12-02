@@ -199,7 +199,7 @@ pub mod gateway {
         require!(!pda.deposit_paused, Errors::DepositPaused);
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
-        let total_amount = amount + pda.deposit_fee;
+        let amount_with_fees = amount + pda.deposit_fee;
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -207,11 +207,12 @@ pub mod gateway {
                 to: ctx.accounts.pda.to_account_info().clone(),
             },
         );
-        system_program::transfer(cpi_context, total_amount)?;
+        system_program::transfer(cpi_context, amount_with_fees)?;
         msg!(
-            "{:?} deposits {:?} lamports to PDA; receiver {:?}",
+            "{:?} deposits {:?} lamports to PDA with fee {:?}; receiver {:?}",
             ctx.accounts.signer.key(),
-            total_amount,
+            amount,
+            ctx.accounts.pda.deposit_fee,
             receiver,
         );
 

@@ -40,6 +40,8 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 pub mod gateway {
     use super::*;
 
+    const DEPOSIT_FEE: u64 = 2_000_000;
+
     pub fn initialize(
         ctx: Context<Initialize>,
         tss_address: [u8; 20],
@@ -182,8 +184,7 @@ pub mod gateway {
         require!(!pda.deposit_paused, Errors::DepositPaused);
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
-        let deposit_fee = 2_000_000;
-        let amount_with_fees = amount + deposit_fee;
+        let amount_with_fees = amount + DEPOSIT_FEE;
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -196,7 +197,7 @@ pub mod gateway {
             "{:?} deposits {:?} lamports to PDA with fee {:?}; receiver {:?}",
             ctx.accounts.signer.key(),
             amount,
-            deposit_fee,
+            DEPOSIT_FEE,
             receiver,
         );
 
@@ -236,7 +237,6 @@ pub mod gateway {
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
         // transfer deposit_fee
-        let deposit_fee = 2_000_000;
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -244,7 +244,7 @@ pub mod gateway {
                 to: pda.to_account_info().clone(),
             },
         );
-        system_program::transfer(cpi_context, deposit_fee)?;
+        system_program::transfer(cpi_context, DEPOSIT_FEE)?;
 
         let pda_ata = get_associated_token_address(&ctx.accounts.pda.key(), &from.mint);
         // must deposit to the ATA from PDA in order to receive credit

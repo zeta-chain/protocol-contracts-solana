@@ -52,21 +52,8 @@ pub mod gateway {
         initialized_pda.authority = ctx.accounts.signer.key();
         initialized_pda.chain_id = chain_id;
         initialized_pda.deposit_paused = false;
-        initialized_pda.deposit_fee = 2_000_000; // 0.002 SOL
         initialized_pda.bump = ctx.bumps.pda;
 
-        Ok(())
-    }
-
-    // admin function to change deposit fee
-    pub fn set_deposit_fee(ctx: Context<SetDepositFee>, fee: u64) -> Result<()> {
-        let pda = &mut ctx.accounts.pda;
-        require!(
-            ctx.accounts.signer.key() == pda.authority,
-            Errors::SignerIsNotAuthority
-        );
-        pda.deposit_fee = fee;
-        msg!("Deposit fee set to: {} lamports", fee);
         Ok(())
     }
 
@@ -199,7 +186,8 @@ pub mod gateway {
         require!(!pda.deposit_paused, Errors::DepositPaused);
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
-        let amount_with_fees = amount + pda.deposit_fee;
+        let deposit_fee = 2_000_000;
+        let amount_with_fees = amount + deposit_fee;
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -212,7 +200,7 @@ pub mod gateway {
             "{:?} deposits {:?} lamports to PDA with fee {:?}; receiver {:?}",
             ctx.accounts.signer.key(),
             amount,
-            ctx.accounts.pda.deposit_fee,
+            deposit_fee,
             receiver,
         );
 
@@ -252,6 +240,7 @@ pub mod gateway {
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
         // transfer deposit_fee
+        let deposit_fee = 2_000_000;
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -259,7 +248,7 @@ pub mod gateway {
                 to: pda.to_account_info().clone(),
             },
         );
-        system_program::transfer(cpi_context, pda.deposit_fee)?;
+        system_program::transfer(cpi_context, deposit_fee)?;
 
         let pda_ata = get_associated_token_address(&ctx.accounts.pda.key(), &from.mint);
         // must deposit to the ATA from PDA in order to receive credit
@@ -717,7 +706,6 @@ pub struct Pda {
     authority: Pubkey,
     chain_id: u64,
     deposit_paused: bool,
-    deposit_fee: u64,
     bump: u8,
 }
 

@@ -639,7 +639,7 @@ pub struct UpdatePaused<'info> {
 pub struct Whitelist<'info> {
     #[account(
         init,
-        space = size_of::< WhitelistEntry > () + 8,
+        space = 8,
         payer=authority,
         seeds = [
             b"whitelist",
@@ -686,7 +686,7 @@ pub struct Unwhitelist<'info> {
 
 #[derive(Accounts)]
 pub struct InitializeRentPayer<'info> {
-    #[account(init, payer = authority, space = size_of::< RentPayerPda > () + 8, seeds = [b"rent-payer"], bump)]
+    #[account(init, payer = authority, space = 8, seeds = [b"rent-payer"], bump)]
     pub rent_payer_pda: Account<'info, RentPayerPda>,
 
     #[account(mut)]

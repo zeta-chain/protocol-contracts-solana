@@ -30,6 +30,8 @@ pub enum Errors {
     DepositPaused,
     #[msg("SPLAtaAndMintAddressMismatch")]
     SPLAtaAndMintAddressMismatch,
+    #[msg("EmptyReceiver")]
+    EmptyReceiver,
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
@@ -38,12 +40,15 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 pub mod gateway {
     use super::*;
 
+    const DEPOSIT_FEE: u64 = 2_000_000;
+
     pub fn initialize(
         ctx: Context<Initialize>,
         tss_address: [u8; 20],
         chain_id: u64,
     ) -> Result<()> {
         let initialized_pda = &mut ctx.accounts.pda;
+
         initialized_pda.nonce = 0;
         initialized_pda.tss_address = tss_address;
         initialized_pda.authority = ctx.accounts.signer.key();
@@ -177,7 +182,9 @@ pub mod gateway {
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
+        require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
+        let amount_with_fees = amount + DEPOSIT_FEE;
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -185,11 +192,12 @@ pub mod gateway {
                 to: ctx.accounts.pda.to_account_info().clone(),
             },
         );
-        system_program::transfer(cpi_context, amount)?;
+        system_program::transfer(cpi_context, amount_with_fees)?;
         msg!(
-            "{:?} deposits {:?} lamports to PDA; receiver {:?}",
+            "{:?} deposits {:?} lamports to PDA with fee {:?}; receiver {:?}",
             ctx.accounts.signer.key(),
             amount,
+            DEPOSIT_FEE,
             receiver,
         );
 
@@ -226,6 +234,17 @@ pub mod gateway {
 
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
+        require!(receiver != [0u8; 20], Errors::EmptyReceiver);
+
+        // transfer deposit_fee
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.signer.to_account_info().clone(),
+                to: pda.to_account_info().clone(),
+            },
+        );
+        system_program::transfer(cpi_context, DEPOSIT_FEE)?;
 
         let pda_ata = get_associated_token_address(&ctx.accounts.pda.key(), &from.mint);
         // must deposit to the ATA from PDA in order to receive credit
@@ -519,10 +538,10 @@ pub struct DepositSplToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
-    #[account(seeds=[b"whitelist", mint_account.key().as_ref()], bump)]
+    #[account(seeds = [b"whitelist", mint_account.key().as_ref()], bump)]
     pub whitelist_entry: Account<'info, WhitelistEntry>, // attach whitelist entry to show the mint_account is whitelisted
 
     pub mint_account: Account<'info, Mint>,
@@ -531,8 +550,11 @@ pub struct DepositSplToken<'info> {
 
     #[account(mut)]
     pub from: Account<'info, TokenAccount>, // this must be owned by signer; normally the ATA of signer
+
     #[account(mut)]
     pub to: Account<'info, TokenAccount>, // this must be ATA of PDA
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -542,6 +564,7 @@ pub struct Withdraw<'info> {
 
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     /// CHECK: to account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
     #[account(mut)]
     pub to: UncheckedAccount<'info>,
@@ -568,8 +591,11 @@ pub struct WithdrawSPLToken<'info> {
 
     #[account(mut, seeds = [b"rent-payer"], bump)]
     pub rent_payer_pda: Account<'info, RentPayerPda>,
+
     pub token_program: Program<'info, Token>,
+
     pub associated_token_program: Program<'info, AssociatedToken>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -577,6 +603,7 @@ pub struct WithdrawSPLToken<'info> {
 pub struct UpdateTss<'info> {
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
@@ -585,6 +612,7 @@ pub struct UpdateTss<'info> {
 pub struct UpdateAuthority<'info> {
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
@@ -593,6 +621,7 @@ pub struct UpdateAuthority<'info> {
 pub struct UpdatePaused<'info> {
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
@@ -601,19 +630,21 @@ pub struct UpdatePaused<'info> {
 pub struct Whitelist<'info> {
     #[account(
         init,
-        space=8,
+        space = 8,
         payer=authority,
-        seeds=[
+        seeds = [
             b"whitelist",
             whitelist_candidate.key().as_ref()
         ],
         bump
     )]
     pub whitelist_entry: Account<'info, WhitelistEntry>,
+
     pub whitelist_candidate: Account<'info, Mint>,
 
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub authority: Signer<'info>,
 
@@ -624,7 +655,7 @@ pub struct Whitelist<'info> {
 pub struct Unwhitelist<'info> {
     #[account(
         mut,
-        seeds=[
+        seeds = [
             b"whitelist",
             whitelist_candidate.key().as_ref()
         ],
@@ -632,10 +663,12 @@ pub struct Unwhitelist<'info> {
         close = authority,
     )]
     pub whitelist_entry: Account<'info, WhitelistEntry>,
+
     pub whitelist_candidate: Account<'info, Mint>,
 
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
+
     #[account(mut)]
     pub authority: Signer<'info>,
 
@@ -646,8 +679,10 @@ pub struct Unwhitelist<'info> {
 pub struct InitializeRentPayer<'info> {
     #[account(init, payer = authority, space = 8, seeds = [b"rent-payer"], bump)]
     pub rent_payer_pda: Account<'info, RentPayerPda>,
+
     #[account(mut)]
     pub authority: Signer<'info>,
+
     pub system_program: Program<'info, System>,
 }
 

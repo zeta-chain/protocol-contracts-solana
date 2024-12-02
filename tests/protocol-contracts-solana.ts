@@ -65,6 +65,7 @@ async function depositSplTokens(gatewayProgram: Program<Gateway>, conn: anchor.w
     }).rpc({commitment: 'processed'});
     return;
 }
+
 async function withdrawSplToken( mint, decimals, amount, nonce,from, to, to_owner, tssKey, gatewayProgram: Program<Gateway>) {
     const buffer = Buffer.concat([
         Buffer.from("withdraw_spl_token","utf-8"),
@@ -92,7 +93,7 @@ async function withdrawSplToken( mint, decimals, amount, nonce,from, to, to_owne
 }
 
 
-describe("some tests", () => {
+describe("Gateway", () => {
     // Configure the client to use the local cluster.
     anchor.setProvider(anchor.AnchorProvider.env());
     const conn = anchor.getProvider().connection;
@@ -275,6 +276,7 @@ describe("some tests", () => {
                 to: fake_pda_ata.address,
                 mintAccount: mint_fake.publicKey,
             }).rpc({commitment: 'processed'});
+            throw new Error("Expected error not thrown");
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("AccountNotInitialized");
@@ -369,10 +371,21 @@ describe("some tests", () => {
         expect(rentPayerPdaBal0-rentPayerPdaBal1).to.be.eq(to_ata_bal); // rentPayer pays rent
     });
 
+    it("fails to deposit if receiver is empty address", async() => {
+        try {
+            await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), Array(20).fill(0)).accounts({}).rpc();
+            throw new Error("Expected error not thrown");
+        } catch(err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("EmptyReceiver");
+        }
+    });
+
     it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
         await gatewayProgram.methods.deposit(new anchor.BN(1_000_000_000), Array.from(address)).accounts({}).rpc();
         let bal1 = await conn.getBalance(pdaAccount);
-        expect(bal1).to.be.gte(1_000_000_000);
+        // amount + deposit fee
+        expect(bal1).to.be.gte(1_000_000_000 + 2_000_000);
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
         const nonce = pdaAccountData.nonce;
         const amount = new anchor.BN(500000000);
@@ -402,6 +415,16 @@ describe("some tests", () => {
         let bal3 = await conn.getBalance(to);
         expect(bal3).to.be.gte(500_000_000);
     })
+    
+    it("fails to deposit and call if receiver is empty address", async() => {
+        try {
+            await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array(20).fill(0), Buffer.from("hello", "utf-8")).accounts({}).rpc();
+            throw new Error("Expected error not thrown");
+        } catch(err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("EmptyReceiver");
+        }
+    });
 
     it("deposit and call", async () => {
         let bal1 = await conn.getBalance(pdaAccount);
@@ -411,13 +434,24 @@ describe("some tests", () => {
         expect(bal2-bal1).to.be.gte(1_000_000_000);
     })
 
+    it("fails to deposit spl if receiver is empty address", async () => {
+        try {
+            await depositSplTokens(gatewayProgram, conn, wallet, mint, Buffer.alloc(20))
+            throw new Error("Expected error not thrown");
+        } catch (err) {
+            expect(err).to.be.instanceof(anchor.AnchorError);
+            expect(err.message).to.include("EmptyReceiver");
+        }
+    });
+
     it("unwhitelist SPL token and deposit should fail", async () => {
         await gatewayProgram.methods.unwhitelistSplMint([], 0, [], new anchor.BN(0)).accounts({
             whitelistCandidate: mint.publicKey,
         }).rpc();
 
         try {
-            await depositSplTokens(gatewayProgram, conn, wallet, mint, address)
+            await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
+            throw new Error("Expected error not thrown");
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("AccountNotInitialized");
@@ -459,7 +493,8 @@ describe("some tests", () => {
         }).rpc();
 
         try {
-            await depositSplTokens(gatewayProgram, conn, wallet, mint, address)
+            await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
+            throw new Error("Expected error not thrown");
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("AccountNotInitialized");
@@ -509,6 +544,7 @@ describe("some tests", () => {
             await gatewayProgram.methods.updateTss(Array.from(newTss)).accounts({
                 signer: mint.publicKey,
             }).signers([mint]).rpc();
+            throw new Error("Expected error not thrown");
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("SignerIsNotAuthority");
@@ -525,6 +561,7 @@ describe("some tests", () => {
         // now try deposit, should fail
         try {
             await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000), Array.from(address), Buffer.from('hi', 'utf-8')).accounts({}).rpc();
+            throw new Error("Expected error not thrown");
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("DepositPaused");
@@ -533,14 +570,11 @@ describe("some tests", () => {
 
     const newAuthority = anchor.web3.Keypair.generate();
     it("update authority", async () => {
-        await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).accounts({
-
-        }).rpc();
+        await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).accounts({}).rpc();
         // now the old authority cannot update TSS address and will fail
         try {
-            await gatewayProgram.methods.updateTss(Array.from(new Uint8Array(20))).accounts({
-
-            }).rpc();
+            await gatewayProgram.methods.updateTss(Array.from(new Uint8Array(20))).accounts({}).rpc();
+            throw new Error("Expected error not thrown");
         } catch (err) {
             expect(err).to.be.instanceof(anchor.AnchorError);
             expect(err.message).to.include("SignerIsNotAuthority");

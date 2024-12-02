@@ -523,15 +523,6 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-pub struct SetDepositFee<'info> {
-    #[account(mut, seeds = [b"meta"], bump)]
-    pub pda: Account<'info, Pda>,
-
-    #[account(mut)]
-    pub signer: Signer<'info>,
-}
-
-#[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,

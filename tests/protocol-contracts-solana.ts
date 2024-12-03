@@ -126,12 +126,6 @@ describe("Gateway", () => {
         gatewayProgram.programId,
     );
 
-    let rentPayerSeeds = [Buffer.from("rent-payer", "utf-8")];
-    let [rentPayerPdaAccount] =  anchor.web3.PublicKey.findProgramAddressSync(
-        rentPayerSeeds,
-        gatewayProgram.programId,
-    );
-
     it("Initializes the program", async () => {
         await gatewayProgram.methods.initialize(tssAddress, chain_id_bn).rpc();
 
@@ -143,18 +137,6 @@ describe("Gateway", () => {
             expect(err).to.be.not.null;
         }
     });
-    it("initialize the rent payer PDA",async() => {
-        await gatewayProgram.methods.initializeRentPayer().rpc();
-        let instr = web3.SystemProgram.transfer({
-           fromPubkey: wallet.publicKey,
-           toPubkey: rentPayerPdaAccount,
-           lamports: 100000000,
-        });
-        let tx = new web3.Transaction();
-        tx.add(instr);
-        await web3.sendAndConfirmTransaction(conn,tx,[wallet]);
-    });
-
 
     it("Mint a SPL USDC token", async () => {
         // now deploying a fake USDC SPL Token

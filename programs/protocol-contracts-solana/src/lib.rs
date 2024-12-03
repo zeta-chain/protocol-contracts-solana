@@ -167,10 +167,6 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn initialize_rent_payer(_ctx: Context<InitializeRentPayer>) -> Result<()> {
-        Ok(())
-    }
-
     // deposit SOL into this program and the `receiver` on ZetaChain zEVM
     // will get corresponding ZRC20 credit.
     // amount: amount of lamports (10^-9 SOL) to deposit
@@ -590,9 +586,6 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut)]
     pub recipient_ata: AccountInfo<'info>,
 
-    #[account(mut, seeds = [b"rent-payer"], bump)]
-    pub rent_payer_pda: Account<'info, RentPayerPda>,
-
     pub token_program: Program<'info, Token>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -669,17 +662,6 @@ pub struct Unwhitelist<'info> {
 
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
-
-    #[account(mut)]
-    pub authority: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct InitializeRentPayer<'info> {
-    #[account(init, payer = authority, space = 8, seeds = [b"rent-payer"], bump)]
-    pub rent_payer_pda: Account<'info, RentPayerPda>,
 
     #[account(mut)]
     pub authority: Signer<'info>,

@@ -386,8 +386,7 @@ describe("Gateway", () => {
         to_ata_bal = await conn.getBalance(to);
         expect(to_ata_bal).to.be.gt(2_000_000); // the new ata account (owned by wallet2) should be created
 
-        // rent_payer_pda should have reduced balance
-
+        // pda should have reduced balance
         let rentPayerPdaBal1 = await conn.getBalance(pdaAccount);
         // expected reimbursement to be gas fee (5000 lamports) + ATA creation cost 2039280 lamports
         expect(rentPayerPdaBal0-rentPayerPdaBal1).to.be.eq(to_ata_bal + 5000); // rentPayer pays rent

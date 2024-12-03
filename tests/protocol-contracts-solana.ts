@@ -372,20 +372,12 @@ describe("Gateway", () => {
     })
 
     it("withdraw SPL token to a non-existent account should succeed by creating it", async () => {
-        let seeds = [Buffer.from("rent-payer", "utf-8")];
-        const [rentPayerPda] = anchor.web3.PublicKey.findProgramAddressSync(
-            seeds,
-            gatewayProgram.programId,
-        );
         let rentPayerPdaBal0 = await conn.getBalance(pdaAccount);
         let pda_ata = await spl.getAssociatedTokenAddress(mint.publicKey, pdaAccount, true);
         const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-        const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
         const amount = new anchor.BN(500_000);
         const nonce = pdaAccountData.nonce;
         const wallet2 = anchor.web3.Keypair.generate();
-
-
         const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
 
         let to_ata_bal = await conn.getBalance(to);

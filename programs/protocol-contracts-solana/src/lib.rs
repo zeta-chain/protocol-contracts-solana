@@ -446,6 +446,8 @@ pub mod gateway {
         // Note: this pda.sub_lamports() must be done here due to this issue https://github.com/solana-labs/solana/issues/9711
         // otherwise the previous CPI calls might fail with error:
         // "sum of account balances before and after instruction do not match"
+        // Note2: to keep PDA from deficit, all SPL ZRC20 contracts needs to charge withdraw fee of
+        // at least 5000(gas)+2039280(rent) lamports.
         let reimbursement = cost_gas + *cost_ata_create;
         pda.sub_lamports(reimbursement)?;
         ctx.accounts.signer.add_lamports(reimbursement)?;

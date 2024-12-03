@@ -167,10 +167,6 @@ pub mod gateway {
         Ok(())
     }
 
-    pub fn initialize_rent_payer(_ctx: Context<InitializeRentPayer>) -> Result<()> {
-        Ok(())
-    }
-
     // deposit SOL into this program and the `receiver` on ZetaChain zEVM
     // will get corresponding ZRC20 credit.
     // amount: amount of lamports (10^-9 SOL) to deposit
@@ -386,6 +382,9 @@ pub mod gateway {
             Errors::SPLAtaAndMintAddressMismatch,
         );
 
+        let cost_gas = 5000; // default gas cost in lamports
+        let cost_ata_create = &mut 0; // will be updated if ATA creation is needed
+
         // test whether the recipient_ata is created or not; if not, create it
         let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();
         if recipient_ata_account.lamports() == 0
@@ -397,8 +396,7 @@ pub mod gateway {
                 recipient_ata_account.key(),
                 ctx.accounts.recipient.key(),
             );
-            let signer_info = &ctx.accounts.signer.to_account_info();
-            let bal_before = signer_info.lamports();
+            let bal_before = ctx.accounts.signer.lamports();
             invoke(
                 &create_associated_token_account(
                     ctx.accounts.signer.to_account_info().key,
@@ -419,21 +417,14 @@ pub mod gateway {
                         .clone(),
                 ],
             )?;
-            let bal_after = signer_info.lamports();
+            let bal_after = ctx.accounts.signer.lamports();
+            *cost_ata_create = bal_before - bal_after;
 
             msg!("Associated token account for recipient created!");
             msg!(
-                "Refunding the rent paid by the signer {:?}",
+                "Refunding the rent ({:?} lamports) paid by the signer {:?}",
+                cost_ata_create,
                 ctx.accounts.signer.to_account_info().key
-            );
-
-            let rent_payer_info = ctx.accounts.rent_payer_pda.to_account_info();
-            let cost = bal_before - bal_after;
-            rent_payer_info.sub_lamports(cost)?;
-            signer_info.add_lamports(cost)?;
-            msg!(
-                "Signer refunded the ATA account creation rent amount {:?} lamports",
-                cost,
             );
         }
 
@@ -452,6 +443,14 @@ pub mod gateway {
 
         transfer_checked(xfer_ctx, amount, decimals)?;
         msg!("withdraw spl token successfully");
+        // Note: this pda.sub_lamports() must be done here due to this issue https://github.com/solana-labs/solana/issues/9711
+        // otherwise the previous CPI calls might fail with error:
+        // "sum of account balances before and after instruction do not match"
+        // Note2: to keep PDA from deficit, all SPL ZRC20 contracts needs to charge withdraw fee of
+        // at least 5000(gas)+2039280(rent) lamports.
+        let reimbursement = cost_gas + *cost_ata_create;
+        pda.sub_lamports(reimbursement)?;
+        ctx.accounts.signer.add_lamports(reimbursement)?;
 
         Ok(())
     }
@@ -589,9 +588,6 @@ pub struct WithdrawSPLToken<'info> {
     #[account(mut)]
     pub recipient_ata: AccountInfo<'info>,
 
-    #[account(mut, seeds = [b"rent-payer"], bump)]
-    pub rent_payer_pda: Account<'info, RentPayerPda>,
-
     pub token_program: Program<'info, Token>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -668,17 +664,6 @@ pub struct Unwhitelist<'info> {
 
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
-
-    #[account(mut)]
-    pub authority: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct InitializeRentPayer<'info> {
-    #[account(init, payer = authority, space = 8, seeds = [b"rent-payer"], bump)]
-    pub rent_payer_pda: Account<'info, RentPayerPda>,
 
     #[account(mut)]
     pub authority: Signer<'info>,

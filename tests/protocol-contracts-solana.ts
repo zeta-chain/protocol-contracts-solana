@@ -126,12 +126,6 @@ describe("Gateway", () => {
         gatewayProgram.programId,
     );
 
-    let rentPayerSeeds = [Buffer.from("rent-payer", "utf-8")];
-    let [rentPayerPdaAccount] =  anchor.web3.PublicKey.findProgramAddressSync(
-        rentPayerSeeds,
-        gatewayProgram.programId,
-    );
-
     it("Initializes the program", async () => {
         await gatewayProgram.methods.initialize(tssAddress, chain_id_bn).rpc();
 
@@ -143,18 +137,6 @@ describe("Gateway", () => {
             expect(err).to.be.not.null;
         }
     });
-    it("initialize the rent payer PDA",async() => {
-        await gatewayProgram.methods.initializeRentPayer().rpc();
-        let instr = web3.SystemProgram.transfer({
-           fromPubkey: wallet.publicKey,
-           toPubkey: rentPayerPdaAccount,
-           lamports: 100000000,
-        });
-        let tx = new web3.Transaction();
-        tx.add(instr);
-        await web3.sendAndConfirmTransaction(conn,tx,[wallet]);
-    });
-
 
     it("Mint a SPL USDC token", async () => {
         // now deploying a fake USDC SPL Token
@@ -343,33 +325,6 @@ describe("Gateway", () => {
 
     });
 
-    it("withdraw SPL token to a non-existent account should succeed by creating it", async () => {
-        let seeds = [Buffer.from("rent-payer", "utf-8")];
-        const [rentPayerPda] = anchor.web3.PublicKey.findProgramAddressSync(
-            seeds,
-            gatewayProgram.programId,
-        );
-        let rentPayerPdaBal0 = await conn.getBalance(rentPayerPda);
-        let pda_ata = await spl.getAssociatedTokenAddress(mint.publicKey, pdaAccount, true);
-        const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-        const hexAddr = bufferToHex(Buffer.from(pdaAccountData.tssAddress));
-        const amount = new anchor.BN(500_000);
-        const nonce = pdaAccountData.nonce;
-        const wallet2 = anchor.web3.Keypair.generate();
-
-        const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
-
-        let to_ata_bal = await conn.getBalance(to);
-        expect(to_ata_bal).to.be.eq(0); // the new ata account (owned by wallet2) should be non-existent;
-        const txsig = await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
-        to_ata_bal = await conn.getBalance(to);
-        expect(to_ata_bal).to.be.gt(2_000_000); // the new ata account (owned by wallet2) should be created
-
-        // rent_payer_pda should have reduced balance
-
-        let rentPayerPdaBal1 = await conn.getBalance(rentPayerPda);
-        expect(rentPayerPdaBal0-rentPayerPdaBal1).to.be.eq(to_ata_bal); // rentPayer pays rent
-    });
 
     it("fails to deposit if receiver is empty address", async() => {
         try {
@@ -415,7 +370,29 @@ describe("Gateway", () => {
         let bal3 = await conn.getBalance(to);
         expect(bal3).to.be.gte(500_000_000);
     })
-    
+
+    it("withdraw SPL token to a non-existent account should succeed by creating it", async () => {
+        let rentPayerPdaBal0 = await conn.getBalance(pdaAccount);
+        let pda_ata = await spl.getAssociatedTokenAddress(mint.publicKey, pdaAccount, true);
+        const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+        const amount = new anchor.BN(500_000);
+        const nonce = pdaAccountData.nonce;
+        const wallet2 = anchor.web3.Keypair.generate();
+        const to = await spl.getAssociatedTokenAddress(mint.publicKey, wallet2.publicKey);
+
+        let to_ata_bal = await conn.getBalance(to);
+        expect(to_ata_bal).to.be.eq(0); // the new ata account (owned by wallet2) should be non-existent;
+        const txsig = await withdrawSplToken(mint, usdcDecimals, amount, nonce, pda_ata, to, wallet2.publicKey,  keyPair, gatewayProgram);
+        to_ata_bal = await conn.getBalance(to);
+        expect(to_ata_bal).to.be.gt(2_000_000); // the new ata account (owned by wallet2) should be created
+
+        // pda should have reduced balance
+        let rentPayerPdaBal1 = await conn.getBalance(pdaAccount);
+        // expected reimbursement to be gas fee (5000 lamports) + ATA creation cost 2039280 lamports
+        expect(rentPayerPdaBal0-rentPayerPdaBal1).to.be.eq(to_ata_bal + 5000); // rentPayer pays rent
+    });
+
+
     it("fails to deposit and call if receiver is empty address", async() => {
         try {
             await gatewayProgram.methods.depositAndCall(new anchor.BN(1_000_000_000), Array(20).fill(0), Buffer.from("hello", "utf-8")).accounts({}).rpc();

@@ -338,7 +338,6 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-
         let pda = &mut ctx.accounts.pda;
         // let program_id = &mut ctx.accounts
         if nonce != pda.nonce {

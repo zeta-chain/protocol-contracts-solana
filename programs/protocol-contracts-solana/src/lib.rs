@@ -387,7 +387,7 @@ pub mod gateway {
         );
 
         let cost_gas = 5000; // default gas cost in lamports
-        let cost_ata_create = &mut 2039280; // default SPL ATA account creation rent fee in lamports
+        let cost_ata_create = &mut 0; // will be updated if ATA creation is needed
 
         // test whether the recipient_ata is created or not; if not, create it
         let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();

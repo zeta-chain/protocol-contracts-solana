@@ -10,10 +10,6 @@ The PDA account address (derived from seeds `b"meta"` and canonical bump) is
 2f9SLuUNb7TNeM6gzBwT4ZjbL5ZyKzzHg1Ce9yiquEjj
 ```
 
-The PDA account address (derived from seeds `b"rent-payer")
-```
-Am1aA3XQciu3vMG6E9yLa2Y9TcTf2XB3D3akLtjVzu3L
-```
 
 
 # Introduction
@@ -49,6 +45,8 @@ To build (this will require at least 2GB disk space)
 ```bash
 $ anchor build
 ```
+
+Before you can run the localnet integration tests in js, do a "yarn" command to install dependencies. 
 
 To run the tests
 ```bash

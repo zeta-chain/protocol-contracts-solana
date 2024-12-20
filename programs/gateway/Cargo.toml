@@ -1,12 +1,12 @@
 [package]
-name = "protocol-contracts-solana"
+name = "gateway"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "protocol_contracts_solana"
+name = "gateway"
 
 [features]
 default = []

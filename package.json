@@ -1,5 +1,5 @@
 {
-  "name": "@zetachain/protocol-contracts-solana",
+  "name": "@zetachain/gateway",
   "private": false,
   "license": "MIT",
   "version": "0.0.0-set-on-publish",

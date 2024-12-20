@@ -8,8 +8,8 @@
     "idl"
   ],
   "scripts": {
-    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+    "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+    "fmt": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.0",

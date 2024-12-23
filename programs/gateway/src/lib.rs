@@ -12,8 +12,6 @@ use std::mem::size_of;
 pub enum Errors {
     #[msg("SignerIsNotAuthority")]
     SignerIsNotAuthority,
-    #[msg("InsufficientPoints")]
-    InsufficientPoints,
     #[msg("NonceMismatch")]
     NonceMismatch,
     #[msg("TSSAuthenticationFailed")]
@@ -24,8 +22,6 @@ pub enum Errors {
     MessageHashMismatch,
     #[msg("MemoLengthExceeded")]
     MemoLengthExceeded,
-    #[msg("MemoLengthTooShort")]
-    MemoLengthTooShort,
     #[msg("DepositPaused")]
     DepositPaused,
     #[msg("SPLAtaAndMintAddressMismatch")]

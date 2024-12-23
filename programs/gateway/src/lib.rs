@@ -45,11 +45,13 @@ pub mod gateway {
     ) -> Result<()> {
         let initialized_pda = &mut ctx.accounts.pda;
 
-        initialized_pda.nonce = 0;
-        initialized_pda.tss_address = tss_address;
-        initialized_pda.authority = ctx.accounts.signer.key();
-        initialized_pda.chain_id = chain_id;
-        initialized_pda.deposit_paused = false;
+        **initialized_pda = Pda {
+            nonce: 0,
+            tss_address,
+            authority: ctx.accounts.signer.key(),
+            chain_id,
+            deposit_paused: false,
+        };
 
         Ok(())
     }
@@ -265,7 +267,6 @@ pub mod gateway {
     // will get corresponding ZRC20 credit. The `receiver` should be a contract
     // on zEVM and the `message` will be used as input data for the contract call.
     // The `receiver` contract on zEVM will get the SPL token ZRC20 credit and receive the `message`.
-    #[allow(unused)]
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -298,7 +299,7 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&ctx.accounts.to.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.recipient.key().to_bytes());
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),
             Errors::MessageHashMismatch
@@ -312,7 +313,7 @@ pub mod gateway {
 
         // transfer amount of SOL from PDA to the payer
         pda.sub_lamports(amount)?;
-        ctx.accounts.to.add_lamports(amount)?;
+        ctx.accounts.recipient.add_lamports(amount)?;
 
         pda.nonce += 1;
 
@@ -350,7 +351,6 @@ pub mod gateway {
         );
 
         let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
-        msg!("recovered address {:?}", address);
         if address != pda.tss_address {
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
@@ -560,9 +560,9 @@ pub struct Withdraw<'info> {
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
-    /// CHECK: to account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
+    /// CHECK: recipient account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
     #[account(mut)]
-    pub to: UncheckedAccount<'info>,
+    pub recipient: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -578,7 +578,8 @@ pub struct WithdrawSPLToken<'info> {
 
     pub mint_account: Account<'info, Mint>,
 
-    pub recipient: SystemAccount<'info>,
+    /// CHECK: recipient account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
+    pub recipient: UncheckedAccount<'info>,
     /// CHECK: recipient_ata might not have been created; avoid checking its content.
     /// the validation will be done in the instruction processor.
     #[account(mut)]
@@ -663,8 +664,6 @@ pub struct Unwhitelist<'info> {
 
     #[account(mut)]
     pub authority: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
 }
 
 #[account]

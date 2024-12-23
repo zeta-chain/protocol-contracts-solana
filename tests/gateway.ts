@@ -470,7 +470,7 @@ describe("Gateway", () => {
         nonce
       )
       .accounts({
-        to: to,
+        recipient: to,
       })
       .rpc();
     let bal2 = await conn.getBalance(pdaAccount);

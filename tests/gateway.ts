@@ -1,13 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program, web3 } from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import { Gateway } from "../target/types/gateway";
 import * as spl from "@solana/spl-token";
 import { randomFillSync } from "crypto";
 import { ec as EC } from "elliptic";
 import { keccak256 } from "ethereumjs-util";
-import { bufferToHex } from "ethereumjs-util";
 import { expect } from "chai";
-import { ecdsaRecover } from "secp256k1";
 import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 
 const ec = new EC("secp256k1");
@@ -144,19 +142,6 @@ describe("Gateway", () => {
   let wallet_ata: anchor.web3.PublicKey;
   let pdaAccount: anchor.web3.PublicKey;
 
-  const message_hash = keccak256(Buffer.from("hello world"));
-  const signature = keyPair.sign(message_hash, "hex");
-  const { r, s, recoveryParam } = signature;
-  const signatureBuffer = Buffer.concat([
-    r.toArrayLike(Buffer, "be", 32),
-    s.toArrayLike(Buffer, "be", 32),
-  ]);
-  const recoveredPubkey = ecdsaRecover(
-    signatureBuffer,
-    recoveryParam,
-    message_hash,
-    false
-  );
   const publicKeyBuffer = Buffer.from(
     keyPair.getPublic(false, "hex").slice(2),
     "hex"
@@ -210,7 +195,6 @@ describe("Gateway", () => {
       mintToTransaction,
       [wallet]
     );
-    const account = await spl.getAccount(conn, tokenAccount.address);
 
     // OK; transfer some USDC SPL token to the gateway PDA
     wallet_ata = await spl.getAssociatedTokenAddress(
@@ -513,7 +497,7 @@ describe("Gateway", () => {
 
     let to_ata_bal = await conn.getBalance(to);
     expect(to_ata_bal).to.be.eq(0); // the new ata account (owned by wallet2) should be non-existent;
-    const txsig = await withdrawSplToken(
+    await withdrawSplToken(
       mint,
       usdcDecimals,
       amount,
@@ -560,7 +544,7 @@ describe("Gateway", () => {
       )
       .accounts({})
       .rpc({ commitment: "processed" });
-    const tx = await conn.getParsedTransaction(txsig, "confirmed");
+    await conn.getParsedTransaction(txsig, "confirmed");
     let bal2 = await conn.getBalance(pdaAccount);
     expect(bal2 - bal1).to.be.gte(1_000_000_000);
   });

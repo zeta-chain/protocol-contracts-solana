@@ -191,11 +191,7 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `amount` - The amount of lamports to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-    pub fn deposit(
-        ctx: Context<Deposit>,
-        amount: u64,
-        receiver: [u8; 20],
-    ) -> Result<()> {
+    pub fn deposit(ctx: Context<Deposit>, amount: u64, receiver: [u8; 20]) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
@@ -763,4 +759,3 @@ pub struct Pda {
 /// Whitelist entry account for whitelisted SPL tokens.
 #[account]
 pub struct WhitelistEntry {}
-

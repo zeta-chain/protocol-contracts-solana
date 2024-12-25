@@ -100,7 +100,6 @@ pub mod gateway {
         ctx: Context<Whitelist>,
         signature: [u8; 64],
         recovery_id: u8,
-        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -114,7 +113,6 @@ pub mod gateway {
                 whitelist_candidate,
                 signature,
                 recovery_id,
-                message_hash,
                 nonce,
                 "whitelist_spl_mint",
             )?;
@@ -136,7 +134,6 @@ pub mod gateway {
         ctx: Context<Unwhitelist>,
         signature: [u8; 64],
         recovery_id: u8,
-        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -150,7 +147,6 @@ pub mod gateway {
                 whitelist_candidate,
                 signature,
                 recovery_id,
-                message_hash,
                 nonce,
                 "unwhitelist_spl_mint",
             )?;
@@ -285,7 +281,6 @@ pub mod gateway {
         amount: u64,
         signature: [u8; 64],
         recovery_id: u8,
-        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -300,12 +295,11 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.recipient.key().to_bytes());
-        require!(
-            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
-            Errors::MessageHashMismatch
-        );
+        let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
 
-        let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
+        msg!("Computed message hash: {:?}", computed_message_hash);
+
+        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         if address != pda.tss_address {
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
@@ -328,7 +322,6 @@ pub mod gateway {
         amount: u64,
         signature: [u8; 64],
         recovery_id: u8,
-        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -345,12 +338,11 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.recipient_ata.key().to_bytes());
-        require!(
-            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
-            Errors::MessageHashMismatch
-        );
+        let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
 
-        let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
+        msg!("Computed message hash: {:?}", computed_message_hash);
+
+        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         if address != pda.tss_address {
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
@@ -476,7 +468,6 @@ fn validate_whitelist_tss_signature(
     whitelist_candidate: &mut Account<Mint>,
     signature: [u8; 64],
     recovery_id: u8,
-    message_hash: [u8; 32],
     nonce: u64,
     instruction_name: &str,
 ) -> Result<()> {
@@ -490,12 +481,11 @@ fn validate_whitelist_tss_signature(
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&whitelist_candidate.key().to_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-    require!(
-        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
-        Errors::MessageHashMismatch
-    );
+    let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
 
-    let address = recover_eth_address(&message_hash, recovery_id, &signature)?;
+    msg!("Computed message hash: {:?}", computed_message_hash);
+
+    let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?;
     if address != pda.tss_address {
         msg!("ECDSA signature error");
         return err!(Errors::TSSAuthenticationFailed);

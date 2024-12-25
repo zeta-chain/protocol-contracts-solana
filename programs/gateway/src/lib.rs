@@ -8,6 +8,7 @@ use solana_program::secp256k1_recover::secp256k1_recover;
 use spl_associated_token_account::instruction::create_associated_token_account;
 use std::mem::size_of;
 
+/// Errors that can occur during execution.
 #[error_code]
 pub enum Errors {
     #[msg("SignerIsNotAuthority")]
@@ -36,8 +37,15 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 pub mod gateway {
     use super::*;
 
+    /// Deposit fee used when depositing SOL or SPL tokens.
     const DEPOSIT_FEE: u64 = 2_000_000;
 
+    /// Initializes the gateway PDA.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `tss_address` - The Ethereum TSS address (20 bytes).
+    /// * `chain_id` - The chain ID associated with the PDA.
     pub fn initialize(
         ctx: Context<Initialize>,
         tss_address: [u8; 20],
@@ -56,7 +64,11 @@ pub mod gateway {
         Ok(())
     }
 
-    // admin function to pause or unpause deposit
+    /// Pauses or unpauses deposits. Caller is authority stored in PDA.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `deposit_paused` - Boolean flag to pause or unpause deposits.
     pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(
@@ -68,7 +80,11 @@ pub mod gateway {
         Ok(())
     }
 
-    // the authority stored in PDA can call this instruction to update tss address
+    /// Updates the TSS address. Caller is authority stored in PDA.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `tss_address` - The new Ethereum TSS address (20 bytes).
     pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(
@@ -79,7 +95,11 @@ pub mod gateway {
         Ok(())
     }
 
-    // the authority stored in PDA can call this instruction to update the authority address
+    /// Updates the PDA authority. Caller is authority stored in PDA.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `new_authority_address` - The new authority's public key.
     pub fn update_authority(
         ctx: Context<UpdateAuthority>,
         new_authority_address: Pubkey,
@@ -93,9 +113,13 @@ pub mod gateway {
         Ok(())
     }
 
-    // whitelist new spl token
-    // in case signature is provided, check if tss is the signer, otherwise check if authority is pda.authority
-    // if succeeds, new whitelist entry account is created
+    /// Whitelists a new SPL token. Caller is TSS.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn whitelist_spl_mint(
         ctx: Context<Whitelist>,
         signature: [u8; 64],
@@ -106,7 +130,6 @@ pub mod gateway {
         let whitelist_candidate = &mut ctx.accounts.whitelist_candidate;
         let authority = &ctx.accounts.authority;
 
-        // signature provided, recover and verify that tss is the signer
         if signature != [0u8; 64] {
             validate_whitelist_tss_signature(
                 pda,
@@ -117,7 +140,6 @@ pub mod gateway {
                 "whitelist_spl_mint",
             )?;
         } else {
-            // no signature provided, fallback to authority check
             require!(
                 authority.key() == pda.authority,
                 Errors::SignerIsNotAuthority
@@ -127,9 +149,13 @@ pub mod gateway {
         Ok(())
     }
 
-    // unwhitelist new spl token
-    // in case signature is provided, check if tss is the signer, otherwise check if authority is pda.authority
-    // if succeeds, whitelist entry account is deleted
+    /// Unwhitelists an SPL token. Caller is TSS.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn unwhitelist_spl_mint(
         ctx: Context<Unwhitelist>,
         signature: [u8; 64],
@@ -140,7 +166,6 @@ pub mod gateway {
         let whitelist_candidate: &mut Account<'_, Mint> = &mut ctx.accounts.whitelist_candidate;
         let authority = &ctx.accounts.authority;
 
-        // signature provided, recover and verify that tss is the signer
         if signature != [0u8; 64] {
             validate_whitelist_tss_signature(
                 pda,
@@ -151,7 +176,6 @@ pub mod gateway {
                 "unwhitelist_spl_mint",
             )?;
         } else {
-            // no signature provided, fallback to authority check
             require!(
                 authority.key() == pda.authority,
                 Errors::SignerIsNotAuthority
@@ -161,14 +185,16 @@ pub mod gateway {
         Ok(())
     }
 
-    // deposit SOL into this program and the `receiver` on ZetaChain zEVM
-    // will get corresponding ZRC20 credit.
-    // amount: amount of lamports (10^-9 SOL) to deposit
-    // receiver: ethereum address (20Bytes) of the receiver on ZetaChain zEVM
+    /// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of lamports to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     pub fn deposit(
         ctx: Context<Deposit>,
         amount: u64,
-        receiver: [u8; 20], // not used in this program; for directing zetachain protocol only
+        receiver: [u8; 20],
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
@@ -194,10 +220,13 @@ pub mod gateway {
         Ok(())
     }
 
-    // deposit SOL into this program and the `receiver` on ZetaChain zEVM
-    // will get corresponding ZRC20 credit. The `receiver` should be a contract
-    // on zEVM and the `message` will be used as input data for the contract call.
-    // The `receiver` contract on zEVM will get the SOL ZRC20 credit and receive the `message`.
+    /// Deposits SOL and calls a contract on ZetaChain zEVM.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of lamports to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `message` - The message passed to the contract.
     pub fn deposit_and_call(
         ctx: Context<Deposit>,
         amount: u64,
@@ -209,15 +238,16 @@ pub mod gateway {
         Ok(())
     }
 
-    // deposit SPL token into this program and the `receiver` on ZetaChain zEVM
-    // will get corresponding ZRC20 credit.
-    // amount: amount of SPL token to deposit
-    // receiver: ethereum address (20Bytes) of the receiver on ZetaChain zEVM
-    #[allow(unused)]
+    /// Deposits SPL tokens and credits the `receiver` on ZetaChain zEVM.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SPL tokens to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
-        receiver: [u8; 20], // unused in this program; for directing zetachain protocol only
+        receiver: [u8; 20],
     ) -> Result<()> {
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
@@ -226,7 +256,6 @@ pub mod gateway {
         require!(!pda.deposit_paused, Errors::DepositPaused);
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
 
-        // transfer deposit_fee
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
@@ -237,7 +266,6 @@ pub mod gateway {
         system_program::transfer(cpi_context, DEPOSIT_FEE)?;
 
         let pda_ata = get_associated_token_address(&ctx.accounts.pda.key(), &from.mint);
-        // must deposit to the ATA from PDA in order to receive credit
         require!(
             pda_ata == ctx.accounts.to.to_account_info().key(),
             Errors::DepositToAddressMismatch
@@ -258,11 +286,13 @@ pub mod gateway {
         Ok(())
     }
 
-    // like `deposit_spl_token` instruction,
-    // deposit SPL token into this program and the `receiver` on ZetaChain zEVM
-    // will get corresponding ZRC20 credit. The `receiver` should be a contract
-    // on zEVM and the `message` will be used as input data for the contract call.
-    // The `receiver` contract on zEVM will get the SPL token ZRC20 credit and receive the `message`.
+    /// Deposits SPL tokens and calls a contract on ZetaChain zEVM.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SPL tokens to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `message` - The message passed to the contract.
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -274,8 +304,14 @@ pub mod gateway {
         Ok(())
     }
 
-    // require tss address signature on the internal message defined in the following
-    // concatenated_buffer vec.
+    /// Withdraws SOL. Caller is TSS.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SOL to withdraw.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
@@ -289,6 +325,7 @@ pub mod gateway {
             msg!("mismatch nonce");
             return err!(Errors::NonceMismatch);
         }
+
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice("withdraw".as_bytes());
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
@@ -299,13 +336,12 @@ pub mod gateway {
 
         msg!("Computed message hash: {:?}", computed_message_hash);
 
-        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
+        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?;
         if address != pda.tss_address {
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
         }
 
-        // transfer amount of SOL from PDA to the payer
         pda.sub_lamports(amount)?;
         ctx.accounts.recipient.add_lamports(amount)?;
 
@@ -314,8 +350,15 @@ pub mod gateway {
         Ok(())
     }
 
-    // require tss address signature on the internal message defined in the following
-    // concatenated_buffer vec.
+    /// Withdraws SPL tokens. Caller is TSS.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `decimals` - Token decimals for precision.
+    /// * `amount` - The amount of tokens to withdraw.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
         decimals: u8,
@@ -444,6 +487,7 @@ pub mod gateway {
     }
 }
 
+/// Recovers eth address from signature.
 fn recover_eth_address(
     message_hash: &[u8; 32],
     recovery_id: u8,
@@ -455,14 +499,14 @@ fn recover_eth_address(
     // pubkey is 64 Bytes, uncompressed public secp256k1 public key
     let h = hash(pubkey.to_bytes().as_slice()).to_bytes();
     let address = &h.as_slice()[12..32]; // ethereum address is the last 20 Bytes of the hashed pubkey
-    msg!("recovered address {:?}", address);
+    msg!("Recovered address {:?}", address);
 
     let mut eth_address = [0u8; 20];
     eth_address.copy_from_slice(address);
     Ok(eth_address)
 }
 
-// recover and verify tss signature for whitelist and unwhitelist instructions
+/// Recovers and verifies tss signature for whitelist and unwhitelist instructions.
 fn validate_whitelist_tss_signature(
     pda: &mut Account<Pda>,
     whitelist_candidate: &mut Account<Mint>,
@@ -496,195 +540,227 @@ fn validate_whitelist_tss_signature(
     Ok(())
 }
 
+/// Instruction context for initializing the program.
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    /// The account of the signer initializing the program.
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(init, payer = signer, space = size_of::< Pda > () + 8, seeds = [b"meta"], bump)]
+    /// Gateway PDA.
+    #[account(init, payer = signer, space = size_of::<Pda>() + 8, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// The system program.
     pub system_program: Program<'info, System>,
 }
 
+/// Instruction context for SOL deposit operations.
 #[derive(Accounts)]
 pub struct Deposit<'info> {
+    /// The account of the signer making the deposit.
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// The system program.
     pub system_program: Program<'info, System>,
 }
 
+/// Instruction context for depositing SPL tokens.
 #[derive(Accounts)]
 pub struct DepositSplToken<'info> {
+    /// The account of the signer making the deposit.
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// The whitelist entry account for the SPL token.
     #[account(seeds = [b"whitelist", mint_account.key().as_ref()], bump)]
-    pub whitelist_entry: Account<'info, WhitelistEntry>, // attach whitelist entry to show the mint_account is whitelisted
+    pub whitelist_entry: Account<'info, WhitelistEntry>,
 
+    /// The mint account of the SPL token being deposited.
     pub mint_account: Account<'info, Mint>,
 
+    /// The token program.
     pub token_program: Program<'info, Token>,
 
+    /// The source token account owned by the signer.
     #[account(mut)]
-    pub from: Account<'info, TokenAccount>, // this must be owned by signer; normally the ATA of signer
+    pub from: Account<'info, TokenAccount>,
 
+    /// The destination token account owned by the PDA.
     #[account(mut)]
-    pub to: Account<'info, TokenAccount>, // this must be ATA of PDA
+    pub to: Account<'info, TokenAccount>,
 
+    /// The system program.
     pub system_program: Program<'info, System>,
 }
 
+/// Instruction context for SOL withdrawal operations.
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
+    /// The account of the signer making the withdrawal.
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
-    /// CHECK: recipient account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
+    /// The recipient account for the withdrawn SOL.
+    /// CHECK: Recipient account is not read; ownership validation is unnecessary.
     #[account(mut)]
     pub recipient: UncheckedAccount<'info>,
 }
 
+/// Instruction context for SPL token withdrawal operations.
 #[derive(Accounts)]
 pub struct WithdrawSPLToken<'info> {
+    /// The account of the signer making the withdrawal.
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// The associated token account for the Gateway PDA.
     #[account(mut, associated_token::mint = mint_account, associated_token::authority = pda)]
-    pub pda_ata: Account<'info, TokenAccount>, // associated token address of PDA
+    pub pda_ata: Account<'info, TokenAccount>,
 
+    /// The mint account of the SPL token being withdrawn.
     pub mint_account: Account<'info, Mint>,
 
-    /// CHECK: recipient account is not read so no need to check its owners; the program neither knows nor cares who the owner is.
+    /// The recipient account for the withdrawn tokens.
+    /// CHECK: Ownership validation is unnecessary.
     pub recipient: UncheckedAccount<'info>,
-    /// CHECK: recipient_ata might not have been created; avoid checking its content.
-    /// the validation will be done in the instruction processor.
+
+    /// The recipient's associated token account.
+    /// CHECK: Validation will occur during instruction processing.
     #[account(mut)]
     pub recipient_ata: AccountInfo<'info>,
 
+    /// The token program.
     pub token_program: Program<'info, Token>,
 
+    /// The associated token program.
     pub associated_token_program: Program<'info, AssociatedToken>,
 
+    /// The system program.
     pub system_program: Program<'info, System>,
 }
 
+/// Instruction context for updating the TSS address.
 #[derive(Accounts)]
 pub struct UpdateTss<'info> {
+    /// The account of the signer performing the update.
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 }
 
+/// Instruction context for updating the PDA authority.
 #[derive(Accounts)]
 pub struct UpdateAuthority<'info> {
+    /// The account of the signer performing the update.
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 }
 
+/// Instruction context for pausing or unpausing deposits.
 #[derive(Accounts)]
 pub struct UpdatePaused<'info> {
+    /// The account of the signer performing the update.
     #[account(mut)]
     pub signer: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 }
 
+/// Instruction context for whitelisting SPL tokens.
 #[derive(Accounts)]
 pub struct Whitelist<'info> {
+    /// The account of the authority performing the operation.
     #[account(mut)]
     pub authority: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// The whitelist entry account being initialized.
     #[account(
         init,
         space = 8,
-        payer=authority,
-        seeds = [
-            b"whitelist",
-            whitelist_candidate.key().as_ref()
-        ],
+        payer = authority,
+        seeds = [b"whitelist", whitelist_candidate.key().as_ref()],
         bump
     )]
     pub whitelist_entry: Account<'info, WhitelistEntry>,
 
+    /// The mint account of the SPL token being whitelisted.
     pub whitelist_candidate: Account<'info, Mint>,
 
+    /// The system program.
     pub system_program: Program<'info, System>,
 }
 
+/// Instruction context for unwhitelisting SPL tokens.
 #[derive(Accounts)]
 pub struct Unwhitelist<'info> {
+    /// The account of the authority performing the operation.
     #[account(mut)]
     pub authority: Signer<'info>,
 
+    /// Gateway PDA.
     #[account(mut, seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// The whitelist entry account being closed.
     #[account(
         mut,
-        seeds = [
-            b"whitelist",
-            whitelist_candidate.key().as_ref()
-        ],
+        seeds = [b"whitelist", whitelist_candidate.key().as_ref()],
         bump,
         close = authority,
     )]
     pub whitelist_entry: Account<'info, WhitelistEntry>,
 
+    /// The mint account of the SPL token being unwhitelisted.
     pub whitelist_candidate: Account<'info, Mint>,
 }
 
+/// PDA account storing program state and settings.
 #[account]
 pub struct Pda {
-    nonce: u64,            // ensure that each signature can only be used once
-    tss_address: [u8; 20], // 20 bytes address format of ethereum
+    /// The nonce to ensure each signature can only be used once.
+    nonce: u64,
+    /// The Ethereum TSS address (20 bytes).
+    tss_address: [u8; 20],
+    /// The authority controlling the PDA.
     authority: Pubkey,
+    /// The chain ID associated with the PDA.
     chain_id: u64,
+    /// Flag to indicate whether deposits are paused.
     deposit_paused: bool,
 }
 
+/// Whitelist entry account for whitelisted SPL tokens.
 #[account]
 pub struct WhitelistEntry {}
 
-#[account]
-pub struct RentPayerPda {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let nonce: u64 = 0;
-        let amount: u64 = 500_000;
-        let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-        println!("concatenated_buffer: {:?}", concatenated_buffer);
-
-        let message_hash = hash(&concatenated_buffer[..]).to_bytes();
-        println!("message_hash: {:?}", message_hash);
-    }
-}

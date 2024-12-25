@@ -639,7 +639,7 @@ pub struct WithdrawSPLToken<'info> {
     pub mint_account: Account<'info, Mint>,
 
     /// The recipient account for the withdrawn tokens.
-    /// CHECK: Ownership validation is unnecessary.
+    /// CHECK: Recipient account is not read; ownership validation is unnecessary.
     pub recipient: UncheckedAccount<'info>,
 
     /// The recipient's associated token account.

@@ -9,7 +9,6 @@ import { expect } from "chai";
 import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 
 const ec = new EC("secp256k1");
-// const keyPair = ec.genKeyPair();
 // read private key from hex dump
 const keyPair = ec.keyFromPrivate(
   "5b81cdf52ba0766983acf8dd0072904733d92afe4dd3499e83e879b43ccb73e8"
@@ -118,7 +117,6 @@ async function withdrawSplToken(
       amount,
       Array.from(signatureBuffer),
       Number(recoveryParam),
-      Array.from(message_hash),
       nonce
     )
     .accounts({
@@ -208,7 +206,7 @@ describe("Gateway", () => {
 
   it("whitelist USDC spl token", async () => {
     await gatewayProgram.methods
-      .whitelistSplMint([], 0, [], new anchor.BN(0))
+      .whitelistSplMint([], 0, new anchor.BN(0))
       .accounts({
         whitelistCandidate: mint.publicKey,
       })
@@ -336,7 +334,6 @@ describe("Gateway", () => {
       true
     );
     const account2 = await spl.getAccount(conn, pda_ata);
-    // expect(account2.amount).to.be.eq(1_000_000n);
 
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const amount = new anchor.BN(500_000);
@@ -399,7 +396,6 @@ describe("Gateway", () => {
           amount,
           Array.from(signatureBuffer),
           Number(recoveryParam),
-          Array.from(message_hash),
           nonce2
         )
         .accounts({
@@ -422,7 +418,6 @@ describe("Gateway", () => {
     try {
       await gatewayProgram.methods
         .deposit(new anchor.BN(1_000_000_000), Array(20).fill(0))
-        .accounts({})
         .rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
@@ -434,7 +429,6 @@ describe("Gateway", () => {
   it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
     await gatewayProgram.methods
       .deposit(new anchor.BN(1_000_000_000), Array.from(address))
-      .accounts({})
       .rpc();
     let bal1 = await conn.getBalance(pdaAccount);
     // amount + deposit fee
@@ -466,7 +460,6 @@ describe("Gateway", () => {
         amount,
         Array.from(signatureBuffer),
         Number(recoveryParam),
-        Array.from(message_hash),
         nonce
       )
       .accounts({
@@ -525,7 +518,6 @@ describe("Gateway", () => {
           Array(20).fill(0),
           Buffer.from("hello", "utf-8")
         )
-        .accounts({})
         .rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
@@ -542,7 +534,6 @@ describe("Gateway", () => {
         Array.from(address),
         Buffer.from("hello", "utf-8")
       )
-      .accounts({})
       .rpc({ commitment: "processed" });
     await conn.getParsedTransaction(txsig, "confirmed");
     let bal2 = await conn.getBalance(pdaAccount);
@@ -567,7 +558,7 @@ describe("Gateway", () => {
 
   it("unwhitelist SPL token and deposit should fail", async () => {
     await gatewayProgram.methods
-      .unwhitelistSplMint([], 0, [], new anchor.BN(0))
+      .unwhitelistSplMint([], 0, new anchor.BN(0))
       .accounts({
         whitelistCandidate: mint.publicKey,
       })
@@ -584,7 +575,7 @@ describe("Gateway", () => {
 
   it("re-whitelist SPL token and deposit should succeed", async () => {
     await gatewayProgram.methods
-      .whitelistSplMint([], 0, [], new anchor.BN(0))
+      .whitelistSplMint([], 0, new anchor.BN(0))
       .accounts({
         whitelistCandidate: mint.publicKey,
       })
@@ -614,7 +605,6 @@ describe("Gateway", () => {
       .unwhitelistSplMint(
         Array.from(signatureBuffer),
         Number(recoveryParam),
-        Array.from(message_hash),
         nonce
       )
       .accounts({
@@ -653,7 +643,6 @@ describe("Gateway", () => {
       .whitelistSplMint(
         Array.from(signatureBuffer),
         Number(recoveryParam),
-        Array.from(message_hash),
         nonce
       )
       .accounts({
@@ -668,9 +657,6 @@ describe("Gateway", () => {
     randomFillSync(newTss);
     await gatewayProgram.methods
       .updateTss(Array.from(newTss))
-      .accounts({
-        // pda: pdaAccount,
-      })
       .rpc();
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     expect(pdaAccountData.tssAddress).to.be.deep.eq(Array.from(newTss));
@@ -694,7 +680,7 @@ describe("Gateway", () => {
   it("pause deposit and deposit should fail", async () => {
     const newTss = new Uint8Array(20);
     randomFillSync(newTss);
-    await gatewayProgram.methods.setDepositPaused(true).accounts({}).rpc();
+    await gatewayProgram.methods.setDepositPaused(true).rpc();
 
     // now try deposit, should fail
     try {
@@ -704,7 +690,6 @@ describe("Gateway", () => {
           Array.from(address),
           Buffer.from("hi", "utf-8")
         )
-        .accounts({})
         .rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
@@ -717,13 +702,11 @@ describe("Gateway", () => {
   it("update authority", async () => {
     await gatewayProgram.methods
       .updateAuthority(newAuthority.publicKey)
-      .accounts({})
       .rpc();
     // now the old authority cannot update TSS address and will fail
     try {
       await gatewayProgram.methods
         .updateTss(Array.from(new Uint8Array(20)))
-        .accounts({})
         .rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {

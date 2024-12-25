@@ -594,33 +594,39 @@ pub struct WithdrawSPLToken<'info> {
 
 #[derive(Accounts)]
 pub struct UpdateTss<'info> {
-    #[account(mut, seeds = [b"meta"], bump)]
-    pub pda: Account<'info, Pda>,
-
     #[account(mut)]
     pub signer: Signer<'info>,
+
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateAuthority<'info> {
-    #[account(mut, seeds = [b"meta"], bump)]
-    pub pda: Account<'info, Pda>,
-
     #[account(mut)]
     pub signer: Signer<'info>,
+
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
 }
 
 #[derive(Accounts)]
 pub struct UpdatePaused<'info> {
-    #[account(mut, seeds = [b"meta"], bump)]
-    pub pda: Account<'info, Pda>,
-
     #[account(mut)]
     pub signer: Signer<'info>,
+
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
 }
 
 #[derive(Accounts)]
 pub struct Whitelist<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+
     #[account(
         init,
         space = 8,
@@ -635,17 +641,17 @@ pub struct Whitelist<'info> {
 
     pub whitelist_candidate: Account<'info, Mint>,
 
-    #[account(mut, seeds = [b"meta"], bump)]
-    pub pda: Account<'info, Pda>,
-
-    #[account(mut)]
-    pub authority: Signer<'info>,
-
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct Unwhitelist<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+
     #[account(
         mut,
         seeds = [
@@ -658,12 +664,6 @@ pub struct Unwhitelist<'info> {
     pub whitelist_entry: Account<'info, WhitelistEntry>,
 
     pub whitelist_candidate: Account<'info, Mint>,
-
-    #[account(mut, seeds = [b"meta"], bump)]
-    pub pda: Account<'info, Pda>,
-
-    #[account(mut)]
-    pub authority: Signer<'info>,
 }
 
 #[account]

@@ -203,7 +203,7 @@ describe("Gateway", () => {
     await mintSPLToken(conn, wallet, mint_fake);
   });
 
-  it("whitelist USDC spl token", async () => {
+  it("Whitelist USDC SPL token", async () => {
     await gatewayProgram.methods
       .whitelistSplMint([], 0, new anchor.BN(0))
       .accounts({
@@ -289,7 +289,7 @@ describe("Gateway", () => {
     expect(bal1 - bal0).to.be.eq(2_000_000n);
   });
 
-  it("deposit non-whitelisted SPL tokens should fail", async () => {
+  it("Deposit non-whitelisted SPL tokens should fail", async () => {
     let seeds = [Buffer.from("meta", "utf-8")];
     [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       seeds,
@@ -411,7 +411,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("fails to deposit if receiver is empty address", async () => {
+  it("Deposit if receiver is empty address should fail", async () => {
     try {
       await gatewayProgram.methods
         .deposit(new anchor.BN(1_000_000_000), Array(20).fill(0))
@@ -423,7 +423,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
+  it("Deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
     await gatewayProgram.methods
       .deposit(new anchor.BN(1_000_000_000), Array.from(address))
       .rpc();
@@ -469,7 +469,7 @@ describe("Gateway", () => {
     expect(bal3).to.be.gte(500_000_000);
   });
 
-  it("withdraw fails if nonce missmatch", async () => {
+  it("Withdraw with wrong nonce should fail", async () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
     const amount = new anchor.BN(500000000);
@@ -512,7 +512,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("withdraw fails if wrong signature", async () => {
+  it("Withdraw with wrong signature should fail", async () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
     const amount = new anchor.BN(500000000);
@@ -555,7 +555,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("withdraw SPL token to a non-existent account should succeed by creating it", async () => {
+  it("Withdraw SPL token to a non-existent account should succeed by creating it", async () => {
     let rentPayerPdaBal0 = await conn.getBalance(pdaAccount);
     let pda_ata = await spl.getAssociatedTokenAddress(
       mint.publicKey,
@@ -592,7 +592,7 @@ describe("Gateway", () => {
     expect(rentPayerPdaBal0 - rentPayerPdaBal1).to.be.eq(to_ata_bal + 5000); // rentPayer pays rent
   });
 
-  it("withdraw SPL token fails if nonce missmatch", async () => {
+  it("Withdraw SPL token with wrong nonce should fail", async () => {
     let pda_ata = await spl.getAssociatedTokenAddress(
       mint.publicKey,
       pdaAccount,
@@ -624,7 +624,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("withdraw SPL token fails if wrong signature", async () => {
+  it("Withdraw SPL token with wrong signature should fail", async () => {
     let pda_ata = await spl.getAssociatedTokenAddress(
       mint.publicKey,
       pdaAccount,
@@ -676,7 +676,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("fails to deposit and call if receiver is empty address", async () => {
+  it("Deposit and call with empty address receiver should fail", async () => {
     try {
       await gatewayProgram.methods
         .depositAndCall(
@@ -692,7 +692,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("deposit and call", async () => {
+  it("Deposit and call", async () => {
     let bal1 = await conn.getBalance(pdaAccount);
     const txsig = await gatewayProgram.methods
       .depositAndCall(
@@ -706,7 +706,7 @@ describe("Gateway", () => {
     expect(bal2 - bal1).to.be.gte(1_000_000_000);
   });
 
-  it("fails to deposit spl if receiver is empty address", async () => {
+  it("Deposit SPL with empty address receiver should fail", async () => {
     try {
       await depositSplTokens(
         gatewayProgram,
@@ -722,7 +722,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("unwhitelist SPL token and deposit should fail", async () => {
+  it("Unwhitelist SPL token and deposit should fail", async () => {
     await gatewayProgram.methods
       .unwhitelistSplMint([], 0, new anchor.BN(0))
       .accounts({
@@ -739,7 +739,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("re-whitelist SPL token and deposit should succeed", async () => {
+  it("Re-whitelist SPL token and deposit should succeed", async () => {
     await gatewayProgram.methods
       .whitelistSplMint([], 0, new anchor.BN(0))
       .accounts({
@@ -749,7 +749,7 @@ describe("Gateway", () => {
     await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
   });
 
-  it("unwhitelist SPL token using TSS signature and deposit should fail", async () => {
+  it("Unwhitelist SPL token using TSS signature and deposit should fail", async () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
@@ -787,7 +787,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("re-whitelist SPL token using TSS signature and deposit should succeed", async () => {
+  it("Re-whitelist SPL token using TSS signature and deposit should succeed", async () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
@@ -818,7 +818,7 @@ describe("Gateway", () => {
     await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
   });
 
-  it("unwhitelist SPL token using wrong TSS signature fails", async () => {
+  it("Unwhitelist SPL token using wrong TSS signature should fail", async () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
@@ -853,7 +853,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("unwhitelist SPL token using wrong nonce fails", async () => {
+  it("Unwhitelist SPL token using wrong nonce should fail", async () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
@@ -888,7 +888,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("update TSS address", async () => {
+  it("Update TSS address", async () => {
     const newTss = new Uint8Array(20);
     randomFillSync(newTss);
     await gatewayProgram.methods.updateTss(Array.from(newTss)).rpc();
@@ -911,7 +911,7 @@ describe("Gateway", () => {
     }
   });
 
-  it("pause deposit and deposit should fail", async () => {
+  it("Pause deposit and deposit should fail", async () => {
     const newTss = new Uint8Array(20);
     randomFillSync(newTss);
     await gatewayProgram.methods.setDepositPaused(true).rpc();
@@ -933,7 +933,7 @@ describe("Gateway", () => {
   });
 
   const newAuthority = anchor.web3.Keypair.generate();
-  it("update authority", async () => {
+  it("Update authority", async () => {
     await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).rpc();
     // now the old authority cannot update TSS address and will fail
     try {

@@ -368,7 +368,11 @@ pub mod gateway {
         let pda = &mut ctx.accounts.pda;
 
         if nonce != pda.nonce {
-            msg!("mismatch nonce");
+            msg!(
+                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
+                nonce,
+                pda.nonce,
+            );
             return err!(Errors::NonceMismatch);
         }
 
@@ -421,9 +425,12 @@ pub mod gateway {
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
-        // let program_id = &mut ctx.accounts
         if nonce != pda.nonce {
-            msg!("mismatch nonce");
+            msg!(
+                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
+                nonce,
+                pda.nonce,
+            );
             return err!(Errors::NonceMismatch);
         }
 
@@ -577,7 +584,11 @@ fn validate_whitelist_tss_signature(
     instruction_name: &str,
 ) -> Result<()> {
     if nonce != pda.nonce {
-        msg!("mismatch nonce");
+        msg!(
+            "Mismatch nonce: provided nonce = {}, expected nonce = {}",
+            nonce,
+            pda.nonce,
+        );
         return err!(Errors::NonceMismatch);
     }
 

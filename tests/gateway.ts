@@ -93,7 +93,6 @@ async function withdrawSplToken(
   from,
   to,
   to_owner,
-  tssKey,
   gatewayProgram: Program<Gateway>
 ) {
   const buffer = Buffer.concat([
@@ -346,7 +345,6 @@ describe("Gateway", () => {
       pda_ata,
       wallet_ata,
       wallet.publicKey,
-      keyPair,
       gatewayProgram
     );
     const account3 = await spl.getAccount(conn, pda_ata);
@@ -362,7 +360,6 @@ describe("Gateway", () => {
         pda_ata,
         wallet_ata,
         wallet.publicKey,
-        keyPair,
         gatewayProgram
       );
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
@@ -472,6 +469,92 @@ describe("Gateway", () => {
     expect(bal3).to.be.gte(500_000_000);
   });
 
+  it("withdraw fails if nonce missmatch", async () => {
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+    const amount = new anchor.BN(500000000);
+    const to = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      wallet.publicKey
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("withdraw", "utf-8"),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      to.toBuffer(),
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      await gatewayProgram.methods
+        .withdraw(
+          amount,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          nonce.subn(1)
+        )
+        .accounts({
+          recipient: to,
+        })
+        .rpc();
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("NonceMismatch.");
+    }
+  });
+
+  it("withdraw fails if wrong signature", async () => {
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+    const amount = new anchor.BN(500000000);
+    const to = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      wallet.publicKey
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("withdraw", "utf-8"),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
+      amount.toArrayLike(Buffer, "be", 8),
+      to.toBuffer(),
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      await gatewayProgram.methods
+        .withdraw(
+          amount,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          nonce
+        )
+        .accounts({
+          recipient: to,
+        })
+        .rpc();
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("TSSAuthenticationFailed");
+    }
+  });
+
   it("withdraw SPL token to a non-existent account should succeed by creating it", async () => {
     let rentPayerPdaBal0 = await conn.getBalance(pdaAccount);
     let pda_ata = await spl.getAssociatedTokenAddress(
@@ -498,7 +581,6 @@ describe("Gateway", () => {
       pda_ata,
       to,
       wallet2.publicKey,
-      keyPair,
       gatewayProgram
     );
     to_ata_bal = await conn.getBalance(to);
@@ -508,6 +590,90 @@ describe("Gateway", () => {
     let rentPayerPdaBal1 = await conn.getBalance(pdaAccount);
     // expected reimbursement to be gas fee (5000 lamports) + ATA creation cost 2039280 lamports
     expect(rentPayerPdaBal0 - rentPayerPdaBal1).to.be.eq(to_ata_bal + 5000); // rentPayer pays rent
+  });
+
+  it("withdraw SPL token fails if nonce missmatch", async () => {
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+    const wallet2 = anchor.web3.Keypair.generate();
+    const to = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      wallet2.publicKey
+    );
+
+    try {
+      await withdrawSplToken(
+        mint,
+        usdcDecimals,
+        amount,
+        nonce.subn(1),
+        pda_ata,
+        to,
+        wallet2.publicKey,
+        gatewayProgram
+      );
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("NonceMismatch.");
+    }
+  });
+
+  it("withdraw SPL token fails if wrong signature", async () => {
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+    const wallet2 = anchor.web3.Keypair.generate();
+    const to = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      wallet2.publicKey
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("withdraw_spl_token", "utf-8"),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      to.toBuffer(),
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+    try {
+      gatewayProgram.methods
+        .withdrawSplToken(
+          usdcDecimals,
+          amount,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          nonce
+        )
+        .accounts({
+          pdaAta: pda_ata,
+          mintAccount: mint.publicKey,
+          recipientAta: to,
+          recipient: wallet2.publicKey,
+        })
+        .rpc({ commitment: "processed" });
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("TSSAuthenticationFailed");
+    }
   });
 
   it("fails to deposit and call if receiver is empty address", async () => {
@@ -652,12 +818,80 @@ describe("Gateway", () => {
     await depositSplTokens(gatewayProgram, conn, wallet, mint, address);
   });
 
+  it("unwhitelist SPL token using wrong TSS signature fails", async () => {
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+
+    const buffer = Buffer.concat([
+      Buffer.from("whitelist_spl_mint", "utf-8"),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      await gatewayProgram.methods
+        .unwhitelistSplMint(
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          nonce
+        )
+        .accounts({
+          whitelistCandidate: mint.publicKey,
+        })
+        .rpc();
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("TSSAuthenticationFailed.");
+    }
+  });
+
+  it("unwhitelist SPL token using wrong nonce fails", async () => {
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+
+    const buffer = Buffer.concat([
+      Buffer.from("whitelist_spl_mint", "utf-8"),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      nonce.toArrayLike(Buffer, "be", 8), // wrong nonce
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      await gatewayProgram.methods
+        .unwhitelistSplMint(
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          nonce.subn(1)
+        )
+        .accounts({
+          whitelistCandidate: mint.publicKey,
+        })
+        .rpc();
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("NonceMismatch.");
+    }
+  });
+
   it("update TSS address", async () => {
     const newTss = new Uint8Array(20);
     randomFillSync(newTss);
-    await gatewayProgram.methods
-      .updateTss(Array.from(newTss))
-      .rpc();
+    await gatewayProgram.methods.updateTss(Array.from(newTss)).rpc();
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     expect(pdaAccountData.tssAddress).to.be.deep.eq(Array.from(newTss));
 
@@ -700,9 +934,7 @@ describe("Gateway", () => {
 
   const newAuthority = anchor.web3.Keypair.generate();
   it("update authority", async () => {
-    await gatewayProgram.methods
-      .updateAuthority(newAuthority.publicKey)
-      .rpc();
+    await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).rpc();
     // now the old authority cannot update TSS address and will fail
     try {
       await gatewayProgram.methods

@@ -61,6 +61,13 @@ pub mod gateway {
             deposit_paused: false,
         };
 
+        msg!(
+            "Gateway initialized: PDA authority = {}, chain_id = {}, TSS address = {:?}",
+            ctx.accounts.signer.key(),
+            chain_id,
+            tss_address
+        );
+
         Ok(())
     }
 
@@ -76,7 +83,8 @@ pub mod gateway {
             Errors::SignerIsNotAuthority
         );
         pda.deposit_paused = deposit_paused;
-        msg!("set_deposit_paused: {:?}", deposit_paused);
+
+        msg!("Set deposit paused: {:?}", deposit_paused);
         Ok(())
     }
 
@@ -92,6 +100,13 @@ pub mod gateway {
             Errors::SignerIsNotAuthority
         );
         pda.tss_address = tss_address;
+
+        msg!(
+            "TSS address updated: new TSS address = {:?}, PDA authority = {}",
+            tss_address,
+            ctx.accounts.signer.key()
+        );
+
         Ok(())
     }
 
@@ -110,6 +125,13 @@ pub mod gateway {
             Errors::SignerIsNotAuthority
         );
         pda.authority = new_authority_address;
+
+        msg!(
+            "PDA authority updated: new authority = {}, previous authority = {}",
+            new_authority_address,
+            ctx.accounts.signer.key()
+        );
+
         Ok(())
     }
 
@@ -145,6 +167,13 @@ pub mod gateway {
                 Errors::SignerIsNotAuthority
             );
         }
+
+        msg!(
+            "SPL token whitelisted: mint = {}, whitelist_entry = {}, authority = {}",
+            whitelist_candidate.key(),
+            ctx.accounts.whitelist_entry.key(),
+            ctx.accounts.authority.key()
+        );
 
         Ok(())
     }
@@ -182,6 +211,13 @@ pub mod gateway {
             );
         }
 
+        msg!(
+            "SPL token unwhitelisted: mint = {}, whitelist_entry = {}, authority = {}",
+            whitelist_candidate.key(),
+            ctx.accounts.whitelist_entry.key(),
+            ctx.accounts.authority.key()
+        );
+
         Ok(())
     }
 
@@ -205,12 +241,13 @@ pub mod gateway {
             },
         );
         system_program::transfer(cpi_context, amount_with_fees)?;
+
         msg!(
-            "{:?} deposits {:?} lamports to PDA with fee {:?}; receiver {:?}",
-            ctx.accounts.signer.key(),
+            "Deposit executed: amount = {}, fee = {}, receiver = {:?}, pda = {}",
             amount,
             DEPOSIT_FEE,
             receiver,
+            ctx.accounts.pda.key()
         );
 
         Ok(())
@@ -231,6 +268,9 @@ pub mod gateway {
     ) -> Result<()> {
         require!(message.len() <= 512, Errors::MemoLengthExceeded);
         deposit(ctx, amount, receiver)?;
+
+        msg!("Deposit and call executed with message = {:?}", message);
+
         Ok(())
     }
 
@@ -277,7 +317,14 @@ pub mod gateway {
         );
         transfer(xfer_ctx, amount)?;
 
-        msg!("deposit spl token successfully");
+        msg!(
+            "Deposit SPL executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, mint = {}",
+            amount,
+            DEPOSIT_FEE,
+            receiver,
+            ctx.accounts.pda.key(),
+            ctx.accounts.mint_account.key()
+        );
 
         Ok(())
     }
@@ -297,6 +344,9 @@ pub mod gateway {
     ) -> Result<()> {
         require!(message.len() <= 512, Errors::MemoLengthExceeded);
         deposit_spl_token(ctx, amount, receiver)?;
+
+        msg!("Deposit SPL and call executed with message = {:?}", message);
+
         Ok(())
     }
 
@@ -342,6 +392,13 @@ pub mod gateway {
         ctx.accounts.recipient.add_lamports(amount)?;
 
         pda.nonce += 1;
+
+        msg!(
+            "Withdraw executed: amount = {}, recipient = {}, pda = {}",
+            amount,
+            ctx.accounts.recipient.key(),
+            ctx.accounts.pda.key()
+        );
 
         Ok(())
     }
@@ -469,7 +526,6 @@ pub mod gateway {
         pda.nonce += 1;
 
         transfer_checked(xfer_ctx, amount, decimals)?;
-        msg!("withdraw spl token successfully");
         // Note: this pda.sub_lamports() must be done here due to this issue https://github.com/solana-labs/solana/issues/9711
         // otherwise the previous CPI calls might fail with error:
         // "sum of account balances before and after instruction do not match"
@@ -478,6 +534,15 @@ pub mod gateway {
         let reimbursement = cost_gas + *cost_ata_create;
         pda.sub_lamports(reimbursement)?;
         ctx.accounts.signer.add_lamports(reimbursement)?;
+
+        msg!(
+            "Withdraw SPL executed: amount = {}, decimals = {}, recipient = {}, mint = {}, pda = {}",
+            amount,
+            decimals,
+            ctx.accounts.recipient.key(),
+            ctx.accounts.mint_account.key(),
+            ctx.accounts.pda.key()
+        );
 
         Ok(())
     }

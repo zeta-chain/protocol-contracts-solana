@@ -31,6 +31,15 @@ pub enum Errors {
     EmptyReceiver,
 }
 
+/// Enumeration for instruction identifiers in message hashes.
+#[repr(u8)]
+enum InstructionId {
+    Withdraw = 1,
+    WithdrawSplToken = 2,
+    WhitelistSplToken = 3,
+    UnwhitelistSplToken = 4,
+}
+
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[program]
@@ -159,7 +168,7 @@ pub mod gateway {
                 signature,
                 recovery_id,
                 nonce,
-                "whitelist_spl_mint",
+                InstructionId::WhitelistSplToken as u8,
             )?;
         } else {
             require!(
@@ -202,7 +211,7 @@ pub mod gateway {
                 signature,
                 recovery_id,
                 nonce,
-                "unwhitelist_spl_mint",
+                InstructionId::UnwhitelistSplToken as u8,
             )?;
         } else {
             require!(
@@ -377,7 +386,8 @@ pub mod gateway {
         }
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice("withdraw".as_bytes());
+        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.push(InstructionId::Withdraw as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
@@ -435,7 +445,8 @@ pub mod gateway {
         }
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice("withdraw_spl_token".as_bytes());
+        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.push(InstructionId::WithdrawSplToken as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
@@ -581,7 +592,7 @@ fn validate_whitelist_tss_signature(
     signature: [u8; 64],
     recovery_id: u8,
     nonce: u64,
-    instruction_name: &str,
+    instruction: u8,
 ) -> Result<()> {
     if nonce != pda.nonce {
         msg!(
@@ -593,10 +604,11 @@ fn validate_whitelist_tss_signature(
     }
 
     let mut concatenated_buffer = Vec::new();
-    concatenated_buffer.extend_from_slice(instruction_name.as_bytes());
+    concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+    concatenated_buffer.push(instruction);
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&whitelist_candidate.key().to_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+    concatenated_buffer.extend_from_slice(&whitelist_candidate.key().to_bytes());
     let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
 
     msg!("Computed message hash: {:?}", computed_message_hash);

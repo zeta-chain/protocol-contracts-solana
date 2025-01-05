@@ -96,7 +96,8 @@ async function withdrawSplToken(
   gatewayProgram: Program<Gateway>
 ) {
   const buffer = Buffer.concat([
-    Buffer.from("withdraw_spl_token", "utf-8"),
+    Buffer.from("ZETACHAIN", "utf-8"),
+    Buffer.from([0x02]),
     chain_id_bn.toArrayLike(Buffer, "be", 8),
     nonce.toArrayLike(Buffer, "be", 8),
     amount.toArrayLike(Buffer, "be", 8),
@@ -373,7 +374,8 @@ describe("Gateway", () => {
     try {
       const nonce2 = nonce.addn(1);
       const buffer = Buffer.concat([
-        Buffer.from("withdraw_spl_token", "utf-8"),
+        Buffer.from("ZETACHAIN", "utf-8"),
+        Buffer.from([0x02]),
         chain_id_bn.toArrayLike(Buffer, "be", 8),
         nonce2.toArrayLike(Buffer, "be", 8),
         amount.toArrayLike(Buffer, "be", 8),
@@ -438,7 +440,8 @@ describe("Gateway", () => {
       wallet.publicKey
     );
     const buffer = Buffer.concat([
-      Buffer.from("withdraw", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x01]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
@@ -479,7 +482,8 @@ describe("Gateway", () => {
     );
 
     const buffer = Buffer.concat([
-      Buffer.from("withdraw", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x01]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
@@ -522,7 +526,8 @@ describe("Gateway", () => {
     );
 
     const buffer = Buffer.concat([
-      Buffer.from("withdraw", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x01]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
       amount.toArrayLike(Buffer, "be", 8),
@@ -640,7 +645,8 @@ describe("Gateway", () => {
     );
 
     const buffer = Buffer.concat([
-      Buffer.from("withdraw_spl_token", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x02]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
       amount.toArrayLike(Buffer, "be", 8),
@@ -754,10 +760,11 @@ describe("Gateway", () => {
     const nonce = pdaAccountData.nonce;
 
     const buffer = Buffer.concat([
-      Buffer.from("unwhitelist_spl_mint", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x04]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
-      mint.publicKey.toBuffer(),
       nonce.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -792,10 +799,11 @@ describe("Gateway", () => {
     const nonce = pdaAccountData.nonce;
 
     const buffer = Buffer.concat([
-      Buffer.from("whitelist_spl_mint", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x03]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
-      mint.publicKey.toBuffer(),
       nonce.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -823,10 +831,11 @@ describe("Gateway", () => {
     const nonce = pdaAccountData.nonce;
 
     const buffer = Buffer.concat([
-      Buffer.from("whitelist_spl_mint", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x03]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
-      mint.publicKey.toBuffer(),
       nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
+      mint.publicKey.toBuffer(),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -858,10 +867,11 @@ describe("Gateway", () => {
     const nonce = pdaAccountData.nonce;
 
     const buffer = Buffer.concat([
-      Buffer.from("whitelist_spl_mint", "utf-8"),
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x03]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
-      nonce.toArrayLike(Buffer, "be", 8), // wrong nonce
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");

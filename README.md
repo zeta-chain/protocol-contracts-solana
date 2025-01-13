@@ -72,7 +72,7 @@ In the instruction, the ECDSA signed message_hash must commit to the  `nonce`, `
 
 # Relevant Account and Addresses
 
-The Gateway program derive a PDA (Program Derived Address) with seeds `b"meta"` and canonical bump.  This PDA account/address actually holds the SOL balance of the Gateway program.  For SPL tokens, the program stores the SPL token in PDA derived ATAs. For each SPL token (different mint account), the program creates ATA from PDA and the Mint (standard way of deriving ATA in Solana SPL program).
+The Gateway program derives a PDA (Program Derived Address) with seeds `b"meta"` and canonical bump.  This PDA account/address actually holds the SOL balance of the Gateway program.  For SPL tokens, the program stores the SPL token in PDA derived ATAs. For each SPL token (different mint account), the program creates an ATA from the PDA and the Mint (standard way of deriving ATA in Solana SPL program).
 
 The PDA account itself is a data account that holds Gateway program state, namely the following data types https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L271-L275
 

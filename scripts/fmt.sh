@@ -3,16 +3,16 @@
 # Exit on any error
 set -e
 
-if ! command -v brew &> /dev/null
+if ! command -v rustup &> /dev/null
 then
-    echo "brew is required to run the script."
+    echo "rustup is required to run the script."
     exit 1
 fi
 
 if ! command -v rustfmt &> /dev/null
 then
     echo "rustfmt could not be found, installing..."
-    brew install rustfmt
+    rustup component add rustfmt
 fi
 
 cargo fmt

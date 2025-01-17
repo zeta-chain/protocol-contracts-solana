@@ -229,6 +229,7 @@ describe("Gateway", () => {
         gatewayProgram.programId
       );
       await gatewayProgram.account.whitelistEntry.fetch(entryAddress);
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err.message).to.include("Account does not exist or has no data");
     }
@@ -623,6 +624,7 @@ describe("Gateway", () => {
         wallet2.publicKey,
         gatewayProgram
       );
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("NonceMismatch.");
@@ -661,7 +663,7 @@ describe("Gateway", () => {
       s.toArrayLike(Buffer, "be", 32),
     ]);
     try {
-      gatewayProgram.methods
+      await gatewayProgram.methods
         .withdrawSplToken(
           usdcDecimals,
           amount,
@@ -676,6 +678,7 @@ describe("Gateway", () => {
           recipient: wallet2.publicKey,
         })
         .rpc({ commitment: "processed" });
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("TSSAuthenticationFailed");
@@ -856,6 +859,7 @@ describe("Gateway", () => {
           whitelistCandidate: mint.publicKey,
         })
         .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("TSSAuthenticationFailed.");
@@ -892,6 +896,7 @@ describe("Gateway", () => {
           whitelistCandidate: mint.publicKey,
         })
         .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("NonceMismatch.");

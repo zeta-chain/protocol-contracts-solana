@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
 use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
+use solana_program::instruction::Instruction;
 use solana_program::keccak::hash;
 use solana_program::program::invoke;
 use solana_program::secp256k1_recover::secp256k1_recover;
@@ -29,6 +30,8 @@ pub enum Errors {
     SPLAtaAndMintAddressMismatch,
     #[msg("EmptyReceiver")]
     EmptyReceiver,
+    #[msg("InvalidInstructionData")]
+    InvalidInstructionData,
 }
 
 /// Enumeration for instruction identifiers in message hashes.
@@ -41,6 +44,36 @@ enum InstructionId {
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
+
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq)]
+pub enum CallableInstruction {
+    OnCall {
+        sender: Pubkey, // this can be struct MessageContext { sender } but this is currently ok
+        data: Vec<u8>,
+    },
+}
+
+impl CallableInstruction {
+    pub fn pack(&self) -> Vec<u8> {
+        let mut buf;
+        match self {
+            CallableInstruction::OnCall { sender, data } => {
+                let data_len = data.len();
+                buf = Vec::with_capacity(41 + data_len); // 41 = 8 (discriminator) + 32 (sender pubkey) + 1 (data length prefix)
+
+                // NOTE: for program to know how to handle instruction after deserialization, discriminator is added
+                // anchor makes discriminator using hash("global:instruction_name") so every contract with on_call instruction should have same discriminator
+                // in case native development is used in target contract, that can be the problem, but probably they can define on_call instruction in this discriminator?
+                buf.extend_from_slice(&[16, 136, 66, 32, 254, 40, 181, 8]);
+                buf.extend_from_slice(&sender.to_bytes());
+                buf.extend_from_slice(&data_len.to_le_bytes()); // have to put length of array so it can be deserialized properly
+                buf.extend_from_slice(data);
+            }
+        }
+        buf
+    }
+}
 
 #[program]
 pub mod gateway {
@@ -76,6 +109,44 @@ pub mod gateway {
             chain_id,
             tss_address
         );
+
+        Ok(())
+    }
+
+    pub fn execute(ctx: Context<Execute>, sender: Pubkey, data: Vec<u8>) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(!pda.deposit_paused, Errors::DepositPaused);
+
+        // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
+        // since any contract with on_call instruction can be called
+        let instruction_data = CallableInstruction::OnCall { sender, data }.pack();
+
+        let account_metas = vec![
+            AccountMeta::new_readonly(ctx.accounts.system_program.to_account_info().key(), false),
+            AccountMeta::new_readonly(ctx.accounts.gateway_program.to_account_info().key(), false),
+        ];
+
+        // NOTE: calling function in other program without passing accounts seems very limitting in what can be done
+        // every account that instruction interacts with has to be predetermined and set before the call, and various callable contracts might have different behavior and need different accounts
+        // also if there is account sent here, we might need to use invoke_signed instead of invoke which also seems not secure with these arbitrary CPIs
+
+        // should we maybe predefine some accounts that can be used in every callable program, or just call without accounts which is really limitting?
+        let ix = Instruction {
+            program_id: ctx.accounts.destination_program.key(),
+            accounts: account_metas,
+            data: instruction_data,
+        };
+
+        // NOTE: one more point is that we are doing arbitrary CPI here without checks about target program, which should be fine if we dont send any accounts, but if we decide to send, might be a problem
+        invoke(
+            &ix,
+            &[
+                ctx.accounts.system_program.to_account_info().clone(),
+                ctx.accounts.gateway_program.to_account_info().clone(),
+            ],
+        )?;
+
+        msg!("execute successfully");
 
         Ok(())
     }
@@ -230,6 +301,12 @@ pub mod gateway {
         Ok(())
     }
 
+    pub fn foo(ctx: Context<Foo>) -> Result<()> {
+        msg!("Foo called");
+
+        Ok(())
+    }
+    
     /// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
     ///
     /// # Arguments
@@ -639,6 +716,20 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+pub struct Execute<'info> {
+    pub signer: Signer<'info>,
+
+    #[account(seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+
+    pub gateway_program: AccountInfo<'info>,
+
+    pub destination_program: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
 /// Instruction context for SOL deposit operations.
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -653,6 +744,9 @@ pub struct Deposit<'info> {
     /// The system program.
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
+pub struct Foo {}
 
 /// Instruction context for depositing SPL tokens.
 #[derive(Accounts)]

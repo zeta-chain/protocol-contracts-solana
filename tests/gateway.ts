@@ -117,6 +117,7 @@ async function withdrawSplToken(
       amount,
       Array.from(signatureBuffer),
       Number(recoveryParam),
+      Array.from(message_hash),
       nonce
     )
     .accounts({
@@ -206,7 +207,7 @@ describe("Gateway", () => {
 
   it("Whitelist USDC SPL token", async () => {
     await gatewayProgram.methods
-      .whitelistSplMint([], 0, new anchor.BN(0))
+      .whitelistSplMint([], 0, [], new anchor.BN(0))
       .accounts({
         whitelistCandidate: mint.publicKey,
       })
@@ -396,6 +397,7 @@ describe("Gateway", () => {
           amount,
           Array.from(signatureBuffer),
           Number(recoveryParam),
+          Array.from(message_hash),
           nonce2
         )
         .accounts({
@@ -461,6 +463,7 @@ describe("Gateway", () => {
         amount,
         Array.from(signatureBuffer),
         Number(recoveryParam),
+        Array.from(message_hash),
         nonce
       )
       .accounts({
@@ -504,6 +507,7 @@ describe("Gateway", () => {
           amount,
           Array.from(signatureBuffer),
           Number(recoveryParam),
+          Array.from(message_hash),
           nonce.subn(1)
         )
         .accounts({
@@ -548,6 +552,7 @@ describe("Gateway", () => {
           amount,
           Array.from(signatureBuffer),
           Number(recoveryParam),
+          Array.from(message_hash),
           nonce
         )
         .accounts({
@@ -557,7 +562,7 @@ describe("Gateway", () => {
       throw new Error("Expected error not thrown");
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
-      expect(err.message).to.include("TSSAuthenticationFailed");
+      expect(err.message).to.include("MessageHashMismatch");
     }
   });
 
@@ -669,6 +674,7 @@ describe("Gateway", () => {
           amount,
           Array.from(signatureBuffer),
           Number(recoveryParam),
+          Array.from(message_hash),
           nonce
         )
         .accounts({
@@ -681,7 +687,7 @@ describe("Gateway", () => {
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
-      expect(err.message).to.include("TSSAuthenticationFailed");
+      expect(err.message).to.include("MessageHashMismatch");
     }
   });
 
@@ -733,7 +739,7 @@ describe("Gateway", () => {
 
   it("Unwhitelist SPL token and deposit should fail", async () => {
     await gatewayProgram.methods
-      .unwhitelistSplMint([], 0, new anchor.BN(0))
+      .unwhitelistSplMint([], 0, [], new anchor.BN(0))
       .accounts({
         whitelistCandidate: mint.publicKey,
       })
@@ -750,7 +756,7 @@ describe("Gateway", () => {
 
   it("Re-whitelist SPL token and deposit should succeed", async () => {
     await gatewayProgram.methods
-      .whitelistSplMint([], 0, new anchor.BN(0))
+      .whitelistSplMint([], 0, [], new anchor.BN(0))
       .accounts({
         whitelistCandidate: mint.publicKey,
       })
@@ -781,6 +787,7 @@ describe("Gateway", () => {
       .unwhitelistSplMint(
         Array.from(signatureBuffer),
         Number(recoveryParam),
+        Array.from(message_hash),
         nonce
       )
       .accounts({
@@ -820,6 +827,7 @@ describe("Gateway", () => {
       .whitelistSplMint(
         Array.from(signatureBuffer),
         Number(recoveryParam),
+        Array.from(message_hash),
         nonce
       )
       .accounts({
@@ -853,6 +861,7 @@ describe("Gateway", () => {
         .unwhitelistSplMint(
           Array.from(signatureBuffer),
           Number(recoveryParam),
+          Array.from(message_hash),
           nonce
         )
         .accounts({
@@ -862,7 +871,7 @@ describe("Gateway", () => {
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
-      expect(err.message).to.include("TSSAuthenticationFailed.");
+      expect(err.message).to.include("MessageHashMismatch.");
     }
   });
 
@@ -890,6 +899,7 @@ describe("Gateway", () => {
         .unwhitelistSplMint(
           Array.from(signatureBuffer),
           Number(recoveryParam),
+          Array.from(message_hash),
           nonce.subn(1)
         )
         .accounts({

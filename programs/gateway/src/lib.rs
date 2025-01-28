@@ -4,6 +4,7 @@ use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken
 use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::instruction::Instruction;
 use solana_program::keccak::hash;
+use solana_program::message;
 use solana_program::program::invoke;
 use solana_program::secp256k1_recover::secp256k1_recover;
 use spl_associated_token_account::instruction::create_associated_token_account;
@@ -221,11 +222,13 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn whitelist_spl_mint(
         ctx: Context<Whitelist>,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -238,6 +241,7 @@ pub mod gateway {
                 whitelist_candidate,
                 signature,
                 recovery_id,
+                message_hash,
                 nonce,
                 InstructionId::WhitelistSplToken as u8,
             )?;
@@ -264,11 +268,13 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn unwhitelist_spl_mint(
         ctx: Context<Unwhitelist>,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -281,6 +287,7 @@ pub mod gateway {
                 whitelist_candidate,
                 signature,
                 recovery_id,
+                message_hash,
                 nonce,
                 InstructionId::UnwhitelistSplToken as u8,
             )?;
@@ -443,12 +450,14 @@ pub mod gateway {
     /// * `amount` - The amount of SOL to withdraw.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -469,11 +478,14 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.recipient.key().to_bytes());
-        let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
 
-        msg!("Computed message hash: {:?}", computed_message_hash);
+        msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?;
+        let address = recover_eth_address(&message_hash, recovery_id, &signature)?;
         if address != pda.tss_address {
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
@@ -502,6 +514,7 @@ pub mod gateway {
     /// * `amount` - The amount of tokens to withdraw.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
@@ -509,6 +522,7 @@ pub mod gateway {
         amount: u64,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -529,11 +543,14 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.recipient_ata.key().to_bytes());
-        let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
 
-        msg!("Computed message hash: {:?}", computed_message_hash);
+        msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
+        let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
         if address != pda.tss_address {
             msg!("ECDSA signature error");
             return err!(Errors::TSSAuthenticationFailed);
@@ -668,6 +685,7 @@ fn validate_whitelist_tss_signature(
     whitelist_candidate: &mut Account<Mint>,
     signature: [u8; 64],
     recovery_id: u8,
+    message_hash: [u8; 32],
     nonce: u64,
     instruction: u8,
 ) -> Result<()> {
@@ -686,11 +704,14 @@ fn validate_whitelist_tss_signature(
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
     concatenated_buffer.extend_from_slice(&whitelist_candidate.key().to_bytes());
-    let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
+    require!(
+        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+        Errors::MessageHashMismatch
+    );
 
-    msg!("Computed message hash: {:?}", computed_message_hash);
+    msg!("Computed message hash: {:?}", message_hash);
 
-    let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?;
+    let address = recover_eth_address(&message_hash, recovery_id, &signature)?;
     if address != pda.tss_address {
         msg!("ECDSA signature error");
         return err!(Errors::TSSAuthenticationFailed);

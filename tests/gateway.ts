@@ -118,6 +118,7 @@ async function withdrawSplToken(
       amount,
       Array.from(signatureBuffer),
       Number(recoveryParam),
+      Array.from(message_hash),
       nonce
     )
     .accounts({

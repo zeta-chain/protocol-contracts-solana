@@ -174,21 +174,43 @@ describe("Gateway", () => {
   it("Calls execute and onCall", async () => {
     await callableProgram.methods.initialize().rpc();
 
+    const randomWallet = anchor.web3.Keypair.generate();
+
+    await gatewayProgram.methods
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .rpc();
+
     // Define the sender's public key and the arbitrary data to pass
     const senderPubkey = wallet.publicKey;
-    const data = keccak256(Buffer.from("hello"));
+    const data = Buffer.from("hello world", "utf-8");
+
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      callableProgram.programId
+    );
+
+    const amount = new anchor.BN(500000000);
 
     // Call the `execute` function in the gateway program
-    // const tx = await callableProgram.methods.onCall(senderPubkey, data).accounts({gpda: pdaAccount, gatewayProgram: gatewayProgram.programId}).rpc()
     const tx = await gatewayProgram.methods
-      .execute(senderPubkey, data)
-      .accounts({
+      .execute(amount, senderPubkey, data) // sender is for authenticated call, and data is from withdraw and call msg
+      .accountsPartial({ // mandatory predefined accounts
+        signer: wallet.publicKey,
         pda: pdaAccount,
         destinationProgram: callableProgram.programId, // Pass the callable program's ID
-        signer: wallet.publicKey,
-        gatewayProgram: gatewayProgram.programId,
+        destinationProgramPda: connectedPdaAccount,
       })
+      .remainingAccounts([ // accounts coming from withdraw and call msg
+        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+        { pubkey: pdaAccount, isSigner: false, isWritable: false },
+        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true},
+        { pubkey: anchor.web3.SystemProgram.programId, isSigner: false, isWritable: false },
+      ])
       .rpc();
+
+      const connectedPdaAfter = await callableProgram.account.pda.fetch(connectedPdaAccount);
+      console.log("connected contract pda after", connectedPdaAfter)
   });
 
   //   it("Mint a SPL USDC token", async () => {

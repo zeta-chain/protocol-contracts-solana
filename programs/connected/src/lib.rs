@@ -12,35 +12,6 @@ use std::str::FromStr;
 
 declare_id!("4xEw862A2SEwMjofPkUyd4NEekmVJKJsdHkK3UkAtDrc");
 
-#[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
-pub enum FooInstruction {
-    Foo {
-        // amount: u64,
-        // receiver: [u8; 20],
-    },
-}
-
-impl FooInstruction {
-    pub fn pack(&self) -> Vec<u8> {
-        let mut buf;
-        match self {
-            FooInstruction::Foo {} => {
-                buf = Vec::with_capacity(8);
-
-                // Add the discriminator for "global:foo"
-                buf.extend_from_slice(&[167, 117, 211, 79, 251, 254, 47, 135]);
-
-                // // Add the `amount` as a little-endian 8-byte array
-                // buf.extend_from_slice(&amount.to_le_bytes());
-
-                // // Add the `receiver` (20-byte Ethereum address)
-                // buf.extend_from_slice(receiver);
-            }
-        }
-        buf
-    }
-}
 
 #[program]
 pub mod connected {
@@ -50,27 +21,21 @@ pub mod connected {
         Ok(())
     }
 
-    pub fn on_call(ctx: Context<OnCall>, sender: Pubkey, data: Vec<u8>) -> Result<()> {
-        let instruction_data = FooInstruction::Foo {}.pack();
-        msg!("On call executed {:?}", instruction_data);
+    pub fn on_call(ctx: Context<OnCall>, amount: u64, sender: Pubkey, data: Vec<u8>) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
 
-        let account_metas = vec![
-            // AccountMeta::new(ctx.accounts.signer.to_account_info().key(), true),
-            // AccountMeta::new(ctx.accounts.gpda.to_account_info().key(), false),
-            // AccountMeta::new_readonly(ctx.accounts.system_program.to_account_info().key(), false),
-        ];
+        // Store the sender's public key
+        pda.last_sender = sender;
 
-        let ix: Instruction = Instruction {
-            program_id: ctx.accounts.gateway_program.key(),
-            accounts: account_metas,
-            data: instruction_data,
-        };
+        // Convert data to a string and store it
+        let message = String::from_utf8(data).map_err(|_| ErrorCode::InvalidDataFormat)?;
+        pda.last_message = message;
 
-        invoke(
-            &ix,
-            // &[ctx.accounts.system_program.to_account_info().clone()],
-            &[],
-        )?;
+        // Transfer some portion of lamports transfered from gateway to another account
+        pda.sub_lamports(amount/2)?;
+        ctx.accounts.random_wallet.add_lamports(amount/2)?;
+
+        msg!("On call executed with amount {}, sender {} and message {}", amount, pda.last_sender, pda.last_message);
 
         Ok(())
     }
@@ -81,7 +46,7 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(init, payer = signer, space = size_of::<Pda>() + 8, seeds = [b"connected"], bump)]
+    #[account(init, payer = signer, space = size_of::<Pda>() + 32, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
     pub system_program: Program<'info, System>,
@@ -89,10 +54,24 @@ pub struct Initialize<'info> {
 
 #[derive(Accounts)]
 pub struct OnCall<'info> {
-    pub system_program: Program<'info, System>,
+    #[account(mut, seeds = [b"connected"], bump)]
+    pub pda: Account<'info, Pda>,
 
-    pub gateway_program: AccountInfo<'info>,
+    pub gateway_pda: UncheckedAccount<'info>,
+
+    pub random_wallet: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
-pub struct Pda {}
+pub struct Pda {
+    pub last_sender: Pubkey,
+    pub last_message: String,
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("The data provided could not be converted to a valid UTF-8 string.")]
+    InvalidDataFormat,
+}

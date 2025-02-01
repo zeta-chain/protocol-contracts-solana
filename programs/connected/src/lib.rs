@@ -21,7 +21,7 @@ pub mod connected {
         Ok(())
     }
 
-    pub fn on_call(ctx: Context<OnCall>, amount: u64, sender: Pubkey, data: Vec<u8>) -> Result<()> {
+    pub fn on_call(ctx: Context<OnCall>, amount: u64, sender: [u8; 20], data: Vec<u8>) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
 
         // Store the sender's public key
@@ -35,7 +35,7 @@ pub mod connected {
         pda.sub_lamports(amount/2)?;
         ctx.accounts.random_wallet.add_lamports(amount/2)?;
 
-        msg!("On call executed with amount {}, sender {} and message {}", amount, pda.last_sender, pda.last_message);
+        msg!("On call executed with amount {}, sender {:?} and message {}", amount, pda.last_sender, pda.last_message);
 
         Ok(())
     }
@@ -66,7 +66,7 @@ pub struct OnCall<'info> {
 
 #[account]
 pub struct Pda {
-    pub last_sender: Pubkey,
+    pub last_sender: [u8; 20],
     pub last_message: String,
 }
 

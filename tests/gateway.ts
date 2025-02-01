@@ -180,8 +180,6 @@ describe("Gateway", () => {
       .deposit(new anchor.BN(1_000_000_000), Array.from(address))
       .rpc();
 
-    // Define the sender's public key and the arbitrary data to pass
-    const senderPubkey = wallet.publicKey;
     const data = Buffer.from("hello world", "utf-8");
 
     let seeds = [Buffer.from("connected", "utf-8")];
@@ -213,7 +211,7 @@ describe("Gateway", () => {
 
     // Call the `execute` function in the gateway program
     const tx = await gatewayProgram.methods
-      .execute(amount, senderPubkey, data,  Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce) // sender is for authenticated call, and data is from withdraw and call msg
+      .execute(amount, Array.from(address), data,  Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce) // sender is for authenticated call, and data is from withdraw and call msg
       .accountsPartial({ // mandatory predefined accounts
         signer: wallet.publicKey,
         pda: pdaAccount,

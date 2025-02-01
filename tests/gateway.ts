@@ -192,9 +192,28 @@ describe("Gateway", () => {
 
     const amount = new anchor.BN(500000000);
 
+    // signature
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x05]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      callableProgram.programId.toBuffer(),
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
     // Call the `execute` function in the gateway program
     const tx = await gatewayProgram.methods
-      .execute(amount, senderPubkey, data) // sender is for authenticated call, and data is from withdraw and call msg
+      .execute(amount, senderPubkey, data,  Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce) // sender is for authenticated call, and data is from withdraw and call msg
       .accountsPartial({ // mandatory predefined accounts
         signer: wallet.publicKey,
         pda: pdaAccount,

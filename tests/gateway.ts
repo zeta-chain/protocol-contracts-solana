@@ -8,6 +8,7 @@ import { keccak256 } from "ethereumjs-util";
 import { expect } from "chai";
 import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import { Connected } from "../target/types/connected";
+import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
 
 const ec = new EC("secp256k1");
 // read private key from hex dump
@@ -135,7 +136,7 @@ describe("Gateway", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const conn = anchor.getProvider().connection;
   const gatewayProgram = anchor.workspace.Gateway as Program<Gateway>;
-  const callableProgram = anchor.workspace.Connected as Program<Connected>;
+  const connectedProgram = anchor.workspace.Connected as Program<Connected>;
 
   const wallet = anchor.workspace.Gateway.provider.wallet.payer;
   const mint = anchor.web3.Keypair.generate();
@@ -172,7 +173,7 @@ describe("Gateway", () => {
   });
 
   it("Calls execute and onCall", async () => {
-    await callableProgram.methods.initialize().rpc();
+    await connectedProgram.methods.initialize().rpc();
 
     const randomWallet = anchor.web3.Keypair.generate();
 
@@ -185,7 +186,7 @@ describe("Gateway", () => {
     let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       seeds,
-      callableProgram.programId
+      connectedProgram.programId
     );
 
     const amount = new anchor.BN(500000000);
@@ -199,7 +200,7 @@ describe("Gateway", () => {
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
-      callableProgram.programId.toBuffer(),
+      connectedProgram.programId.toBuffer(),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -209,13 +210,17 @@ describe("Gateway", () => {
       s.toArrayLike(Buffer, "be", 32),
     ]);
 
+    // balances before call
+    const connectedPdaBalanceBefore = await conn.getBalance(connectedPdaAccount);
+    const randomWalletBalanceBefore = await conn.getBalance(randomWallet.publicKey);
+
     // Call the `execute` function in the gateway program
-    const tx = await gatewayProgram.methods
+    await gatewayProgram.methods
       .execute(amount, Array.from(address), data,  Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce) // sender is for authenticated call, and data is from withdraw and call msg
       .accountsPartial({ // mandatory predefined accounts
         signer: wallet.publicKey,
         pda: pdaAccount,
-        destinationProgram: callableProgram.programId, // Pass the callable program's ID
+        destinationProgram: connectedProgram.programId, // Pass the connected program's ID
         destinationProgramPda: connectedPdaAccount,
       })
       .remainingAccounts([ // accounts coming from withdraw and call msg
@@ -226,8 +231,18 @@ describe("Gateway", () => {
       ])
       .rpc();
 
-      const connectedPdaAfter = await callableProgram.account.pda.fetch(connectedPdaAccount);
-      console.log("connected contract pda after", connectedPdaAfter)
+      const connectedPdaAfter = await connectedProgram.account.pda.fetch(connectedPdaAccount);
+
+      // check connected pda state was updated
+      expect(connectedPdaAfter.lastMessage).to.be.eq("hello world");
+      expect(Array.from(connectedPdaAfter.lastSender)).to.be.deep.eq(Array.from(address));
+
+      // check balances were updated
+      const connectedPdaBalanceAfter = await conn.getBalance(connectedPdaAccount);
+      const randomWalletBalanceAfter = await conn.getBalance(randomWallet.publicKey);
+
+      expect(connectedPdaBalanceBefore + amount.toNumber()/2).to.eq(connectedPdaBalanceAfter);
+      expect(randomWalletBalanceBefore + amount.toNumber()/2).to.eq(randomWalletBalanceAfter);
   });
 
   //   it("Mint a SPL USDC token", async () => {

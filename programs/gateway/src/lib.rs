@@ -61,7 +61,11 @@ impl CallableInstruction {
     pub fn pack(&self) -> Vec<u8> {
         let mut buf;
         match self {
-            CallableInstruction::OnCall { amount, sender, data } => {
+            CallableInstruction::OnCall {
+                amount,
+                sender,
+                data,
+            } => {
                 let data_len = data.len() as u32;
 
                 //8 (discriminator) + 8 (u64 amount) + 20 (sender) + 4 (data length)
@@ -127,6 +131,17 @@ pub mod gateway {
         Ok(())
     }
 
+    /// Withdraws amount to destination program pda, and calls on_call on destination program
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SOL to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn execute(
         ctx: Context<Execute>,
         amount: u64,
@@ -135,7 +150,7 @@ pub mod gateway {
         signature: [u8; 64],
         recovery_id: u8,
         message_hash: [u8; 32],
-        nonce: u64
+        nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
 
@@ -170,9 +185,17 @@ pub mod gateway {
 
         // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
         // since any contract with on_call instruction can be called
-        let instruction_data = CallableInstruction::OnCall { amount, sender, data }.pack();
+        let instruction_data = CallableInstruction::OnCall {
+            amount,
+            sender,
+            data,
+        }
+        .pack();
 
-        let account_metas: Vec<AccountMeta> = ctx.remaining_accounts.iter()
+        // account metas for remaining accounts
+        let account_metas: Vec<AccountMeta> = ctx
+            .remaining_accounts
+            .iter()
             .map(|account_info| {
                 // Check if the account is writable, then create the appropriate AccountMeta
                 if account_info.is_writable {
@@ -189,15 +212,19 @@ pub mod gateway {
             data: instruction_data,
         };
 
+        // withdraw to destination program pda
         pda.sub_lamports(amount)?;
         ctx.accounts.destination_program_pda.add_lamports(amount)?;
 
-        invoke(
-            &ix,
-            ctx.remaining_accounts,
-        )?;
+        // invoke destination program on_call function
+        invoke(&ix, ctx.remaining_accounts)?;
 
-        msg!("execute successfully");
+        msg!(
+            "Execute done: destination contract = {}, amount = {}, sender = {:?}",
+            amount,
+            ctx.accounts.destination_program.key(),
+            sender,
+        );
 
         pda.nonce += 1;
 
@@ -359,6 +386,7 @@ pub mod gateway {
 
         Ok(())
     }
+
     /// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
     ///
     /// # Arguments
@@ -796,7 +824,7 @@ pub struct Execute<'info> {
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
-    pub destination_program_pda: UncheckedAccount<'info>
+    pub destination_program_pda: UncheckedAccount<'info>,
 }
 
 /// Instruction context for SOL deposit operations.

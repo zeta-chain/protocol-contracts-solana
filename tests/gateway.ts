@@ -603,38 +603,66 @@ describe("Gateway", () => {
     ]);
 
     // balances before call
-    const connectedPdaBalanceBefore = await conn.getBalance(connectedPdaAccount);
-    const randomWalletBalanceBefore = await conn.getBalance(randomWallet.publicKey);
+    const connectedPdaBalanceBefore = await conn.getBalance(
+      connectedPdaAccount
+    );
+    const randomWalletBalanceBefore = await conn.getBalance(
+      randomWallet.publicKey
+    );
 
     // call the `execute` function in the gateway program
     await gatewayProgram.methods
-      .execute(amount, Array.from(address), data,  Array.from(signatureBuffer), Number(recoveryParam), Array.from(message_hash), nonce)
-      .accountsPartial({ // mandatory predefined accounts
+      .execute(
+        amount,
+        Array.from(address),
+        data,
+        Array.from(signatureBuffer),
+        Number(recoveryParam),
+        Array.from(message_hash),
+        nonce
+      )
+      .accountsPartial({
+        // mandatory predefined accounts
         signer: wallet.publicKey,
         pda: pdaAccount,
         destinationProgram: connectedProgram.programId,
         destinationProgramPda: connectedPdaAccount,
       })
-      .remainingAccounts([ // accounts coming from withdraw and call msg
+      .remainingAccounts([
+        // accounts coming from withdraw and call msg
         { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
         { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true},
-        { pubkey: anchor.web3.SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
+        {
+          pubkey: anchor.web3.SystemProgram.programId,
+          isSigner: false,
+          isWritable: false,
+        },
       ])
       .rpc();
 
-      const connectedPdaAfter = await connectedProgram.account.pda.fetch(connectedPdaAccount);
+    const connectedPdaAfter = await connectedProgram.account.pda.fetch(
+      connectedPdaAccount
+    );
 
-      // check connected pda state was updated
-      expect(connectedPdaAfter.lastMessage).to.be.eq("hello world");
-      expect(Array.from(connectedPdaAfter.lastSender)).to.be.deep.eq(Array.from(address));
+    // check connected pda state was updated
+    expect(connectedPdaAfter.lastMessage).to.be.eq("hello world");
+    expect(Array.from(connectedPdaAfter.lastSender)).to.be.deep.eq(
+      Array.from(address)
+    );
 
-      // check balances were updated
-      const connectedPdaBalanceAfter = await conn.getBalance(connectedPdaAccount);
-      const randomWalletBalanceAfter = await conn.getBalance(randomWallet.publicKey);
+    // check balances were updated
+    const connectedPdaBalanceAfter = await conn.getBalance(connectedPdaAccount);
+    const randomWalletBalanceAfter = await conn.getBalance(
+      randomWallet.publicKey
+    );
 
-      expect(connectedPdaBalanceBefore + amount.toNumber()/2).to.eq(connectedPdaBalanceAfter);
-      expect(randomWalletBalanceBefore + amount.toNumber()/2).to.eq(randomWalletBalanceAfter);
+    expect(connectedPdaBalanceBefore + amount.toNumber() / 2).to.eq(
+      connectedPdaBalanceAfter
+    );
+    expect(randomWalletBalanceBefore + amount.toNumber() / 2).to.eq(
+      randomWalletBalanceAfter
+    );
   });
 
   it("Withdraw SPL token to a non-existent account should succeed by creating it", async () => {
@@ -1042,4 +1070,4 @@ describe("Gateway", () => {
       expect(err.message).to.include("SignerIsNotAuthority");
     }
   });
-  });
+});

@@ -959,9 +959,11 @@ pub struct Execute<'info> {
     pub pda: Account<'info, Pda>,
 
     /// The destination program.
+    /// CHECK: arbirtrary contract
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
+    /// CHECK: arbirtrary contract
     pub destination_program_pda: UncheckedAccount<'info>,
 }
 
@@ -1085,9 +1087,11 @@ pub struct ExecuteSPLToken<'info> {
     pub mint_account: Account<'info, Mint>,
 
     /// The destination program.
+    /// CHECK: arbirtrary contract
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
+    /// CHECK: arbirtrary contract
     pub destination_program_pda: UncheckedAccount<'info>,
 
     /// The destination program associated token account.

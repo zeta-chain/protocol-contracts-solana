@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-protocol_contracts_solana = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
+gateway = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
 
 [registry]
 url = "https://api.apr.dev"

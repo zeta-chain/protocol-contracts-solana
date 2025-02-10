@@ -1,5 +1,5 @@
 {
-  "name": "@zetachain/protocol-contracts-solana",
+  "name": "@zetachain/gateway",
   "private": false,
   "license": "MIT",
   "version": "0.0.0-set-on-publish",
@@ -8,8 +8,9 @@
     "idl"
   ],
   "scripts": {
-    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+    "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+    "fmt": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "rust:fmt": "./scripts/fmt.sh"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.0",

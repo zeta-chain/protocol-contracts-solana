@@ -976,6 +976,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
+name = "gateway"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "solana-program",
+ "spl-associated-token-account",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1479,17 +1489,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22244ce15aa966053a896d1accb3a6e68469b97c7f33f284b99f0d576879fc23"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "protocol-contracts-solana"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "anchor-syn",
- "solana-program",
- "spl-associated-token-account",
 ]
 
 [[package]]

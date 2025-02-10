@@ -81,7 +81,7 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "pda",
-					Writable: false,
+					Writable: true,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,
@@ -119,6 +119,13 @@ var IDLGateway = types.IDL{
 					Writable: true,
 					Signer:   false,
 					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
 					PDA:      nil,
 				},
 			},
@@ -136,7 +143,7 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "pda",
-					Writable: false,
+					Writable: true,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,
@@ -174,6 +181,123 @@ var IDLGateway = types.IDL{
 					Writable: true,
 					Signer:   false,
 					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
+					PDA:      nil,
+				},
+			},
+		},
+		{
+			Name:          "execute",
+			Discriminator: [8]byte{130, 221, 242, 154, 13, 193, 189, 29},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program_pda",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+			},
+		},
+		{
+			Name:          "execute_spl_token",
+			Discriminator: [8]byte{121, 99, 79, 69, 77, 243, 46, 199},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda_ata",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "mint_account",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program_pda",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program_pda_ata",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "token_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+					PDA:      nil,
+				},
+				{
+					Name:     "associated_token_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
 					PDA:      nil,
 				},
 			},
@@ -206,47 +330,20 @@ var IDLGateway = types.IDL{
 			},
 		},
 		{
-			Name:          "initialize_rent_payer",
-			Discriminator: [8]byte{225, 73, 166, 180, 25, 245, 183, 96},
-			Accounts: []types.Account{
-				{
-					Name:     "rent_payer_pda",
-					Writable: true,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "authority",
-					Writable: true,
-					Signer:   true,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "system_program",
-					Writable: false,
-					Signer:   false,
-					Address:  "11111111111111111111111111111111",
-					PDA:      nil,
-				},
-			},
-		},
-		{
 			Name:          "set_deposit_paused",
 			Discriminator: [8]byte{98, 179, 141, 24, 246, 120, 164, 143},
 			Accounts: []types.Account{
 				{
-					Name:     "pda",
+					Name:     "signer",
 					Writable: true,
-					Signer:   false,
+					Signer:   true,
 					Address:  "",
 					PDA:      nil,
 				},
 				{
-					Name:     "signer",
+					Name:     "pda",
 					Writable: true,
-					Signer:   true,
+					Signer:   false,
 					Address:  "",
 					PDA:      nil,
 				},
@@ -257,6 +354,20 @@ var IDLGateway = types.IDL{
 			Discriminator: [8]byte{73, 142, 63, 191, 233, 238, 170, 104},
 			Accounts: []types.Account{
 				{
+					Name:     "authority",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
 					Name:     "whitelist_entry",
 					Writable: true,
 					Signer:   false,
@@ -270,27 +381,6 @@ var IDLGateway = types.IDL{
 					Address:  "",
 					PDA:      nil,
 				},
-				{
-					Name:     "pda",
-					Writable: true,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "authority",
-					Writable: true,
-					Signer:   true,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "system_program",
-					Writable: false,
-					Signer:   false,
-					Address:  "11111111111111111111111111111111",
-					PDA:      nil,
-				},
 			},
 		},
 		{
@@ -298,16 +388,16 @@ var IDLGateway = types.IDL{
 			Discriminator: [8]byte{32, 46, 64, 28, 149, 75, 243, 88},
 			Accounts: []types.Account{
 				{
-					Name:     "pda",
+					Name:     "signer",
 					Writable: true,
-					Signer:   false,
+					Signer:   true,
 					Address:  "",
 					PDA:      nil,
 				},
 				{
-					Name:     "signer",
+					Name:     "pda",
 					Writable: true,
-					Signer:   true,
+					Signer:   false,
 					Address:  "",
 					PDA:      nil,
 				},
@@ -318,16 +408,16 @@ var IDLGateway = types.IDL{
 			Discriminator: [8]byte{227, 136, 3, 242, 177, 168, 10, 160},
 			Accounts: []types.Account{
 				{
-					Name:     "pda",
+					Name:     "signer",
 					Writable: true,
-					Signer:   false,
+					Signer:   true,
 					Address:  "",
 					PDA:      nil,
 				},
 				{
-					Name:     "signer",
+					Name:     "pda",
 					Writable: true,
-					Signer:   true,
+					Signer:   false,
 					Address:  "",
 					PDA:      nil,
 				},
@@ -337,6 +427,20 @@ var IDLGateway = types.IDL{
 			Name:          "whitelist_spl_mint",
 			Discriminator: [8]byte{30, 110, 162, 42, 208, 147, 254, 219},
 			Accounts: []types.Account{
+				{
+					Name:     "authority",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
 				{
 					Name:     "whitelist_entry",
 					Writable: true,
@@ -348,20 +452,6 @@ var IDLGateway = types.IDL{
 					Name:     "whitelist_candidate",
 					Writable: false,
 					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "pda",
-					Writable: true,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "authority",
-					Writable: true,
-					Signer:   true,
 					Address:  "",
 					PDA:      nil,
 				},
@@ -393,7 +483,7 @@ var IDLGateway = types.IDL{
 					PDA:      nil,
 				},
 				{
-					Name:     "to",
+					Name:     "recipient",
 					Writable: true,
 					Signer:   false,
 					Address:  "",
@@ -448,13 +538,6 @@ var IDLGateway = types.IDL{
 					PDA:      nil,
 				},
 				{
-					Name:     "rent_payer_pda",
-					Writable: true,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
 					Name:     "token_program",
 					Writable: false,
 					Signer:   false,
@@ -487,13 +570,6 @@ var IDLGateway = types.IDL{
 			PDA:      nil,
 		},
 		{
-			Name:     "RentPayerPda",
-			Writable: false,
-			Signer:   false,
-			Address:  "",
-			PDA:      nil,
-		},
-		{
 			Name:     "WhitelistEntry",
 			Writable: false,
 			Signer:   false,
@@ -503,15 +579,15 @@ var IDLGateway = types.IDL{
 	},
 	Errors: []types.Error{
 		{Code: 6000, Name: "SignerIsNotAuthority", Msg: "SignerIsNotAuthority"},
-		{Code: 6001, Name: "InsufficientPoints", Msg: "InsufficientPoints"},
-		{Code: 6002, Name: "NonceMismatch", Msg: "NonceMismatch"},
-		{Code: 6003, Name: "TSSAuthenticationFailed", Msg: "TSSAuthenticationFailed"},
-		{Code: 6004, Name: "DepositToAddressMismatch", Msg: "DepositToAddressMismatch"},
-		{Code: 6005, Name: "MessageHashMismatch", Msg: "MessageHashMismatch"},
-		{Code: 6006, Name: "MemoLengthExceeded", Msg: "MemoLengthExceeded"},
-		{Code: 6007, Name: "MemoLengthTooShort", Msg: "MemoLengthTooShort"},
-		{Code: 6008, Name: "DepositPaused", Msg: "DepositPaused"},
-		{Code: 6009, Name: "SPLAtaAndMintAddressMismatch", Msg: "SPLAtaAndMintAddressMismatch"},
+		{Code: 6001, Name: "NonceMismatch", Msg: "NonceMismatch"},
+		{Code: 6002, Name: "TSSAuthenticationFailed", Msg: "TSSAuthenticationFailed"},
+		{Code: 6003, Name: "DepositToAddressMismatch", Msg: "DepositToAddressMismatch"},
+		{Code: 6004, Name: "MessageHashMismatch", Msg: "MessageHashMismatch"},
+		{Code: 6005, Name: "MemoLengthExceeded", Msg: "MemoLengthExceeded"},
+		{Code: 6006, Name: "DepositPaused", Msg: "DepositPaused"},
+		{Code: 6007, Name: "SPLAtaAndMintAddressMismatch", Msg: "SPLAtaAndMintAddressMismatch"},
+		{Code: 6008, Name: "EmptyReceiver", Msg: "EmptyReceiver"},
+		{Code: 6009, Name: "InvalidInstructionData", Msg: "InvalidInstructionData"},
 	},
 }
 
@@ -520,8 +596,9 @@ const (
 	InstructionDeposit_and_call           = "deposit_and_call"
 	InstructionDeposit_spl_token          = "deposit_spl_token"
 	InstructionDeposit_spl_token_and_call = "deposit_spl_token_and_call"
+	InstructionExecute                    = "execute"
+	InstructionExecute_spl_token          = "execute_spl_token"
 	InstructionInitialize                 = "initialize"
-	InstructionInitialize_rent_payer      = "initialize_rent_payer"
 	InstructionSet_deposit_paused         = "set_deposit_paused"
 	InstructionUnwhitelist_spl_mint       = "unwhitelist_spl_mint"
 	InstructionUpdate_authority           = "update_authority"

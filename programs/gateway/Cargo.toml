@@ -1,12 +1,12 @@
 [package]
-name = "protocol-contracts-solana"
+name = "gateway"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "protocol_contracts_solana"
+name = "gateway"
 
 [features]
 default = []
@@ -19,6 +19,5 @@ idl-build = ["anchor-lang/idl-build"]
 [dependencies]
 anchor-lang = { version = "=0.30.0" }
 anchor-spl = { version = "=0.30.0", features = ["idl-build"] }
-anchor-syn = "=0.30.0"
 spl-associated-token-account = "3.0.2"
 solana-program = "=1.18.15"

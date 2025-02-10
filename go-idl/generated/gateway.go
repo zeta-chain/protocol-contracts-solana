@@ -6,12 +6,12 @@ import (
 )
 
 var IDLGateway = types.IDL{
-	Address: "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis",
+	Address: "94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d",
 	Metadata: types.Metadata{
 		Name:        "gateway",
 		Version:     "0.1.0",
 		Spec:        "0.1.0",
-		Description: "Created with Anchor",
+		Description: "ZetaChain Gateway program on Solana",
 	},
 	Instructions: []types.Instruction{
 		{
@@ -222,82 +222,6 @@ var IDLGateway = types.IDL{
 					Writable: false,
 					Signer:   false,
 					Address:  "",
-					PDA:      nil,
-				},
-			},
-		},
-		{
-			Name:          "execute_spl_token",
-			Discriminator: [8]byte{121, 99, 79, 69, 77, 243, 46, 199},
-			Accounts: []types.Account{
-				{
-					Name:     "signer",
-					Writable: true,
-					Signer:   true,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "pda",
-					Writable: true,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "pda_ata",
-					Writable: true,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "mint_account",
-					Writable: false,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "destination_program",
-					Writable: false,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "destination_program_pda",
-					Writable: false,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "destination_program_pda_ata",
-					Writable: true,
-					Signer:   false,
-					Address:  "",
-					PDA:      nil,
-				},
-				{
-					Name:     "token_program",
-					Writable: false,
-					Signer:   false,
-					Address:  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-					PDA:      nil,
-				},
-				{
-					Name:     "associated_token_program",
-					Writable: false,
-					Signer:   false,
-					Address:  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-					PDA:      nil,
-				},
-				{
-					Name:     "system_program",
-					Writable: false,
-					Signer:   false,
-					Address:  "11111111111111111111111111111111",
 					PDA:      nil,
 				},
 			},
@@ -597,7 +521,6 @@ const (
 	InstructionDeposit_spl_token          = "deposit_spl_token"
 	InstructionDeposit_spl_token_and_call = "deposit_spl_token_and_call"
 	InstructionExecute                    = "execute"
-	InstructionExecute_spl_token          = "execute_spl_token"
 	InstructionInitialize                 = "initialize"
 	InstructionSet_deposit_paused         = "set_deposit_paused"
 	InstructionUnwhitelist_spl_mint       = "unwhitelist_spl_mint"

@@ -4,7 +4,6 @@ use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken
 use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
 use solana_program::instruction::Instruction;
 use solana_program::keccak::hash;
-use solana_program::message;
 use solana_program::program::invoke;
 use solana_program::secp256k1_recover::secp256k1_recover;
 use spl_associated_token_account::instruction::create_associated_token_account;
@@ -154,14 +153,7 @@ pub mod gateway {
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
 
-        if nonce != pda.nonce {
-            msg!(
-                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-                nonce,
-                pda.nonce,
-            );
-            return err!(Errors::NonceMismatch);
-        }
+        verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -177,11 +169,7 @@ pub mod gateway {
 
         msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&message_hash, recovery_id, &signature)?;
-        if address != pda.tss_address {
-            msg!("ECDSA signature error");
-            return err!(Errors::TSSAuthenticationFailed);
-        }
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
         // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
         // since any contract with on_call instruction can be called
@@ -225,8 +213,6 @@ pub mod gateway {
             ctx.accounts.destination_program.key(),
             sender,
         );
-
-        pda.nonce += 1;
 
         Ok(())
     }
@@ -535,14 +521,7 @@ pub mod gateway {
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
 
-        if nonce != pda.nonce {
-            msg!(
-                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-                nonce,
-                pda.nonce,
-            );
-            return err!(Errors::NonceMismatch);
-        }
+        verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -558,16 +537,10 @@ pub mod gateway {
 
         msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&message_hash, recovery_id, &signature)?;
-        if address != pda.tss_address {
-            msg!("ECDSA signature error");
-            return err!(Errors::TSSAuthenticationFailed);
-        }
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
         pda.sub_lamports(amount)?;
         ctx.accounts.recipient.add_lamports(amount)?;
-
-        pda.nonce += 1;
 
         msg!(
             "Withdraw executed: amount = {}, recipient = {}, pda = {}",
@@ -599,14 +572,8 @@ pub mod gateway {
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
-        if nonce != pda.nonce {
-            msg!(
-                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-                nonce,
-                pda.nonce,
-            );
-            return err!(Errors::NonceMismatch);
-        }
+
+        verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -623,11 +590,7 @@ pub mod gateway {
 
         msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
-        if address != pda.tss_address {
-            msg!("ECDSA signature error");
-            return err!(Errors::TSSAuthenticationFailed);
-        }
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
         // associated token address (ATA) of the program PDA
         // the PDA is the "wallet" (owner) of the token account
@@ -708,8 +671,6 @@ pub mod gateway {
             signer_seeds,
         );
 
-        pda.nonce += 1;
-
         transfer_checked(xfer_ctx, amount, decimals)?;
         // Note: this pda.sub_lamports() must be done here due to this issue https://github.com/solana-labs/solana/issues/9711
         // otherwise the previous CPI calls might fail with error:
@@ -733,12 +694,27 @@ pub mod gateway {
     }
 }
 
-/// Recovers eth address from signature.
-fn recover_eth_address(
+// Verifies provided nonce is correct and updates pda nonce.
+fn verify_and_update_nonce(pda: &mut Account<Pda>, nonce: u64) -> Result<()> {
+    if nonce != pda.nonce {
+        msg!(
+            "Mismatch nonce: provided nonce = {}, expected nonce = {}",
+            nonce,
+            pda.nonce,
+        );
+        return err!(Errors::NonceMismatch);
+    }
+    pda.nonce += 1;
+    Ok(())
+}
+
+/// Recovers and verifies eth address from signature.
+fn recover_and_verify_eth_address(
+    pda: &mut Account<Pda>,
     message_hash: &[u8; 32],
     recovery_id: u8,
     signature: &[u8; 64],
-) -> Result<[u8; 20]> {
+) -> Result<()> {
     let pubkey = secp256k1_recover(message_hash, recovery_id, signature)
         .map_err(|_| ProgramError::InvalidArgument)?;
 
@@ -749,7 +725,13 @@ fn recover_eth_address(
 
     let mut eth_address = [0u8; 20];
     eth_address.copy_from_slice(address);
-    Ok(eth_address)
+
+    if eth_address != pda.tss_address {
+        msg!("ECDSA signature error");
+        return err!(Errors::TSSAuthenticationFailed);
+    }
+
+    Ok(())
 }
 
 /// Recovers and verifies tss signature for whitelist and unwhitelist instructions.
@@ -762,14 +744,7 @@ fn validate_whitelist_tss_signature(
     nonce: u64,
     instruction: u8,
 ) -> Result<()> {
-    if nonce != pda.nonce {
-        msg!(
-            "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-            nonce,
-            pda.nonce,
-        );
-        return err!(Errors::NonceMismatch);
-    }
+    verify_and_update_nonce(pda, nonce)?;
 
     let mut concatenated_buffer = Vec::new();
     concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -784,13 +759,7 @@ fn validate_whitelist_tss_signature(
 
     msg!("Computed message hash: {:?}", message_hash);
 
-    let address = recover_eth_address(&message_hash, recovery_id, &signature)?;
-    if address != pda.tss_address {
-        msg!("ECDSA signature error");
-        return err!(Errors::TSSAuthenticationFailed);
-    }
-
-    pda.nonce += 1;
+    recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
     Ok(())
 }

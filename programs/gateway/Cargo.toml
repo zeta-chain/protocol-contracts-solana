@@ -1,7 +1,7 @@
 [package]
 name = "gateway"
 version = "0.1.0"
-description = "Created with Anchor"
+description = "ZetaChain Gateway program on Solana"
 edition = "2021"
 
 [lib]

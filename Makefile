@@ -9,7 +9,7 @@ generate:
 	@for file in $(wildcard $(IDL_DIR)/*.json); do \
 	    base_name=$$(basename $$file .json); \
 	    input_file="../$$file"; \
-	    output_file="$(GENERATED_DIR)/$$base_name.go"; \
+	    output_file="$(GENERATED_DIR)/$$base_name/$$base_name.go"; \
 	    echo "Generating $$output_file from $$file"; \
 	    (cd go-idl && go run ./generator "$$input_file" "$$output_file"); \
 	    (cd go-idl && go fmt $$output_file); \

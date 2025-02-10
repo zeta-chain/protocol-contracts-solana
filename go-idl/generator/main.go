@@ -24,10 +24,9 @@ func main() {
 		fmt.Printf("Error reading IDL: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("NAME?", idl.Metadata.Name, outputPath)
 
 	// write the parsed IDL as a Go constant in `generated.go`.
-	err = writeGoFile(idl, idl.Metadata.Name, outputPath)
+	err = writeGoFile(idl, outputPath)
 	if err != nil {
 		fmt.Printf("Error writing Go file: %v\n", err)
 		os.Exit(1)
@@ -54,7 +53,7 @@ func readIDL(filePath string) (*types.IDL, error) {
 }
 
 // writeGoFile generates the `generated.go` file with the constant `IDL`.
-func writeGoFile(idl *types.IDL, name string, outputPath string) error {
+func writeGoFile(idl *types.IDL, outputPath string) error {
 	// create the output file
 	file, err := os.Create(outputPath)
 	if err != nil {
@@ -62,7 +61,7 @@ func writeGoFile(idl *types.IDL, name string, outputPath string) error {
 	}
 
 	// write the Go code to the file
-	_, err = file.WriteString(generateIDLFile(name, name, idl))
+	_, err = file.WriteString(generateIDLFile("solana", "Gateway", idl))
 	if err != nil {
 		return fmt.Errorf("failed to write to file: %w", err)
 	}

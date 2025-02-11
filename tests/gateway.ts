@@ -598,6 +598,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      data,
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -713,6 +714,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      data,
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");

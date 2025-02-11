@@ -163,6 +163,7 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.destination_program.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&data);
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),
             Errors::MessageHashMismatch
@@ -253,6 +254,7 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
         concatenated_buffer
             .extend_from_slice(&ctx.accounts.destination_program_pda_ata.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&data);
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),
             Errors::MessageHashMismatch

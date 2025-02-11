@@ -42,7 +42,7 @@ enum InstructionId {
     WhitelistSplToken = 3,
     UnwhitelistSplToken = 4,
     Execute = 5,
-    ExecteSplToken = 6,
+    ExecuteSplToken = 6,
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
@@ -246,7 +246,7 @@ pub mod gateway {
 
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(b"ZETACHAIN");
-        concatenated_buffer.push(InstructionId::ExecteSplToken as u8);
+        concatenated_buffer.push(InstructionId::ExecuteSplToken as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());

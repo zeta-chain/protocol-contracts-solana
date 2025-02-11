@@ -4,7 +4,7 @@ use std::mem::size_of;
 
 declare_id!("8iUjRRhUCn8BjrvsWPfj8mguTe9L81ES4oAUApiF8JFC");
 
-// NOTE: this is just example contract that can be called from gateway in execute function for testing withdraw and call spl
+// NOTE: this is just example contract that can be called from gateway in execute_spl_token function for testing withdraw and call spl
 #[program]
 pub mod connected_spl {
     use super::*;
@@ -100,4 +100,3 @@ pub enum ErrorCode {
     #[msg("The data provided could not be converted to a valid UTF-8 string.")]
     InvalidDataFormat,
 }
-

@@ -1,7 +1,7 @@
 [package]
 name = "connectedSPL"
 version = "0.1.0"
-description = "Created with Anchor"
+description = "Test program used for testing withdraw and call SPL feature"
 edition = "2021"
 
 [lib]

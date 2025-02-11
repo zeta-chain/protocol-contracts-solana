@@ -218,7 +218,6 @@ pub mod gateway {
         Ok(())
     }
 
-
     /// Execute with SPL tokens. Caller is TSS.
     ///
     /// # Arguments
@@ -243,14 +242,7 @@ pub mod gateway {
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
-        if nonce != pda.nonce {
-            msg!(
-                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-                nonce,
-                pda.nonce,
-            );
-            return err!(Errors::NonceMismatch);
-        }
+        verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -259,7 +251,8 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
-        concatenated_buffer.extend_from_slice(&ctx.accounts.destination_program_pda_ata.key().to_bytes());
+        concatenated_buffer
+            .extend_from_slice(&ctx.accounts.destination_program_pda_ata.key().to_bytes());
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),
             Errors::MessageHashMismatch
@@ -267,11 +260,7 @@ pub mod gateway {
 
         msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
-        if address != pda.tss_address {
-            msg!("ECDSA signature error");
-            return err!(Errors::TSSAuthenticationFailed);
-        }
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
 
         // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
         // since any contract with on_call instruction can be called
@@ -320,7 +309,12 @@ pub mod gateway {
             &ctx.accounts.mint_account.key(),
         );
         require!(
-            recipient_ata == ctx.accounts.destination_program_pda_ata.to_account_info().key(),
+            recipient_ata
+                == ctx
+                    .accounts
+                    .destination_program_pda_ata
+                    .to_account_info()
+                    .key(),
             Errors::SPLAtaAndMintAddressMismatch,
         );
 
@@ -338,14 +332,14 @@ pub mod gateway {
         );
 
         transfer_checked(xfer_ctx, amount, decimals)?;
-       
+
         // invoke destination program on_call function
         invoke(&ix, ctx.remaining_accounts)?;
 
         pda.nonce += 1;
 
         msg!(
-            "Execute SPL executed: amount = {}, decimals = {}, recipient = {}, mint = {}, pda = {}",
+            "Execute SPL done: amount = {}, decimals = {}, recipient = {}, mint = {}, pda = {}",
             amount,
             decimals,
             ctx.accounts.destination_program_pda.key(),

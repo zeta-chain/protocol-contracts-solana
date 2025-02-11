@@ -1,4 +1,6 @@
 .anchor/
+.idea/
 /target
 **/.DS_Store
-node_modules
+.idea/
+node_modules/

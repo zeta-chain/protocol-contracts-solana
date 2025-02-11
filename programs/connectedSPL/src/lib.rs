@@ -28,7 +28,7 @@ pub mod connected_spl {
         let message = String::from_utf8(data).map_err(|_| ErrorCode::InvalidDataFormat)?;
         pda.last_message = message;
 
-        // Transfer some portion of tokens transfered from gateway to another account
+        // Transfer some portion of tokens transferred from gateway to another account
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"connectedSPL", &[ctx.bumps.pda]]];
 

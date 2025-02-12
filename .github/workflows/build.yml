@@ -11,6 +11,10 @@ jobs:
   build:
     # solana-verify: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required by solana-verify)
     runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
         with:

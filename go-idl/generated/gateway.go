@@ -303,6 +303,26 @@ var IDLGateway = types.IDL{
 			},
 		},
 		{
+			Name:          "increment_nonce",
+			Discriminator: [8]byte{84, 149, 209, 233, 228, 66, 195, 237},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+			},
+		},
+		{
 			Name:          "initialize",
 			Discriminator: [8]byte{175, 175, 109, 31, 13, 152, 155, 237},
 			Accounts: []types.Account{
@@ -598,6 +618,7 @@ const (
 	InstructionDeposit_spl_token_and_call = "deposit_spl_token_and_call"
 	InstructionExecute                    = "execute"
 	InstructionExecute_spl_token          = "execute_spl_token"
+	InstructionIncrement_nonce            = "increment_nonce"
 	InstructionInitialize                 = "initialize"
 	InstructionSet_deposit_paused         = "set_deposit_paused"
 	InstructionUnwhitelist_spl_mint       = "unwhitelist_spl_mint"

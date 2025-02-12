@@ -31,6 +31,12 @@ pub mod connected {
         pda.sub_lamports(amount / 2)?;
         ctx.accounts.random_wallet.add_lamports(amount / 2)?;
 
+        // Check if the message is "revert" and return an error if so
+        if pda.last_message == "revert" {
+            msg!("Reverting transaction due to 'revert' message.");
+            return Err(ErrorCode::RevertMessage.into());
+        }
+
         msg!(
             "On call executed with amount {}, sender {:?} and message {}",
             amount,
@@ -75,4 +81,7 @@ pub struct Pda {
 pub enum ErrorCode {
     #[msg("The data provided could not be converted to a valid UTF-8 string.")]
     InvalidDataFormat,
+
+    #[msg("Revert message detected. Transaction execution halted.")]
+    RevertMessage,
 }

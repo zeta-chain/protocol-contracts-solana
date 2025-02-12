@@ -43,6 +43,7 @@ enum InstructionId {
     UnwhitelistSplToken = 4,
     Execute = 5,
     ExecuteSplToken = 6,
+    IncrementNonce = 7,
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
@@ -127,6 +128,36 @@ pub mod gateway {
             chain_id,
             tss_address
         );
+
+        Ok(())
+    }
+
+    pub fn increment_nonce(
+        ctx: Context<IncrementNonce>,
+        amount: u64,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    )-> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+
+        verify_and_update_nonce(pda, nonce)?;
+
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.push(InstructionId::IncrementNonce as u8);
+        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
+
+        msg!("Computed message hash: {:?}", message_hash);
+
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
         Ok(())
     }
@@ -337,8 +368,6 @@ pub mod gateway {
 
         // invoke destination program on_call function
         invoke(&ix, ctx.remaining_accounts)?;
-
-        pda.nonce += 1;
 
         msg!(
             "Execute SPL done: amount = {}, decimals = {}, recipient = {}, mint = {}, pda = {}",
@@ -929,6 +958,18 @@ pub struct Execute<'info> {
 
     // Pda for destination program
     pub destination_program_pda: UncheckedAccount<'info>,
+}
+
+
+#[derive(Accounts)]
+pub struct IncrementNonce<'info> {
+    /// The account of the signer incrementing nonce.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
 }
 
 /// Instruction context for SOL deposit operations.

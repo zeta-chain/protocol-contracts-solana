@@ -51,7 +51,6 @@ pub mod connected_spl {
             return Err(ErrorCode::RevertMessage.into());
         }
 
-
         msg!(
             "On call executed with amount {}, sender {:?} and message {}",
             amount,

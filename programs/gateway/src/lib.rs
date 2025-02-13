@@ -148,7 +148,7 @@ pub mod gateway {
         recovery_id: u8,
         message_hash: [u8; 32],
         nonce: u64,
-    )-> Result<()> {
+    ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
 
         verify_and_update_nonce(pda, nonce)?;
@@ -968,7 +968,6 @@ pub struct Execute<'info> {
     // Pda for destination program
     pub destination_program_pda: UncheckedAccount<'info>,
 }
-
 
 /// Instruction context for increment nonce.
 #[derive(Accounts)]

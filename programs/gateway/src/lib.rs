@@ -132,6 +132,15 @@ pub mod gateway {
         Ok(())
     }
 
+    /// Increments nonce, used by TSS in case outbound fails.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount in original outbound.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn increment_nonce(
         ctx: Context<IncrementNonce>,
         amount: u64,
@@ -961,6 +970,7 @@ pub struct Execute<'info> {
 }
 
 
+/// Instruction context for increment nonce.
 #[derive(Accounts)]
 pub struct IncrementNonce<'info> {
     /// The account of the signer incrementing nonce.

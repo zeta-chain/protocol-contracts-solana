@@ -223,18 +223,8 @@ pub mod gateway {
         .pack();
 
         // account metas for remaining accounts
-        let account_metas: Vec<AccountMeta> = ctx
-            .remaining_accounts
-            .iter()
-            .map(|account_info| {
-                // Check if the account is writable, then create the appropriate AccountMeta
-                if account_info.is_writable {
-                    AccountMeta::new(*account_info.key, account_info.is_signer)
-                } else {
-                    AccountMeta::new_readonly(*account_info.key, account_info.is_signer)
-                }
-            })
-            .collect();
+        let account_metas =
+            prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
 
         let ix = Instruction {
             program_id: ctx.accounts.destination_program.key(),
@@ -314,18 +304,8 @@ pub mod gateway {
         .pack();
 
         // account metas for remaining accounts
-        let account_metas: Vec<AccountMeta> = ctx
-            .remaining_accounts
-            .iter()
-            .map(|account_info| {
-                // Check if the account is writable, then create the appropriate AccountMeta
-                if account_info.is_writable {
-                    AccountMeta::new(*account_info.key, account_info.is_signer)
-                } else {
-                    AccountMeta::new_readonly(*account_info.key, account_info.is_signer)
-                }
-            })
-            .collect();
+        let account_metas =
+            prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
 
         let ix = Instruction {
             program_id: ctx.accounts.destination_program.key(),
@@ -935,6 +915,36 @@ fn validate_whitelist_tss_signature(
     recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
     Ok(())
+}
+
+// Prepares account metas for withdraw and call, revert if unallowed account is passed
+// TODO: this might be extended
+fn prepare_account_metas(
+    remaining_accounts: &[AccountInfo],
+    signer: &Signer,
+    pda: &Account<Pda>,
+) -> Result<Vec<AccountMeta>> {
+    let mut account_metas = Vec::new();
+
+    for account_info in remaining_accounts.iter() {
+        let account_key = account_info.key;
+
+        // Prevent signer from being included
+        require!(account_key != signer.key, Errors::InvalidInstructionData);
+
+        // Gateway pda can be added as not writable
+        if *account_key == pda.key() {
+            account_metas.push(AccountMeta::new_readonly(*account_key, false));
+        } else {
+            if account_info.is_writable {
+                account_metas.push(AccountMeta::new(*account_key, false));
+            } else {
+                account_metas.push(AccountMeta::new_readonly(*account_key, false));
+            }
+        }
+    }
+
+    Ok(account_metas)
 }
 
 /// Instruction context for initializing the program.

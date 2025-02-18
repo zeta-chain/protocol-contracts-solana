@@ -120,7 +120,7 @@ pub mod gateway {
             authority: ctx.accounts.signer.key(),
             chain_id,
             deposit_paused: false,
-            upgraded: true
+            upgraded: true,
         };
 
         msg!(

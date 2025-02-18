@@ -1233,7 +1233,7 @@ pub struct Pda {
     chain_id: u64,
     /// Flag to indicate whether deposits are paused.
     deposit_paused: bool,
-
+    /// Flag used for verifying contract upgrades in e2e tests
     upgraded: bool,
 }
 

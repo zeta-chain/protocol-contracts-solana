@@ -120,7 +120,6 @@ pub mod gateway {
             authority: ctx.accounts.signer.key(),
             chain_id,
             deposit_paused: false,
-            upgraded: true,
         };
 
         msg!(
@@ -220,8 +219,7 @@ pub mod gateway {
             amount,
             sender,
             data,
-        }
-        .pack();
+        }.pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -301,8 +299,7 @@ pub mod gateway {
             amount,
             sender,
             data,
-        }
-        .pack();
+        }.pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -332,12 +329,11 @@ pub mod gateway {
             &ctx.accounts.mint_account.key(),
         );
         require!(
-            recipient_ata
-                == ctx
-                    .accounts
-                    .destination_program_pda_ata
-                    .to_account_info()
-                    .key(),
+            recipient_ata == ctx
+                .accounts
+                .destination_program_pda_ata
+                .to_account_info()
+                .key(),
             Errors::SPLAtaAndMintAddressMismatch,
         );
 
@@ -846,6 +842,12 @@ pub mod gateway {
 
         Ok(())
     }
+
+    /// Returns true to indicate program has been upgraded
+    pub fn upgraded(ctx: Context<Upgrade>) -> Result<bool> {
+        msg!("Program has been upgraded!");
+        Ok(true)
+    }
 }
 
 // Verifies provided nonce is correct and updates pda nonce.
@@ -1233,9 +1235,15 @@ pub struct Pda {
     chain_id: u64,
     /// Flag to indicate whether deposits are paused.
     deposit_paused: bool,
-    /// Flag used for verifying contract upgrades in e2e tests
-    upgraded: bool,
 }
+
+/// Instruction context for checking upgrade status
+#[derive(Accounts)]
+pub struct Upgrade<'info> {
+    /// The account of the signer checking the upgrade
+    pub signer: Signer<'info>,
+}
+
 
 /// Whitelist entry account for whitelisted SPL tokens.
 #[account]

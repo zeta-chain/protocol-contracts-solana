@@ -100,6 +100,8 @@ pub mod gateway {
 
     /// Deposit fee used when depositing SOL or SPL tokens.
     const DEPOSIT_FEE: u64 = 2_000_000;
+    /// Prefix used for outbounds message hashes.
+    pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
 
     /// Initializes the gateway PDA.
     ///
@@ -154,7 +156,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::IncrementNonce as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -197,7 +199,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::Execute as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -276,7 +278,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::ExecuteSplToken as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -677,7 +679,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::Withdraw as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -729,7 +731,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::WithdrawSplToken as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -900,7 +902,7 @@ fn validate_whitelist_tss_signature(
     verify_and_update_nonce(pda, nonce)?;
 
     let mut concatenated_buffer = Vec::new();
-    concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+    concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
     concatenated_buffer.push(instruction);
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());

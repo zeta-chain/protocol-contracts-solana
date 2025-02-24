@@ -6,6 +6,7 @@ skip-lint = false
 
 [programs.localnet]
 connected = "4xEw862A2SEwMjofPkUyd4NEekmVJKJsdHkK3UkAtDrc"
+connected_spl = "8iUjRRhUCn8BjrvsWPfj8mguTe9L81ES4oAUApiF8JFC"
 gateway = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
 
 [registry]

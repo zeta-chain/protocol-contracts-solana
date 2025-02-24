@@ -42,6 +42,8 @@ enum InstructionId {
     WhitelistSplToken = 3,
     UnwhitelistSplToken = 4,
     Execute = 5,
+    ExecuteSplToken = 6,
+    IncrementNonce = 7,
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
@@ -98,6 +100,8 @@ pub mod gateway {
 
     /// Deposit fee used when depositing SOL or SPL tokens.
     const DEPOSIT_FEE: u64 = 2_000_000;
+    /// Prefix used for outbounds message hashes.
+    pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
 
     /// Initializes the gateway PDA.
     ///
@@ -130,6 +134,45 @@ pub mod gateway {
         Ok(())
     }
 
+    /// Increments nonce, used by TSS in case outbound fails.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount in original outbound.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
+    pub fn increment_nonce(
+        ctx: Context<IncrementNonce>,
+        amount: u64,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    ) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+
+        verify_and_update_nonce(pda, nonce)?;
+
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
+        concatenated_buffer.push(InstructionId::IncrementNonce as u8);
+        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
+
+        msg!("Computed message hash: {:?}", message_hash);
+
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
+
+        Ok(())
+    }
+
     /// Withdraws amount to destination program pda, and calls on_call on destination program
     ///
     /// # Arguments
@@ -156,12 +199,13 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::Execute as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.destination_program.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&data);
         require!(
             message_hash == hash(&concatenated_buffer[..]).to_bytes(),
             Errors::MessageHashMismatch
@@ -181,18 +225,8 @@ pub mod gateway {
         .pack();
 
         // account metas for remaining accounts
-        let account_metas: Vec<AccountMeta> = ctx
-            .remaining_accounts
-            .iter()
-            .map(|account_info| {
-                // Check if the account is writable, then create the appropriate AccountMeta
-                if account_info.is_writable {
-                    AccountMeta::new(*account_info.key, account_info.is_signer)
-                } else {
-                    AccountMeta::new_readonly(*account_info.key, account_info.is_signer)
-                }
-            })
-            .collect();
+        let account_metas =
+            prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
 
         let ix = Instruction {
             program_id: ctx.accounts.destination_program.key(),
@@ -212,6 +246,127 @@ pub mod gateway {
             amount,
             ctx.accounts.destination_program.key(),
             sender,
+        );
+
+        Ok(())
+    }
+
+    /// Execute with SPL tokens. Caller is TSS.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `decimals` - Token decimals for precision.
+    /// * `amount` - The amount of tokens to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
+    pub fn execute_spl_token(
+        ctx: Context<ExecuteSPLToken>,
+        decimals: u8,
+        amount: u64,
+        sender: [u8; 20],
+        data: Vec<u8>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    ) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        verify_and_update_nonce(pda, nonce)?;
+
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
+        concatenated_buffer.push(InstructionId::ExecuteSplToken as u8);
+        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
+        concatenated_buffer
+            .extend_from_slice(&ctx.accounts.destination_program_pda_ata.key().to_bytes());
+        concatenated_buffer.extend_from_slice(&data);
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
+
+        msg!("Computed message hash: {:?}", message_hash);
+
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
+
+        // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
+        // since any contract with on_call instruction can be called
+        let instruction_data = CallableInstruction::OnCall {
+            amount,
+            sender,
+            data,
+        }
+        .pack();
+
+        // account metas for remaining accounts
+        let account_metas =
+            prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
+
+        let ix = Instruction {
+            program_id: ctx.accounts.destination_program.key(),
+            accounts: account_metas,
+            data: instruction_data,
+        };
+
+        // associated token address (ATA) of the program PDA
+        // the PDA is the "wallet" (owner) of the token account
+        // the token is stored in ATA account owned by the PDA
+        let pda_ata = get_associated_token_address(&pda.key(), &ctx.accounts.mint_account.key());
+        require!(
+            pda_ata == ctx.accounts.pda_ata.to_account_info().key(),
+            Errors::SPLAtaAndMintAddressMismatch,
+        );
+
+        let token = &ctx.accounts.token_program;
+        let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
+
+        // make sure that ctx.accounts.recipient_ata is ATA (PDA account of token program)
+        let recipient_ata = get_associated_token_address(
+            &ctx.accounts.destination_program_pda.key(),
+            &ctx.accounts.mint_account.key(),
+        );
+        require!(
+            recipient_ata
+                == ctx
+                    .accounts
+                    .destination_program_pda_ata
+                    .to_account_info()
+                    .key(),
+            Errors::SPLAtaAndMintAddressMismatch,
+        );
+
+        // TODO: also create destination program pda ata? add later for simplicity
+
+        let xfer_ctx = CpiContext::new_with_signer(
+            token.to_account_info(),
+            anchor_spl::token::TransferChecked {
+                from: ctx.accounts.pda_ata.to_account_info(),
+                mint: ctx.accounts.mint_account.to_account_info(),
+                to: ctx.accounts.destination_program_pda_ata.to_account_info(),
+                authority: pda.to_account_info(),
+            },
+            signer_seeds,
+        );
+
+        transfer_checked(xfer_ctx, amount, decimals)?;
+
+        // invoke destination program on_call function
+        invoke(&ix, ctx.remaining_accounts)?;
+
+        msg!(
+            "Execute SPL done: amount = {}, decimals = {}, recipient = {}, mint = {}, pda = {}",
+            amount,
+            decimals,
+            ctx.accounts.destination_program_pda.key(),
+            ctx.accounts.mint_account.key(),
+            ctx.accounts.pda.key()
         );
 
         Ok(())
@@ -524,7 +679,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::Withdraw as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -576,7 +731,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::WithdrawSplToken as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -747,7 +902,7 @@ fn validate_whitelist_tss_signature(
     verify_and_update_nonce(pda, nonce)?;
 
     let mut concatenated_buffer = Vec::new();
-    concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+    concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
     concatenated_buffer.push(instruction);
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -762,6 +917,36 @@ fn validate_whitelist_tss_signature(
     recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
     Ok(())
+}
+
+// Prepares account metas for withdraw and call, revert if unallowed account is passed
+// TODO: this might be extended
+fn prepare_account_metas(
+    remaining_accounts: &[AccountInfo],
+    signer: &Signer,
+    pda: &Account<Pda>,
+) -> Result<Vec<AccountMeta>> {
+    let mut account_metas = Vec::new();
+
+    for account_info in remaining_accounts.iter() {
+        let account_key = account_info.key;
+
+        // Prevent signer from being included
+        require!(account_key != signer.key, Errors::InvalidInstructionData);
+
+        // Gateway pda can be added as not writable
+        if *account_key == pda.key() {
+            account_metas.push(AccountMeta::new_readonly(*account_key, false));
+        } else {
+            if account_info.is_writable {
+                account_metas.push(AccountMeta::new(*account_key, false));
+            } else {
+                account_metas.push(AccountMeta::new_readonly(*account_key, false));
+            }
+        }
+    }
+
+    Ok(account_metas)
 }
 
 /// Instruction context for initializing the program.
@@ -794,6 +979,18 @@ pub struct Execute<'info> {
 
     // Pda for destination program
     pub destination_program_pda: UncheckedAccount<'info>,
+}
+
+/// Instruction context for increment nonce.
+#[derive(Accounts)]
+pub struct IncrementNonce<'info> {
+    /// The account of the signer incrementing nonce.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
 }
 
 /// Instruction context for SOL deposit operations.
@@ -887,6 +1084,44 @@ pub struct WithdrawSPLToken<'info> {
     /// CHECK: Validation will occur during instruction processing.
     #[account(mut)]
     pub recipient_ata: AccountInfo<'info>,
+
+    /// The token program.
+    pub token_program: Program<'info, Token>,
+
+    /// The associated token program.
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    /// The system program.
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ExecuteSPLToken<'info> {
+    /// The account of the signer making the withdrawal.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+
+    /// The associated token account for the Gateway PDA.
+    #[account(mut, associated_token::mint = mint_account, associated_token::authority = pda)]
+    pub pda_ata: Account<'info, TokenAccount>,
+
+    /// The mint account of the SPL token being withdrawn.
+    pub mint_account: Account<'info, Mint>,
+
+    /// The destination program.
+    pub destination_program: AccountInfo<'info>,
+
+    // Pda for destination program
+    pub destination_program_pda: UncheckedAccount<'info>,
+
+    /// The destination program associated token account.
+    /// CHECK: Validation will occur during instruction processing.
+    #[account(mut)]
+    pub destination_program_pda_ata: AccountInfo<'info>,
 
     /// The token program.
     pub token_program: Program<'info, Token>,

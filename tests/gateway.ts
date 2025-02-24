@@ -1411,6 +1411,103 @@ describe("Gateway", () => {
     }
   });
 
+  it("Calls execute and onCall", async () => {
+    await connectedProgram.methods.initialize().rpc();
+    await gatewayProgram.methods
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .rpc();
+
+    const randomWallet = anchor.web3.Keypair.generate();
+    const data = Buffer.from("hello world", "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedProgram.programId
+    );
+    const amount = new anchor.BN(500000000);
+
+    // signature
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x05]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      connectedProgram.programId.toBuffer(),
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    // balances before call
+    const connectedPdaBalanceBefore = await conn.getBalance(
+      connectedPdaAccount
+    );
+    const randomWalletBalanceBefore = await conn.getBalance(
+      randomWallet.publicKey
+    );
+
+    // call the `execute` function in the gateway program
+    await gatewayProgram.methods
+      .execute(
+        amount,
+        Array.from(address),
+        data,
+        Array.from(signatureBuffer),
+        Number(recoveryParam),
+        Array.from(message_hash),
+        nonce
+      )
+      .accountsPartial({
+        // mandatory predefined accounts
+        signer: wallet.publicKey,
+        pda: pdaAccount,
+        destinationProgram: connectedProgram.programId,
+        destinationProgramPda: connectedPdaAccount,
+      })
+      .remainingAccounts([
+        // accounts coming from withdraw and call msg
+        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+        { pubkey: pdaAccount, isSigner: false, isWritable: false },
+        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
+        {
+          pubkey: anchor.web3.SystemProgram.programId,
+          isSigner: false,
+          isWritable: false,
+        },
+      ])
+      .rpc();
+
+    const connectedPdaAfter = await connectedProgram.account.pda.fetch(
+      connectedPdaAccount
+    );
+
+    // check connected pda state was updated
+    expect(connectedPdaAfter.lastMessage).to.be.eq("hello world");
+    expect(Array.from(connectedPdaAfter.lastSender)).to.be.deep.eq(
+      Array.from(address)
+    );
+
+    // check balances were updated
+    const connectedPdaBalanceAfter = await conn.getBalance(connectedPdaAccount);
+    const randomWalletBalanceAfter = await conn.getBalance(
+      randomWallet.publicKey
+    );
+
+    expect(connectedPdaBalanceBefore + amount.toNumber() / 2).to.eq(
+      connectedPdaBalanceAfter
+    );
+    expect(randomWalletBalanceBefore + amount.toNumber() / 2).to.eq(
+      randomWalletBalanceAfter
+    );
+  });
+
   it("Withdraw SPL token to a non-existent account should succeed by creating it", async () => {
     let rentPayerPdaBal0 = await conn.getBalance(pdaAccount);
     let pda_ata = await spl.getAssociatedTokenAddress(
@@ -1588,7 +1685,7 @@ describe("Gateway", () => {
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
-      expect(err.message).to.include("TSSAuthenticationFailed");
+      expect(err.message).to.include("MessageHashMismatch");
     }
   });
 

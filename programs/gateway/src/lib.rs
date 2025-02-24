@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
 use anchor_spl::token::{transfer, transfer_checked, Mint, Token, TokenAccount};
+use solana_program::instruction::Instruction;
 use solana_program::keccak::hash;
 use solana_program::program::invoke;
 use solana_program::secp256k1_recover::secp256k1_recover;
@@ -29,6 +30,8 @@ pub enum Errors {
     SPLAtaAndMintAddressMismatch,
     #[msg("EmptyReceiver")]
     EmptyReceiver,
+    #[msg("InvalidInstructionData")]
+    InvalidInstructionData,
 }
 
 /// Enumeration for instruction identifiers in message hashes.
@@ -38,9 +41,56 @@ enum InstructionId {
     WithdrawSplToken = 2,
     WhitelistSplToken = 3,
     UnwhitelistSplToken = 4,
+    Execute = 5,
 }
 
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
+
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq)]
+pub enum CallableInstruction {
+    OnCall {
+        amount: u64,
+        sender: [u8; 20],
+        data: Vec<u8>,
+    },
+}
+
+impl CallableInstruction {
+    pub fn pack(&self) -> Vec<u8> {
+        let mut buf;
+        match self {
+            CallableInstruction::OnCall {
+                amount,
+                sender,
+                data,
+            } => {
+                let data_len = data.len() as u32;
+
+                //8 (discriminator) + 8 (u64 amount) + 20 (sender) + 4 (data length)
+                buf = Vec::with_capacity(40 + data_len as usize);
+
+                // Discriminator for instruction (example)
+                // This ensures the program knows how to handle this instruction.
+                // Example discriminator: anchor typically uses `hash("global:on_call")`
+                buf.extend_from_slice(&[16, 136, 66, 32, 254, 40, 181, 8]);
+
+                // Encode amount (u64) in little-endian format
+                buf.extend_from_slice(&amount.to_le_bytes());
+
+                // Encode sender ([u8; 20])
+                buf.extend_from_slice(sender);
+
+                // Encode the length of the data array (u32)
+                buf.extend_from_slice(&data_len.to_le_bytes());
+
+                // Encode the data itself
+                buf.extend_from_slice(data);
+            }
+        }
+        buf
+    }
+}
 
 #[program]
 pub mod gateway {
@@ -75,6 +125,93 @@ pub mod gateway {
             ctx.accounts.signer.key(),
             chain_id,
             tss_address
+        );
+
+        Ok(())
+    }
+
+    /// Withdraws amount to destination program pda, and calls on_call on destination program
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SOL to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
+    pub fn execute(
+        ctx: Context<Execute>,
+        amount: u64,
+        sender: [u8; 20],
+        data: Vec<u8>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    ) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+
+        verify_and_update_nonce(pda, nonce)?;
+
+        let mut concatenated_buffer = Vec::new();
+        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.push(InstructionId::Execute as u8);
+        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+        concatenated_buffer.extend_from_slice(&ctx.accounts.destination_program.key().to_bytes());
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
+
+        msg!("Computed message hash: {:?}", message_hash);
+
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
+
+        // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
+        // since any contract with on_call instruction can be called
+        let instruction_data = CallableInstruction::OnCall {
+            amount,
+            sender,
+            data,
+        }
+        .pack();
+
+        // account metas for remaining accounts
+        let account_metas: Vec<AccountMeta> = ctx
+            .remaining_accounts
+            .iter()
+            .map(|account_info| {
+                // Check if the account is writable, then create the appropriate AccountMeta
+                if account_info.is_writable {
+                    AccountMeta::new(*account_info.key, account_info.is_signer)
+                } else {
+                    AccountMeta::new_readonly(*account_info.key, account_info.is_signer)
+                }
+            })
+            .collect();
+
+        let ix = Instruction {
+            program_id: ctx.accounts.destination_program.key(),
+            accounts: account_metas,
+            data: instruction_data,
+        };
+
+        // withdraw to destination program pda
+        pda.sub_lamports(amount)?;
+        ctx.accounts.destination_program_pda.add_lamports(amount)?;
+
+        // invoke destination program on_call function
+        invoke(&ix, ctx.remaining_accounts)?;
+
+        msg!(
+            "Execute done: destination contract = {}, amount = {}, sender = {:?}",
+            amount,
+            ctx.accounts.destination_program.key(),
+            sender,
         );
 
         Ok(())
@@ -150,11 +287,13 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn whitelist_spl_mint(
         ctx: Context<Whitelist>,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -167,6 +306,7 @@ pub mod gateway {
                 whitelist_candidate,
                 signature,
                 recovery_id,
+                message_hash,
                 nonce,
                 InstructionId::WhitelistSplToken as u8,
             )?;
@@ -193,11 +333,13 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn unwhitelist_spl_mint(
         ctx: Context<Unwhitelist>,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -210,6 +352,7 @@ pub mod gateway {
                 whitelist_candidate,
                 signature,
                 recovery_id,
+                message_hash,
                 nonce,
                 InstructionId::UnwhitelistSplToken as u8,
             )?;
@@ -366,24 +509,19 @@ pub mod gateway {
     /// * `amount` - The amount of SOL to withdraw.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
 
-        if nonce != pda.nonce {
-            msg!(
-                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-                nonce,
-                pda.nonce,
-            );
-            return err!(Errors::NonceMismatch);
-        }
+        verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -392,20 +530,17 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.recipient.key().to_bytes());
-        let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
 
-        msg!("Computed message hash: {:?}", computed_message_hash);
+        msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?;
-        if address != pda.tss_address {
-            msg!("ECDSA signature error");
-            return err!(Errors::TSSAuthenticationFailed);
-        }
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
         pda.sub_lamports(amount)?;
         ctx.accounts.recipient.add_lamports(amount)?;
-
-        pda.nonce += 1;
 
         msg!(
             "Withdraw executed: amount = {}, recipient = {}, pda = {}",
@@ -425,6 +560,7 @@ pub mod gateway {
     /// * `amount` - The amount of tokens to withdraw.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
@@ -432,17 +568,12 @@ pub mod gateway {
         amount: u64,
         signature: [u8; 64],
         recovery_id: u8,
+        message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
-        if nonce != pda.nonce {
-            msg!(
-                "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-                nonce,
-                pda.nonce,
-            );
-            return err!(Errors::NonceMismatch);
-        }
+
+        verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
         concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -452,15 +583,14 @@ pub mod gateway {
         concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
         concatenated_buffer.extend_from_slice(&ctx.accounts.recipient_ata.key().to_bytes());
-        let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
+        require!(
+            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+            Errors::MessageHashMismatch
+        );
 
-        msg!("Computed message hash: {:?}", computed_message_hash);
+        msg!("Computed message hash: {:?}", message_hash);
 
-        let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?; // ethereum address is the last 20 Bytes of the hashed pubkey
-        if address != pda.tss_address {
-            msg!("ECDSA signature error");
-            return err!(Errors::TSSAuthenticationFailed);
-        }
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
         // associated token address (ATA) of the program PDA
         // the PDA is the "wallet" (owner) of the token account
@@ -541,8 +671,6 @@ pub mod gateway {
             signer_seeds,
         );
 
-        pda.nonce += 1;
-
         transfer_checked(xfer_ctx, amount, decimals)?;
         // Note: this pda.sub_lamports() must be done here due to this issue https://github.com/solana-labs/solana/issues/9711
         // otherwise the previous CPI calls might fail with error:
@@ -566,12 +694,27 @@ pub mod gateway {
     }
 }
 
-/// Recovers eth address from signature.
-fn recover_eth_address(
+// Verifies provided nonce is correct and updates pda nonce.
+fn verify_and_update_nonce(pda: &mut Account<Pda>, nonce: u64) -> Result<()> {
+    if nonce != pda.nonce {
+        msg!(
+            "Mismatch nonce: provided nonce = {}, expected nonce = {}",
+            nonce,
+            pda.nonce,
+        );
+        return err!(Errors::NonceMismatch);
+    }
+    pda.nonce += 1;
+    Ok(())
+}
+
+/// Recovers and verifies eth address from signature.
+fn recover_and_verify_eth_address(
+    pda: &mut Account<Pda>,
     message_hash: &[u8; 32],
     recovery_id: u8,
     signature: &[u8; 64],
-) -> Result<[u8; 20]> {
+) -> Result<()> {
     let pubkey = secp256k1_recover(message_hash, recovery_id, signature)
         .map_err(|_| ProgramError::InvalidArgument)?;
 
@@ -582,7 +725,13 @@ fn recover_eth_address(
 
     let mut eth_address = [0u8; 20];
     eth_address.copy_from_slice(address);
-    Ok(eth_address)
+
+    if eth_address != pda.tss_address {
+        msg!("ECDSA signature error");
+        return err!(Errors::TSSAuthenticationFailed);
+    }
+
+    Ok(())
 }
 
 /// Recovers and verifies tss signature for whitelist and unwhitelist instructions.
@@ -591,17 +740,11 @@ fn validate_whitelist_tss_signature(
     whitelist_candidate: &mut Account<Mint>,
     signature: [u8; 64],
     recovery_id: u8,
+    message_hash: [u8; 32],
     nonce: u64,
     instruction: u8,
 ) -> Result<()> {
-    if nonce != pda.nonce {
-        msg!(
-            "Mismatch nonce: provided nonce = {}, expected nonce = {}",
-            nonce,
-            pda.nonce,
-        );
-        return err!(Errors::NonceMismatch);
-    }
+    verify_and_update_nonce(pda, nonce)?;
 
     let mut concatenated_buffer = Vec::new();
     concatenated_buffer.extend_from_slice(b"ZETACHAIN");
@@ -609,17 +752,14 @@ fn validate_whitelist_tss_signature(
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
     concatenated_buffer.extend_from_slice(&whitelist_candidate.key().to_bytes());
-    let computed_message_hash = hash(&concatenated_buffer[..]).to_bytes();
+    require!(
+        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+        Errors::MessageHashMismatch
+    );
 
-    msg!("Computed message hash: {:?}", computed_message_hash);
+    msg!("Computed message hash: {:?}", message_hash);
 
-    let address = recover_eth_address(&computed_message_hash, recovery_id, &signature)?;
-    if address != pda.tss_address {
-        msg!("ECDSA signature error");
-        return err!(Errors::TSSAuthenticationFailed);
-    }
-
-    pda.nonce += 1;
+    recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
     Ok(())
 }
@@ -637,6 +777,23 @@ pub struct Initialize<'info> {
 
     /// The system program.
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Execute<'info> {
+    /// The account of the signer making the deposit.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+
+    /// The destination program.
+    pub destination_program: AccountInfo<'info>,
+
+    // Pda for destination program
+    pub destination_program_pda: UncheckedAccount<'info>,
 }
 
 /// Instruction context for SOL deposit operations.

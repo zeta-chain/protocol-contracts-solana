@@ -1,5 +1,12 @@
 [toolchain]
 
+[workspace]
+members = [
+  "programs/gateway",
+  "programs/examples/connected",
+  "programs/examples/connectedSPL"
+]
+
 [features]
 resolution = true
 skip-lint = false

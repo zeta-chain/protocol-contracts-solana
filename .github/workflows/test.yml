@@ -5,13 +5,9 @@ on:
   pull_request:
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install stable rust toolchain
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: stable
     - name: cargo install avm
       run: cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
     - uses: metadaoproject/anchor-test@v2.1

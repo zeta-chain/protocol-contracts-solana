@@ -13,7 +13,7 @@ jobs:
       with:
         toolchain: stable
     - name: cargo install avm
-      run: cargo install avm
+      run: cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
     - name: Print Cargo, Rustup, and AVM versions
       run: |
         echo "=== Version Information ==="

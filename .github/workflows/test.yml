@@ -13,7 +13,7 @@ jobs:
       with:
         toolchain: stable
     - name: cargo install avm
-      uses: cargo install avm
+      run: cargo install avm
     - name: Print Cargo, Rustup, and AVM versions
       run: |
         echo "=== Version Information ==="

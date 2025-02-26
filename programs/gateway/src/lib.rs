@@ -46,6 +46,9 @@ enum InstructionId {
     IncrementNonce = 7,
 }
 
+#[cfg(feature = "dev")]
+declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
+#[cfg(not(feature = "dev"))]
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[repr(C)]

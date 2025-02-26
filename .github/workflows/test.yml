@@ -14,12 +14,6 @@ jobs:
         toolchain: stable
     - name: cargo install avm
       run: cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-    - name: Print Cargo, Rustup, and AVM versions
-      run: |
-        echo "=== Version Information ==="
-        cargo --version || echo "Cargo not found"
-        rustup --version || echo "Rustup not found"
-        avm --version || echo "AVM not found"
     - uses: metadaoproject/anchor-test@v2.1
       with: 
         anchor-version: '0.30.1'

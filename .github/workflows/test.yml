@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: cargo install avm
+      run: cargo install --git https://github.com/coral-xyz/anchor avm
     - uses: metadaoproject/anchor-test@v2.1
       with: 
         anchor-version: '0.30.1'

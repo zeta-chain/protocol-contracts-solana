@@ -30,7 +30,7 @@ pub mod connected_spl {
 
         // Transfer some portion of tokens transferred from gateway to another account
         let token = &ctx.accounts.token_program;
-        let signer_seeds: &[&[&[u8]]] = &[&[b"connectedSPL", &[ctx.bumps.pda]]];
+        let signer_seeds: &[&[&[u8]]] = &[&[b"connected", &[ctx.bumps.pda]]];
 
         let xfer_ctx = CpiContext::new_with_signer(
             token.to_account_info(),
@@ -67,7 +67,7 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(init, payer = signer, space = size_of::<Pda>() + 32, seeds = [b"connectedSPL"], bump)]
+    #[account(init, payer = signer, space = size_of::<Pda>() + 32, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
     pub system_program: Program<'info, System>,
@@ -75,7 +75,7 @@ pub struct Initialize<'info> {
 
 #[derive(Accounts)]
 pub struct OnCall<'info> {
-    #[account(mut, seeds = [b"connectedSPL"], bump)]
+    #[account(mut, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
     #[account(mut)]

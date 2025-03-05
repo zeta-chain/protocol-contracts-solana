@@ -105,6 +105,8 @@ pub mod gateway {
     const DEPOSIT_FEE: u64 = 2_000_000;
     /// Prefix used for outbounds message hashes.
     pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
+    /// Max deposit payload size
+    const MAX_DEPOSIT_PAYLOAD_SIZE: usize = 750;
 
     /// Initializes the gateway PDA.
     ///
@@ -576,7 +578,10 @@ pub mod gateway {
         receiver: [u8; 20],
         message: Vec<u8>,
     ) -> Result<()> {
-        require!(message.len() <= 512, Errors::MemoLengthExceeded);
+        require!(
+            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
+            Errors::MemoLengthExceeded
+        );
         deposit(ctx, amount, receiver)?;
 
         msg!("Deposit and call executed with message = {:?}", message);
@@ -652,7 +657,10 @@ pub mod gateway {
         receiver: [u8; 20],
         message: Vec<u8>,
     ) -> Result<()> {
-        require!(message.len() <= 512, Errors::MemoLengthExceeded);
+        require!(
+            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
+            Errors::MemoLengthExceeded
+        );
         deposit_spl_token(ctx, amount, receiver)?;
 
         msg!("Deposit SPL and call executed with message = {:?}", message);

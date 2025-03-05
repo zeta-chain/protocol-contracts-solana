@@ -10,6 +10,7 @@ import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import { Connected } from "../target/types/connected";
 import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
 import { ConnectedSpl } from "../target/types/connected_spl";
+import { ComputeBudgetProgram } from "@solana/web3.js";
 
 const ec = new EC("secp256k1");
 // read private key from hex dump
@@ -20,6 +21,7 @@ const keyPair = ec.keyFromPrivate(
 const usdcDecimals = 6;
 const chain_id = 111111;
 const chain_id_bn = new anchor.BN(chain_id);
+const maxPayloadSize = 750;
 
 async function mintSPLToken(
   conn: anchor.web3.Connection,
@@ -242,6 +244,77 @@ describe("Gateway", () => {
     }
   });
 
+  it("Deposit 1_000_000 USDC with above max payload size should fail", async () => {
+    const pda_ata = await getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const tokenAccount = await getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      wallet.publicKey
+    );
+    try {
+      await gatewayProgram.methods
+        .depositSplTokenAndCall(
+          new anchor.BN(2_000_000),
+          Array.from(address),
+          Buffer.from(Array(maxPayloadSize + 1).fill(1))
+        )
+        .accounts({
+          from: tokenAccount.address,
+          to: pda_ata.address,
+          mintAccount: mint.publicKey,
+        })
+        .rpc({ commitment: "processed" });
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("MemoLengthExceeded");
+    }
+  });
+
+  it("Deposit 1_000_000 USDC with with max payload size", async () => {
+    const pda_ata = await getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const tokenAccount = await getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      wallet.publicKey
+    );
+    let acct = await spl.getAccount(conn, pda_ata.address);
+    const bal1 = acct.amount;
+
+    await gatewayProgram.methods
+      .depositSplTokenAndCall(
+        new anchor.BN(2_000_000),
+        Array.from(address),
+        Buffer.from(Array(maxPayloadSize).fill(1))
+      )
+      .accounts({
+        from: tokenAccount.address,
+        to: pda_ata.address,
+        mintAccount: mint.publicKey,
+      })
+      .preInstructions([
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
+      ])
+      .rpc({ commitment: "processed" });
+    acct = await spl.getAccount(conn, pda_ata.address);
+    const bal2 = acct.amount;
+    expect(bal2 - bal1).to.be.eq(2_000_000n);
+  });
+
   it("Deposit 1_000_000 USDC to Gateway", async () => {
     let pda_ata = await getOrCreateAssociatedTokenAccount(
       conn,
@@ -376,7 +449,7 @@ describe("Gateway", () => {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("NonceMismatch");
       const account4 = await spl.getAccount(conn, pda_ata);
-      expect(account4.amount).to.be.eq(2_500_000n);
+      expect(account4.amount).to.be.eq(4_500_000n);
     }
 
     try {
@@ -418,7 +491,7 @@ describe("Gateway", () => {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("ConstraintAssociated");
       const account4 = await spl.getAccount(conn, pda_ata);
-      expect(account4.amount).to.be.eq(2_500_000n);
+      expect(account4.amount).to.be.eq(4_500_000n);
     }
   });
 
@@ -1606,6 +1679,39 @@ describe("Gateway", () => {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("EmptyReceiver");
     }
+  });
+
+  it("Deposit and call with above max payload size should fail", async () => {
+    try {
+      await gatewayProgram.methods
+        .depositAndCall(
+          new anchor.BN(1_000_000_000),
+          Array.from(address),
+          Buffer.from(Array(maxPayloadSize + 1).fill(1))
+        )
+        .rpc();
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("MemoLengthExceeded");
+    }
+  });
+
+  it("Deposit and call with max payload size", async () => {
+    const bal1 = await conn.getBalance(pdaAccount);
+    const txsig = await gatewayProgram.methods
+      .depositAndCall(
+        new anchor.BN(1_000_000_000),
+        Array.from(address),
+        Buffer.from(Array(maxPayloadSize).fill(1))
+      )
+      .preInstructions([
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
+      ])
+      .rpc({ commitment: "processed" });
+    await conn.getParsedTransaction(txsig, "confirmed");
+    const bal2 = await conn.getBalance(pdaAccount);
+    expect(bal2 - bal1).to.be.gte(1_000_000_000);
   });
 
   it("Deposit and call", async () => {

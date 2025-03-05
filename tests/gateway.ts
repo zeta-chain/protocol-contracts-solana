@@ -949,7 +949,7 @@ describe("Gateway", () => {
     );
     const lastMessageData = "execute_spl";
     const data = Buffer.from(lastMessageData, "utf-8");
-    let seeds = [Buffer.from("connectedSPL", "utf-8")];
+    let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       seeds,
       connectedSPLProgram.programId
@@ -1074,7 +1074,7 @@ describe("Gateway", () => {
     );
     const lastMessageData = "revert";
     const data = Buffer.from(lastMessageData, "utf-8");
-    let seeds = [Buffer.from("connectedSPL", "utf-8")];
+    let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       seeds,
       connectedSPLProgram.programId
@@ -1189,7 +1189,7 @@ describe("Gateway", () => {
     );
     const lastMessageData = "revert";
     const data = Buffer.from(lastMessageData, "utf-8");
-    let seeds = [Buffer.from("connectedSPL", "utf-8")];
+    let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       seeds,
       connectedSPLProgram.programId
@@ -1306,7 +1306,7 @@ describe("Gateway", () => {
     );
     const lastMessageData = "revert";
     const data = Buffer.from(lastMessageData, "utf-8");
-    let seeds = [Buffer.from("connectedSPL", "utf-8")];
+    let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       seeds,
       connectedSPLProgram.programId

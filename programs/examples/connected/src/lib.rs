@@ -27,7 +27,7 @@ pub mod connected {
         let message = String::from_utf8(data).map_err(|_| ErrorCode::InvalidDataFormat)?;
         pda.last_message = message;
 
-        // Transfer some portion of lamports transferred from gateway to another account
+        // Transfer some portion of lamports transfered from gateway to another account
         pda.sub_lamports(amount / 2)?;
         ctx.accounts.random_wallet.add_lamports(amount / 2)?;
 
@@ -64,8 +64,10 @@ pub struct OnCall<'info> {
     #[account(mut, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// CHECK: this is just test contract
     pub gateway_pda: UncheckedAccount<'info>,
 
+    /// CHECK: this is just test contract
     pub random_wallet: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,

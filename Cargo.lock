@@ -737,7 +737,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "connectedSPL"
+name = "connected_spl"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
@@ -1329,7 +1329,7 @@ version = "4.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caf0f61b553e424a6234af1268456972ee66c2222e1da89079242251fa7479e5"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.9.3",
  "num-derive 0.3.3",
  "num-traits",
  "solana-program",
@@ -1652,7 +1652,7 @@ dependencies = [
 [[package]]
 name = "raydium-cpmm-cpi"
 version = "0.1.0"
-source = "git+https://github.com/raydium-io/raydium-cpi?branch=anchor-0.30.1#f4cd77f78a19e271e9d4cc5c0561eaff42fd14ba"
+source = "git+https://github.com/raydium-io/raydium-cpi?branch=anchor-0.30.1#c470a055aa44da1666f6c50c3600e0495699f6ab"
 dependencies = [
  "anchor-lang",
  "anchor-spl",

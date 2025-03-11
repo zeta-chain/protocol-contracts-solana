@@ -6,7 +6,6 @@ import { ec as EC } from "elliptic";
 import { keccak256 } from "ethereumjs-util";
 import { expect } from "chai";
 import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
-import { Connected } from "../target/types/connected";
 import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
 import { ConnectedSpl } from "../target/types/connected_spl";
 import { setupSwapTest, swap_base_input_accounts } from "./utils";
@@ -139,7 +138,6 @@ describe("Gateway", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const conn = anchor.getProvider().connection;
   const gatewayProgram = anchor.workspace.Gateway as Program<Gateway>;
-  const connectedProgram = anchor.workspace.Connected as Program<Connected>;
   const connectedSPLProgram = anchor.workspace
     .ConnectedSPL as Program<ConnectedSpl>;
   const wallet = anchor.workspace.Gateway.provider.wallet.payer;
@@ -260,6 +258,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       inputToken.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      data,
     ]);
     let message_hash2 = keccak256(buffer2);
     signature = keyPair.sign(message_hash2, "hex");

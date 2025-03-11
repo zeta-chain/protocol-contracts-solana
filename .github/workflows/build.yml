@@ -1,0 +1,40 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/*
+
+jobs:
+  build:
+    # solana-verify: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required by solana-verify)
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: install solana-verify
+        run: |
+          curl -L https://github.com/Ellipsis-Labs/solana-verifiable-build/releases/download/v0.4.1/solana-verify-linux -o solana-verify
+          chmod +x solana-verify
+          sudo mv solana-verify /usr/local/bin/
+      - name: run solana-verify build
+        run: |
+          solana-verify build
+      - name: Artifact Attestations
+        id: attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            target/deploy/gateway.so
+      - name: Archive program artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: program
+          path: target/deploy/gateway.so

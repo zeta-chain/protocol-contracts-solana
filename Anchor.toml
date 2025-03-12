@@ -26,19 +26,47 @@ wallet = "~/.config/solana/id.json"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.test.ts"
 
 [test.validator]
-url = "https://api.mainnet-beta.solana.com"
+url = "https://api.devnet.solana.com"
 
 # [test]
 # startup_wait = 20000
 
-# cp-swap program in mainnet
+# cp-swap program in devnet
 [[test.validator.clone]]
-address = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
+address = "CPMDWBwJDtYax9qW7AyRuVC19Cc4L4Vcy4n2BHAbHkCW"
 
-# cp-swap create_pool_fee_reveiver in mainnet
+# cp-swap create_pool_fee_reveiver in devnet
 [[test.validator.clone]]
-address = "DNXgeM9EiiaAbaWvwjHj9fQQLAX5ZsfHyvmYUNRAdNC8"
+address = "G11FKBRaAkHAKuLCgLM6K6NUc9rTjPAznRCjZifrTQe2"
 
-# cp-swap ammConfig in mainnet
+# cp-swap ammConfig in devnet
 [[test.validator.clone]]
-address = "D4FPEruKEHrG5TenZ2mpDGEfu1iUvTiqBxvpU8HLBvC2"
+address = "9zSzfkYy6awexsHvmggeH36pfVUdDGyCcwmjT3AQPBj6"
+
+# tokens
+[[test.validator.clone]]
+address = "2VJeR4LcdCHCxYxjsbbhcbpH7GsvDLVTh44idzXGh9Th"
+
+[[test.validator.clone]]
+address = "DEVmSoaTsVJvc5NrcUDzaQuAdHnGZhnjDMP16Dd91GKU"
+
+[[test.validator.clone]]
+address = "13VMCHVV9tLwmkr4xgEeakiargyEQq4B2jCwPrJq6JsR"
+
+[[test.validator.clone]]
+address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+
+[[test.validator.clone]]
+address = "3LGcEveuCPBgSHqe3iN9eX8x65BaCJeuPKT5PZfVYD7q"
+
+[[test.validator.clone]]
+address = "AYmKYwZkqyetC7QoZgSrHDvoXtXJ29bgCfL22ske4HYX"
+
+[[test.validator.clone]]
+address = "bHJq7h2ZykY35Qx4DwjZqGwGb2RGWBoVSbW9efomizt"
+
+[[test.validator.clone]]
+address = "Hh4Epj1k2FYn4tuh8pYDQSQPYQR6ZivSm6GfJahWrvgT"
+
+[[test.validator.clone]]
+address = "CRuXMqy7u31up9f2Qksy7me8fW34gBt3erHe6nEmjNSG"

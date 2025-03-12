@@ -8,7 +8,7 @@ import { expect } from "chai";
 import { getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
 import { ConnectedSpl } from "../target/types/connected_spl";
-import { setupSwapTest, swap_base_input_accounts } from "./utils";
+import { swap_base_input_accounts } from "./utils";
 import { configAddress } from "./config";
 import { ComputeBudgetProgram } from "@solana/web3.js";
 
@@ -179,12 +179,21 @@ describe("Gateway", () => {
     await connectedSPLProgram.methods.initialize().rpc();
 
     // Setup raydium swap
-    const cpSwapPoolState = await setupSwapTest(
-      connectedSPLProgram,
-      anchor.getProvider().connection,
-      wallet,
-      { transferFeeBasisPoints: 0, MaxFee: 0 }
-    );
+    // const cpSwapPoolState = await setupSwapTest(
+    //   connectedSPLProgram,
+    //   anchor.getProvider().connection,
+    //   wallet,
+    //   { transferFeeBasisPoints: 0, MaxFee: 0 }
+    // );
+
+    // already set up on devnet and loaded in anchor toml
+    const cpSwapPoolState = {
+      ammConfig: new anchor.web3.PublicKey("9zSzfkYy6awexsHvmggeH36pfVUdDGyCcwmjT3AQPBj6"),
+      token0Mint: new anchor.web3.PublicKey("2VJeR4LcdCHCxYxjsbbhcbpH7GsvDLVTh44idzXGh9Th"),
+      token0Program: new anchor.web3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      token1Mint: new anchor.web3.PublicKey("DEVmSoaTsVJvc5NrcUDzaQuAdHnGZhnjDMP16Dd91GKU"),
+      token1Program: new anchor.web3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+    }
 
     await delay(1000);
 
@@ -232,7 +241,7 @@ describe("Gateway", () => {
     // Execute spl, on_call will perform swap
     const lastMessageData = "execute_spl";
     let data = Buffer.from(lastMessageData, "utf-8");
-    let seeds = [Buffer.from("connectedSPL", "utf-8")];
+    let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
       seeds,
       connectedSPLProgram.programId
@@ -899,7 +908,7 @@ describe("Gateway", () => {
   //   );
   //   const lastMessageData = "execute_spl";
   //   const data = Buffer.from(lastMessageData, "utf-8");
-  //   let seeds = [Buffer.from("connectedSPL", "utf-8")];
+  //   let seeds = [Buffer.from("connected", "utf-8")];
   //   const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
   //     seeds,
   //     connectedSPLProgram.programId

@@ -137,7 +137,7 @@ export async function initialize(
   );
   const tx = await program.methods
     .proxyInitialize(initAmount.initAmount0, initAmount.initAmount1, new BN(0))
-    .accounts({
+    .accountsPartial({
       cpSwapProgram: cpSwapProgram,
       creator: creator.publicKey,
       ammConfig: configAddress,
@@ -239,7 +239,7 @@ export async function deposit(
       maximum_token_0_amount,
       maximum_token_1_amount
     )
-    .accounts({
+    .accountsPartial({
       cpSwapProgram: cpSwapProgram,
       owner: owner.publicKey,
       authority: auth,

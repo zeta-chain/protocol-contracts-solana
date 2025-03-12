@@ -69,7 +69,7 @@ pub mod connected_spl {
         let message = String::from_utf8(data).map_err(|_| ErrorCode::InvalidDataFormat)?;
         pda.last_message = message;
 
-        let signer_seeds: &[&[&[u8]]] = &[&[b"connectedSPL", &[ctx.bumps.pda]]];
+        let signer_seeds: &[&[&[u8]]] = &[&[b"connected", &[ctx.bumps.pda]]];
 
         let cpi_accounts = cpi::accounts::Swap {
             payer: pda.to_account_info(),
@@ -105,7 +105,7 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(init, payer = signer, space = size_of::<Pda>() + 32, seeds = [b"connectedSPL"], bump)]
+    #[account(init, payer = signer, space = size_of::<Pda>() + 32, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
     pub system_program: Program<'info, System>,
@@ -113,7 +113,7 @@ pub struct Initialize<'info> {
 
 #[derive(Accounts)]
 pub struct OnCall<'info> {
-    #[account(mut, seeds = [b"connectedSPL"], bump)]
+    #[account(mut, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
     /// CHECK: test

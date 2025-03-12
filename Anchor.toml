@@ -29,7 +29,7 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.test.ts"
 url = "https://api.devnet.solana.com"
 
 # [test]
-# startup_wait = 20000
+# startup_wait = 50000
 
 # cp-swap program in devnet
 [[test.validator.clone]]
@@ -70,3 +70,27 @@ address = "Hh4Epj1k2FYn4tuh8pYDQSQPYQR6ZivSm6GfJahWrvgT"
 
 [[test.validator.clone]]
 address = "CRuXMqy7u31up9f2Qksy7me8fW34gBt3erHe6nEmjNSG"
+
+[[test.validator.clone]]
+address = "So11111111111111111111111111111111111111112"
+
+[[test.validator.clone]]
+address = "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+
+[[test.validator.clone]]
+address = "A9Seij5cnSeSbu7dADsb4kTU7esxPS8Z37r3U9JF4C4z"
+
+[[test.validator.clone]]
+address = "9AvBWUfhCf7yfHUW1zA493GNgsEzmvvdaTKDJpSHX32N"
+
+[[test.validator.clone]]
+address = "A84muQUPmkCnmY9JCZ7NL1KSRRsA3h641niSu4pGWyuS"
+
+[[test.validator.clone]]
+address = "3eCLdZ1cX5yC2127kTUMwyvqFwHQxoZ2XUQSc7cuC5Fk"
+
+[[test.validator.clone]]
+address = "7xDWXgaDLFcs2emPXs7uWKT17FXcMqeH5BtSAjTQnaht"
+
+[[test.validator.clone]]
+address = "Fwj7Nfm6KZSHLyLAgxx8Q7rvrYf9tKxxV7Nr1P6zZQqF"

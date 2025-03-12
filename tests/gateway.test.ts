@@ -11,6 +11,7 @@ import { ConnectedSpl } from "../target/types/connected_spl";
 import { swap_base_input_accounts } from "./utils";
 import { configAddress } from "./config";
 import { ComputeBudgetProgram } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 
 const ec = new EC("secp256k1");
 // read private key from hex dump
@@ -191,7 +192,7 @@ describe("Gateway", () => {
       ammConfig: new anchor.web3.PublicKey("9zSzfkYy6awexsHvmggeH36pfVUdDGyCcwmjT3AQPBj6"),
       token0Mint: new anchor.web3.PublicKey("2VJeR4LcdCHCxYxjsbbhcbpH7GsvDLVTh44idzXGh9Th"),
       token0Program: new anchor.web3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-      token1Mint: new anchor.web3.PublicKey("DEVmSoaTsVJvc5NrcUDzaQuAdHnGZhnjDMP16Dd91GKU"),
+      token1Mint: new anchor.web3.PublicKey("Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"), // USDC-dev
       token1Program: new anchor.web3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
     }
 
@@ -248,7 +249,7 @@ describe("Gateway", () => {
     );
 
     pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-    let amount = new anchor.BN(500_000);
+    let amount = new anchor.BN(5_000);
     nonce = pdaAccountData.nonce;
 
     let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
@@ -276,12 +277,11 @@ describe("Gateway", () => {
       r2.toArrayLike(Buffer, "be", 32),
       s2.toArrayLike(Buffer, "be", 32),
     ]);
-
     // atas before swap
     let ownerToken1AccountBefore = await getOrCreateAssociatedTokenAccount(
       conn,
       wallet,
-      cpSwapPoolState.token1Mint,
+      new PublicKey("Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"),
       wallet.publicKey,
       false,
       "processed",
@@ -368,7 +368,7 @@ describe("Gateway", () => {
     let ownerToken1AccountAfter = await getOrCreateAssociatedTokenAccount(
       conn,
       wallet,
-      cpSwapPoolState.token1Mint,
+      new PublicKey("Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"),
       wallet.publicKey,
       false,
       "processed",

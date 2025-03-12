@@ -32,15 +32,15 @@ export async function createTokenMintAndAssociatedTokenAccount(
   mintAuthority: Signer,
   transferFeeConfig: { transferFeeBasisPoints: number; MaxFee: number }
 ) {
-  let ixs: TransactionInstruction[] = [];
-  ixs.push(
-    web3.SystemProgram.transfer({
-      fromPubkey: payer.publicKey,
-      toPubkey: mintAuthority.publicKey,
-      lamports: web3.LAMPORTS_PER_SOL,
-    })
-  );
-  await sendTransaction(connection, ixs, [payer]);
+  // let ixs: TransactionInstruction[] = [];
+  // ixs.push(
+  //   web3.SystemProgram.transfer({
+  //     fromPubkey: payer.publicKey,
+  //     toPubkey: mintAuthority.publicKey,
+  //     lamports: web3.LAMPORTS_PER_SOL,
+  //   })
+  // );
+  // await sendTransaction(connection, ixs, [payer]);
 
   interface Token {
     address: PublicKey;
@@ -48,22 +48,24 @@ export async function createTokenMintAndAssociatedTokenAccount(
   }
 
   let tokenArray: Token[] = [];
-  let token0 = await createMint(
-    connection,
-    mintAuthority,
-    mintAuthority.publicKey,
-    null,
-    9
-  );
+  const token1 = new PublicKey("Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr")
+  const token0 = new PublicKey("2VJeR4LcdCHCxYxjsbbhcbpH7GsvDLVTh44idzXGh9Th")
+  // let token0 = await createMint(
+  //   connection,
+  //   mintAuthority,
+  //   mintAuthority.publicKey,
+  //   null,
+  //   9
+  // );
   tokenArray.push({ address: token0, program: TOKEN_PROGRAM_ID });
 
-  let token1 = await createMint(
-    connection,
-    mintAuthority,
-    mintAuthority.publicKey,
-    null,
-    9
-  );
+  // let token1 = await createMint(
+  //   connection,
+  //   mintAuthority,
+  //   mintAuthority.publicKey,
+  //   null,
+  //   9
+  // );
 
   tokenArray.push({ address: token1, program: TOKEN_PROGRAM_ID });
 
@@ -90,8 +92,8 @@ export async function createTokenMintAndAssociatedTokenAccount(
     return 0;
   });
 
-  token0 = tokenArray[0].address;
-  token1 = tokenArray[1].address;
+  // token0 = tokenArray[0].address;
+  // token1 = tokenArray[1].address;
   //   console.log("Token 0", token0.toString());
   //   console.log("Token 1", token1.toString());
   const token0Program = tokenArray[0].program;
@@ -108,17 +110,17 @@ export async function createTokenMintAndAssociatedTokenAccount(
     token0Program
   );
 
-  await mintTo(
-    connection,
-    payer,
-    token0,
-    ownerToken0Account.address,
-    mintAuthority,
-    100_000_000_000_000,
-    [],
-    { skipPreflight: true },
-    token0Program
-  );
+  // await mintTo(
+  //   connection,
+  //   payer,
+  //   token0,
+  //   ownerToken0Account.address,
+  //   mintAuthority,
+  //   100_000_000_000_000,
+  //   [],
+  //   { skipPreflight: true },
+  //   token0Program
+  // );
 
   // console.log(
   //   "ownerToken0Account key: ",
@@ -135,21 +137,22 @@ export async function createTokenMintAndAssociatedTokenAccount(
     { skipPreflight: true },
     token1Program
   );
+
   // console.log(
   //   "ownerToken1Account key: ",
   //   ownerToken1Account.address.toString()
   // );
-  await mintTo(
-    connection,
-    payer,
-    token1,
-    ownerToken1Account.address,
-    mintAuthority,
-    100_000_000_000_000,
-    [],
-    { skipPreflight: true },
-    token1Program
-  );
+  // await mintTo(
+  //   connection,
+  //   payer,
+  //   token1,
+  //   ownerToken1Account.address,
+  //   mintAuthority,
+  //   100_000_000_000_000,
+  //   [],
+  //   { skipPreflight: true },
+  //   token1Program
+  // );
 
   return [
     { token0, token0Program },

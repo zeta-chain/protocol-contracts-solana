@@ -65,9 +65,9 @@ export async function setupSwapTest(
     token0Program,
     token1,
     token1Program,
-    new BN(10000000000),
-    new BN(100000000000),
-    new BN(100000000000),
+    new BN(100_000),
+    new BN(1_000_000),
+    new BN(1_000_000),
     confirmOptions
   );
   return cpSwapPoolState;
@@ -83,8 +83,8 @@ export async function initialize(
   token1Program: PublicKey,
   confirmOptions?: ConfirmOptions,
   initAmount: { initAmount0: BN; initAmount1: BN } = {
-    initAmount0: new BN(10000000000),
-    initAmount1: new BN(20000000000),
+    initAmount0: new BN(100_000),
+    initAmount1: new BN(200_000),
   },
   createPoolFee = createPoolFeeReceive
 ) {

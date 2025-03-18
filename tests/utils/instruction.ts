@@ -274,8 +274,8 @@ export async function swap_base_input_accounts(
   const [auth] = await getAuthAddress(cpSwapProgram);
   const [poolAddress] = await getPoolAddress(
     configAddress,
-    inputToken,
     outputToken,
+    inputToken,
     cpSwapProgram
   );
 

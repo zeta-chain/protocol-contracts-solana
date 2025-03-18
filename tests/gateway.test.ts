@@ -177,7 +177,7 @@ describe("Gateway", () => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   it("swap", async () => {
-    await connectedSPLProgram.methods.initialize().rpc();
+    // await connectedSPLProgram.methods.initialize().rpc();
 
     // Setup raydium swap
     // const cpSwapPoolState = await setupSwapTest(
@@ -198,7 +198,7 @@ describe("Gateway", () => {
 
     await delay(1000);
 
-    const inputToken = cpSwapPoolState.token0Mint;
+    const inputToken = cpSwapPoolState.token1Mint;
     const inputTokenProgram = cpSwapPoolState.token0Program;
 
     // Whitelist input token and deposit to gateway so withdraw can be called
@@ -240,7 +240,7 @@ describe("Gateway", () => {
     );
 
     // Execute spl, on_call will perform swap
-    const lastMessageData = "execute_spl";
+    const lastMessageData = "";
     let data = Buffer.from(lastMessageData, "utf-8");
     let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -249,7 +249,7 @@ describe("Gateway", () => {
     );
 
     pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
-    let amount = new anchor.BN(5_000);
+    let amount = new anchor.BN(100);
     nonce = pdaAccountData.nonce;
 
     let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
@@ -281,7 +281,7 @@ describe("Gateway", () => {
     let ownerToken1AccountBefore = await getOrCreateAssociatedTokenAccount(
       conn,
       wallet,
-      new PublicKey("Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"),
+      new PublicKey("2VJeR4LcdCHCxYxjsbbhcbpH7GsvDLVTh44idzXGh9Th"),
       wallet.publicKey,
       false,
       "processed",
@@ -316,13 +316,13 @@ describe("Gateway", () => {
       inputToken,
       pdaToken0AccountBefore.address,
       inputTokenProgram,
-      cpSwapPoolState.token1Mint,
-      cpSwapPoolState.token1Program
+      cpSwapPoolState.token0Mint,
+      cpSwapPoolState.token0Program
     );
 
     await gatewayProgram.methods
       .executeSplToken(
-        9,
+        6,
         amount,
         Array.from(address),
         data,
@@ -368,7 +368,7 @@ describe("Gateway", () => {
     let ownerToken1AccountAfter = await getOrCreateAssociatedTokenAccount(
       conn,
       wallet,
-      new PublicKey("Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"),
+      new PublicKey("2VJeR4LcdCHCxYxjsbbhcbpH7GsvDLVTh44idzXGh9Th"),
       wallet.publicKey,
       false,
       "processed",

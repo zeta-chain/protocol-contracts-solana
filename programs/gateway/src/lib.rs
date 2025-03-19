@@ -332,7 +332,7 @@ pub mod gateway {
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
 
-        // make sure that ctx.accounts.recipient_ata is ATA (PDA account of token program)
+        // make sure that ctx.accounts.destination_program_pda_ata is ATA of destination_program
         let recipient_ata = get_associated_token_address(
             &ctx.accounts.destination_program_pda.key(),
             &ctx.accounts.mint_account.key(),
@@ -346,9 +346,7 @@ pub mod gateway {
                     .key(),
             Errors::SPLAtaAndMintAddressMismatch,
         );
-
-        // TODO: also create destination program pda ata? add later for simplicity
-
+        // withdraw to destination program pda
         let xfer_ctx = CpiContext::new_with_signer(
             token.to_account_info(),
             anchor_spl::token::TransferChecked {
@@ -986,9 +984,17 @@ pub struct Execute<'info> {
     pub pda: Account<'info, Pda>,
 
     /// The destination program.
+    /// CHECK: This is arbirtrary program.
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
+    /// CHECK: Validation will occur during instruction processing.
+    #[account(
+        mut,
+        seeds = [b"connected"],
+        bump,
+        seeds::program = destination_program.key()
+    )]
     pub destination_program_pda: UncheckedAccount<'info>,
 }
 
@@ -1124,9 +1130,17 @@ pub struct ExecuteSPLToken<'info> {
     pub mint_account: Account<'info, Mint>,
 
     /// The destination program.
+    /// CHECK: This is arbirtrary program.
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
+    /// CHECK: Validation will occur during instruction processing.
+    #[account(
+        mut,
+        seeds = [b"connected"],
+        bump,
+        seeds::program = destination_program.key()
+    )]
     pub destination_program_pda: UncheckedAccount<'info>,
 
     /// The destination program associated token account.

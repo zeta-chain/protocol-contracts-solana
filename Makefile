@@ -14,3 +14,7 @@ generate:
 	    (cd go-idl && go run ./generator "$$input_file" "$$output_file"); \
 	    (cd go-idl && go fmt $$output_file); \
 	done
+
+
+build-gateway-upgrade:
+	cargo build-sbf --features dev --manifest-path programs/examples/gateway_upgrade/Cargo.toml

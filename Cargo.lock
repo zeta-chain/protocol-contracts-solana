@@ -1006,6 +1006,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gateway-upgrade"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "solana-program",
+ "spl-associated-token-account",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

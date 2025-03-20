@@ -665,28 +665,6 @@ pub mod gateway {
         Ok(())
     }
 
-    /// Calls a contract on ZetaChain zEVM.
-    ///
-    /// # Arguments
-    /// * `ctx` - The instruction context.
-    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-    /// * `message` - The message passed to the contract.
-    pub fn call(_ctx: Context<Call>, receiver: [u8; 20], message: Vec<u8>) -> Result<()> {
-        require!(receiver != [0u8; 20], Errors::EmptyReceiver);
-        require!(
-            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
-            Errors::MemoLengthExceeded
-        );
-
-        msg!(
-            "Call executed: receiver = {:?}, message = {:?}",
-            receiver,
-            message
-        );
-
-        Ok(())
-    }
-
     /// Withdraws SOL. Caller is TSS.
     ///
     /// # Arguments
@@ -735,6 +713,12 @@ pub mod gateway {
         );
 
         Ok(())
+    }
+
+    /// Returns true to indicate program has been upgraded
+    pub fn upgraded(ctx: Context<Upgrade>) -> Result<bool> {
+        msg!("Program has been upgraded!");
+        Ok(true)
     }
 
     /// Withdraws SPL tokens. Caller is TSS.
@@ -1079,14 +1063,6 @@ pub struct DepositSplToken<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Instruction context for call operation.
-#[derive(Accounts)]
-pub struct Call<'info> {
-    /// The account of the signer making the call.
-    #[account(mut)]
-    pub signer: Signer<'info>,
-}
-
 /// Instruction context for SOL withdrawal operations.
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
@@ -1288,6 +1264,13 @@ pub struct Pda {
     chain_id: u64,
     /// Flag to indicate whether deposits are paused.
     deposit_paused: bool,
+}
+
+/// Instruction context for checking upgrade status
+#[derive(Accounts)]
+pub struct Upgrade<'info> {
+    /// The account of the signer checking the upgrade
+    pub signer: Signer<'info>,
 }
 
 /// Whitelist entry account for whitelisted SPL tokens.

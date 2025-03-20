@@ -71,7 +71,6 @@ impl CallableInstruction {
                 data,
             } => {
                 let data_len = data.len() as u32;
-
                 //8 (discriminator) + 8 (u64 amount) + 20 (sender) + 4 (data length)
                 buf = Vec::with_capacity(40 + data_len as usize);
 
@@ -227,7 +226,7 @@ pub mod gateway {
             sender,
             data,
         }
-        .pack();
+            .pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -308,7 +307,7 @@ pub mod gateway {
             sender,
             data,
         }
-        .pack();
+            .pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -716,6 +715,12 @@ pub mod gateway {
         Ok(())
     }
 
+    /// Returns true to indicate program has been upgraded
+    pub fn upgraded(ctx: Context<Upgrade>) -> Result<bool> {
+        msg!("Program has been upgraded!");
+        Ok(true)
+    }
+
     /// Withdraws SPL tokens. Caller is TSS.
     ///
     /// # Arguments
@@ -855,11 +860,6 @@ pub mod gateway {
         );
 
         Ok(())
-    }
-    /// Returns true to indicate program has been upgraded
-    pub fn upgraded(ctx: Context<Upgrade>) -> Result<bool> {
-        msg!("Program has been upgraded!");
-        Ok(true)
     }
 }
 

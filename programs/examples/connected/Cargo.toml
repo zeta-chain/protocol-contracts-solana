@@ -1,15 +1,14 @@
 [package]
-name = "gateway-upgrade"
+name = "connected"
 version = "0.1.0"
-description = "program for testing upgrades on solana network"
+description = "Test program used for testing withdraw and call feature"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "gateway_upgrade"
+name = "connected"
 
 [features]
-dev = []
 default = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []

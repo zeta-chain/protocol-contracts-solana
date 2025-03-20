@@ -46,7 +46,10 @@ enum InstructionId {
     IncrementNonce = 7,
 }
 
+#[cfg(feature = "dev")]
 declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
+#[cfg(not(feature = "dev"))]
+declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
@@ -100,6 +103,10 @@ pub mod gateway {
 
     /// Deposit fee used when depositing SOL or SPL tokens.
     const DEPOSIT_FEE: u64 = 2_000_000;
+    /// Prefix used for outbounds message hashes.
+    pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
+    /// Max deposit payload size
+    const MAX_DEPOSIT_PAYLOAD_SIZE: usize = 750;
 
     /// Initializes the gateway PDA.
     ///
@@ -154,7 +161,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::IncrementNonce as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -197,7 +204,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::Execute as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -219,7 +226,8 @@ pub mod gateway {
             amount,
             sender,
             data,
-        }.pack();
+        }
+            .pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -275,7 +283,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::ExecuteSplToken as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -299,7 +307,8 @@ pub mod gateway {
             amount,
             sender,
             data,
-        }.pack();
+        }
+            .pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -323,22 +332,21 @@ pub mod gateway {
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
 
-        // make sure that ctx.accounts.recipient_ata is ATA (PDA account of token program)
+        // make sure that ctx.accounts.destination_program_pda_ata is ATA of destination_program
         let recipient_ata = get_associated_token_address(
             &ctx.accounts.destination_program_pda.key(),
             &ctx.accounts.mint_account.key(),
         );
         require!(
-            recipient_ata == ctx
-                .accounts
-                .destination_program_pda_ata
-                .to_account_info()
-                .key(),
+            recipient_ata
+                == ctx
+                    .accounts
+                    .destination_program_pda_ata
+                    .to_account_info()
+                    .key(),
             Errors::SPLAtaAndMintAddressMismatch,
         );
-
-        // TODO: also create destination program pda ata? add later for simplicity
-
+        // withdraw to destination program pda
         let xfer_ctx = CpiContext::new_with_signer(
             token.to_account_info(),
             anchor_spl::token::TransferChecked {
@@ -568,7 +576,10 @@ pub mod gateway {
         receiver: [u8; 20],
         message: Vec<u8>,
     ) -> Result<()> {
-        require!(message.len() <= 512, Errors::MemoLengthExceeded);
+        require!(
+            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
+            Errors::MemoLengthExceeded
+        );
         deposit(ctx, amount, receiver)?;
 
         msg!("Deposit and call executed with message = {:?}", message);
@@ -644,7 +655,10 @@ pub mod gateway {
         receiver: [u8; 20],
         message: Vec<u8>,
     ) -> Result<()> {
-        require!(message.len() <= 512, Errors::MemoLengthExceeded);
+        require!(
+            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
+            Errors::MemoLengthExceeded
+        );
         deposit_spl_token(ctx, amount, receiver)?;
 
         msg!("Deposit SPL and call executed with message = {:?}", message);
@@ -674,7 +688,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::Withdraw as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -726,7 +740,7 @@ pub mod gateway {
         verify_and_update_nonce(pda, nonce)?;
 
         let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
         concatenated_buffer.push(InstructionId::WithdrawSplToken as u8);
         concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
         concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -842,7 +856,6 @@ pub mod gateway {
 
         Ok(())
     }
-
     /// Returns true to indicate program has been upgraded
     pub fn upgraded(ctx: Context<Upgrade>) -> Result<bool> {
         msg!("Program has been upgraded!");
@@ -903,7 +916,7 @@ fn validate_whitelist_tss_signature(
     verify_and_update_nonce(pda, nonce)?;
 
     let mut concatenated_buffer = Vec::new();
-    concatenated_buffer.extend_from_slice(b"ZETACHAIN");
+    concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
     concatenated_buffer.push(instruction);
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
@@ -976,9 +989,17 @@ pub struct Execute<'info> {
     pub pda: Account<'info, Pda>,
 
     /// The destination program.
+    /// CHECK: This is arbitrary program.
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
+    /// CHECK: Validation will occur during instruction processing.
+    #[account(
+        mut,
+        seeds = [b"connected"],
+        bump,
+        seeds::program = destination_program.key()
+    )]
     pub destination_program_pda: UncheckedAccount<'info>,
 }
 
@@ -1114,9 +1135,17 @@ pub struct ExecuteSPLToken<'info> {
     pub mint_account: Account<'info, Mint>,
 
     /// The destination program.
+    /// CHECK: This is arbitrary program.
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
+    /// CHECK: Validation will occur during instruction processing.
+    #[account(
+        mut,
+        seeds = [b"connected"],
+        bump,
+        seeds::program = destination_program.key()
+    )]
     pub destination_program_pda: UncheckedAccount<'info>,
 
     /// The destination program associated token account.
@@ -1243,7 +1272,6 @@ pub struct Upgrade<'info> {
     /// The account of the signer checking the upgrade
     pub signer: Signer<'info>,
 }
-
 
 /// Whitelist entry account for whitelisted SPL tokens.
 #[account]

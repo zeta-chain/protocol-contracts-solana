@@ -17,5 +17,4 @@ generate:
 
 
 build-gateway-upgrade:
-	cargo build-sbf --features dev --manifest-path programs/gateway_upgrade/Cargo.toml
-
+	cargo build-sbf --features dev --manifest-path programs/examples/gateway_upgrade/Cargo.toml

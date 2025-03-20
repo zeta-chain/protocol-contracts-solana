@@ -1888,6 +1888,43 @@ describe("Gateway", () => {
     }
   });
 
+  it("Call with empty address receiver should fail", async () => {
+    try {
+      await gatewayProgram.methods
+        .call(Array(20).fill(0), Buffer.from("hello", "utf-8"))
+        .rpc();
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("EmptyReceiver");
+    }
+  });
+
+  it("Call with above max payload size should fail", async () => {
+    try {
+      await gatewayProgram.methods
+        .call(
+          Array.from(address),
+          Buffer.from(Array(maxPayloadSize + 1).fill(1))
+        )
+        .rpc();
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("MemoLengthExceeded");
+    }
+  });
+
+  it("Call with max payload size", async () => {
+    const txsig = await gatewayProgram.methods
+      .call(Array.from(address), Buffer.from(Array(maxPayloadSize).fill(1)))
+      .preInstructions([
+        ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
+      ])
+      .rpc({ commitment: "processed" });
+    await conn.getParsedTransaction(txsig, "confirmed");
+  });
+
   it("Deposit and call with max payload size", async () => {
     const bal1 = await conn.getBalance(pdaAccount);
     const txsig = await gatewayProgram.methods

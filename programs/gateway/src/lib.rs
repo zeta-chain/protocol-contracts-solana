@@ -984,7 +984,7 @@ pub struct Execute<'info> {
     pub pda: Account<'info, Pda>,
 
     /// The destination program.
-    /// CHECK: This is arbirtrary program.
+    /// CHECK: This is arbitrary program.
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program
@@ -1130,7 +1130,7 @@ pub struct ExecuteSPLToken<'info> {
     pub mint_account: Account<'info, Mint>,
 
     /// The destination program.
-    /// CHECK: This is arbirtrary program.
+    /// CHECK: This is arbitrary program.
     pub destination_program: AccountInfo<'info>,
 
     // Pda for destination program

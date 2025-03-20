@@ -232,7 +232,7 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "destination_program_pda",
-					Writable: true,
+					Writable: false,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,
@@ -280,7 +280,7 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "destination_program_pda",
-					Writable: true,
+					Writable: false,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,

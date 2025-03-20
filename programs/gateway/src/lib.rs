@@ -672,11 +672,7 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     /// * `message` - The message passed to the contract.
-    pub fn call(
-        _ctx: Context<Call>,
-        receiver: [u8; 20],
-        message: Vec<u8>,
-    ) -> Result<()> {
+    pub fn call(_ctx: Context<Call>, receiver: [u8; 20], message: Vec<u8>) -> Result<()> {
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
         require!(
             message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,

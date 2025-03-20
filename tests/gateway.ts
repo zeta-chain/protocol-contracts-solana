@@ -1891,10 +1891,7 @@ describe("Gateway", () => {
   it("Call with empty address receiver should fail", async () => {
     try {
       await gatewayProgram.methods
-        .call(
-          Array(20).fill(0),
-          Buffer.from("hello", "utf-8")
-        )
+        .call(Array(20).fill(0), Buffer.from("hello", "utf-8"))
         .rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
@@ -1920,10 +1917,7 @@ describe("Gateway", () => {
 
   it("Call with max payload size", async () => {
     const txsig = await gatewayProgram.methods
-      .call(
-        Array.from(address),
-        Buffer.from(Array(maxPayloadSize).fill(1))
-      )
+      .call(Array.from(address), Buffer.from(Array(maxPayloadSize).fill(1)))
       .preInstructions([
         ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
       ])

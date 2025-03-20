@@ -226,7 +226,7 @@ pub mod gateway {
             sender,
             data,
         }
-            .pack();
+        .pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -307,7 +307,7 @@ pub mod gateway {
             sender,
             data,
         }
-            .pack();
+        .pack();
 
         // account metas for remaining accounts
         let account_metas =

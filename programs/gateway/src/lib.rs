@@ -666,6 +666,32 @@ pub mod gateway {
         Ok(())
     }
 
+    /// Calls a contract on ZetaChain zEVM.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `message` - The message passed to the contract.
+    pub fn call(
+        _ctx: Context<Call>,
+        receiver: [u8; 20],
+        message: Vec<u8>,
+    ) -> Result<()> {
+        require!(receiver != [0u8; 20], Errors::EmptyReceiver);
+        require!(
+            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
+            Errors::MemoLengthExceeded
+        );
+
+        msg!(
+            "Call executed: receiver = {:?}, message = {:?}",
+            receiver,
+            message
+        );
+
+        Ok(())
+    }
+
     /// Withdraws SOL. Caller is TSS.
     ///
     /// # Arguments
@@ -1056,6 +1082,14 @@ pub struct DepositSplToken<'info> {
 
     /// The system program.
     pub system_program: Program<'info, System>,
+}
+
+/// Instruction context for call operation.
+#[derive(Accounts)]
+pub struct Call<'info> {
+    /// The account of the signer making the call.
+    #[account(mut)]
+    pub signer: Signer<'info>,
 }
 
 /// Instruction context for SOL withdrawal operations.

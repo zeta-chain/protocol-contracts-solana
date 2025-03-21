@@ -1011,7 +1011,6 @@ pub struct Execute<'info> {
     // Pda for destination program
     /// CHECK: Validation will occur during instruction processing.
     #[account(
-        mut,
         seeds = [b"connected"],
         bump,
         seeds::program = destination_program.key()
@@ -1165,7 +1164,6 @@ pub struct ExecuteSPLToken<'info> {
     // Pda for destination program
     /// CHECK: Validation will occur during instruction processing.
     #[account(
-        mut,
         seeds = [b"connected"],
         bump,
         seeds::program = destination_program.key()

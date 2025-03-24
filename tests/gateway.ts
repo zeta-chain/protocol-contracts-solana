@@ -21,7 +21,15 @@ const keyPair = ec.keyFromPrivate(
 const usdcDecimals = 6;
 const chain_id = 111111;
 const chain_id_bn = new anchor.BN(chain_id);
-const maxPayloadSize = 750;
+const maxPayloadSize = 745;
+
+// generic revertOptions
+const revertOptions = {
+  revertAddress: anchor.web3.Keypair.generate().publicKey,
+  callOnRevert: false,
+  revertMessage: Buffer.from("", "utf-8"),
+  onRevertGasLimit: new anchor.BN(0),
+};
 
 async function mintSPLToken(
   conn: anchor.web3.Connection,
@@ -80,7 +88,11 @@ async function depositSplTokens(
     wallet.publicKey
   );
   await gatewayProgram.methods
-    .depositSplToken(new anchor.BN(1_000_000), Array.from(address))
+    .depositSplToken(
+      new anchor.BN(1_000_000),
+      Array.from(address),
+      revertOptions
+    )
     .accounts({
       from: tokenAccount.address,
       to: pda_ata.address,
@@ -263,13 +275,17 @@ describe("Gateway", () => {
         .depositSplTokenAndCall(
           new anchor.BN(2_000_000),
           Array.from(address),
-          Buffer.from(Array(maxPayloadSize + 1).fill(1))
+          Buffer.from(Array(maxPayloadSize + 1).fill(1)),
+          null
         )
         .accounts({
           from: tokenAccount.address,
           to: pda_ata.address,
           mintAccount: mint.publicKey,
         })
+        .preInstructions([
+          ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
+        ])
         .rpc({ commitment: "processed" });
       throw new Error("Expected error not thrown");
     } catch (err) {
@@ -299,7 +315,8 @@ describe("Gateway", () => {
       .depositSplTokenAndCall(
         new anchor.BN(2_000_000),
         Array.from(address),
-        Buffer.from(Array(maxPayloadSize).fill(1))
+        Buffer.from(Array(maxPayloadSize).fill(1)),
+        null
       )
       .accounts({
         from: tokenAccount.address,
@@ -338,7 +355,11 @@ describe("Gateway", () => {
     );
     try {
       await gatewayProgram.methods
-        .depositSplToken(new anchor.BN(1_000_000), Array.from(address))
+        .depositSplToken(
+          new anchor.BN(1_000_000),
+          Array.from(address),
+          revertOptions
+        )
         .accounts({
           from: tokenAccount.address,
           to: wallet_ata,
@@ -358,7 +379,8 @@ describe("Gateway", () => {
       .depositSplTokenAndCall(
         new anchor.BN(2_000_000),
         Array.from(address),
-        Buffer.from("hi", "utf-8")
+        Buffer.from("hi", "utf-8"),
+        revertOptions
       )
       .accounts({
         from: tokenAccount.address,
@@ -394,7 +416,11 @@ describe("Gateway", () => {
     );
     try {
       await gatewayProgram.methods
-        .depositSplToken(new anchor.BN(1_000_000), Array.from(address))
+        .depositSplToken(
+          new anchor.BN(1_000_000),
+          Array.from(address),
+          revertOptions
+        )
         .accounts({
           from: tokenAccount.address,
           to: fake_pda_ata.address,
@@ -498,7 +524,7 @@ describe("Gateway", () => {
   it("Deposit if receiver is empty address should fail", async () => {
     try {
       await gatewayProgram.methods
-        .deposit(new anchor.BN(1_000_000_000), Array(20).fill(0))
+        .deposit(new anchor.BN(1_000_000_000), Array(20).fill(0), revertOptions)
         .rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
@@ -509,7 +535,7 @@ describe("Gateway", () => {
 
   it("Deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
     await gatewayProgram.methods
-      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
     let bal1 = await conn.getBalance(pdaAccount);
     // amount + deposit fee
@@ -694,7 +720,7 @@ describe("Gateway", () => {
   it("Calls execute and onCall", async () => {
     await connectedProgram.methods.initialize().rpc();
     await gatewayProgram.methods
-      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
 
     const randomWallet = anchor.web3.Keypair.generate();
@@ -792,7 +818,7 @@ describe("Gateway", () => {
 
   it("Calls execute and onCall reverts if connected program reverts", async () => {
     await gatewayProgram.methods
-      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
 
     const randomWallet = anchor.web3.Keypair.generate();
@@ -864,7 +890,7 @@ describe("Gateway", () => {
 
   it("Calls execute and onCall reverts if wrong msg hash", async () => {
     await gatewayProgram.methods
-      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
 
     const randomWallet = anchor.web3.Keypair.generate();
@@ -938,7 +964,7 @@ describe("Gateway", () => {
   it("Calls execute and onCall reverts if wrong signer", async () => {
     const key = ec.genKeyPair(); // non TSS key pair
     await gatewayProgram.methods
-      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
 
     const randomWallet = anchor.web3.Keypair.generate();
@@ -1011,7 +1037,7 @@ describe("Gateway", () => {
 
   it("Calls execute and onCall reverts if signer is passed in remaining accounts", async () => {
     await gatewayProgram.methods
-      .deposit(new anchor.BN(1_000_000_000), Array.from(address))
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
 
     const randomWallet = anchor.web3.Keypair.generate();
@@ -1862,7 +1888,8 @@ describe("Gateway", () => {
         .depositAndCall(
           new anchor.BN(1_000_000_000),
           Array(20).fill(0),
-          Buffer.from("hello", "utf-8")
+          Buffer.from("hello", "utf-8"),
+          revertOptions
         )
         .rpc();
       throw new Error("Expected error not thrown");
@@ -1878,7 +1905,8 @@ describe("Gateway", () => {
         .depositAndCall(
           new anchor.BN(1_000_000_000),
           Array.from(address),
-          Buffer.from(Array(maxPayloadSize + 1).fill(1))
+          Buffer.from(Array(maxPayloadSize + 1).fill(1)),
+          revertOptions
         )
         .rpc();
       throw new Error("Expected error not thrown");
@@ -1891,7 +1919,7 @@ describe("Gateway", () => {
   it("Call with empty address receiver should fail", async () => {
     try {
       await gatewayProgram.methods
-        .call(Array(20).fill(0), Buffer.from("hello", "utf-8"))
+        .call(Array(20).fill(0), Buffer.from("hello", "utf-8"), revertOptions)
         .rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
@@ -1905,7 +1933,8 @@ describe("Gateway", () => {
       await gatewayProgram.methods
         .call(
           Array.from(address),
-          Buffer.from(Array(maxPayloadSize + 1).fill(1))
+          Buffer.from(Array(maxPayloadSize + 1).fill(1)),
+          revertOptions
         )
         .rpc();
       throw new Error("Expected error not thrown");
@@ -1917,7 +1946,11 @@ describe("Gateway", () => {
 
   it("Call with max payload size", async () => {
     const txsig = await gatewayProgram.methods
-      .call(Array.from(address), Buffer.from(Array(maxPayloadSize).fill(1)))
+      .call(
+        Array.from(address),
+        Buffer.from(Array(maxPayloadSize).fill(1)),
+        revertOptions
+      )
       .preInstructions([
         ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
       ])
@@ -1931,7 +1964,8 @@ describe("Gateway", () => {
       .depositAndCall(
         new anchor.BN(1_000_000_000),
         Array.from(address),
-        Buffer.from(Array(maxPayloadSize).fill(1))
+        Buffer.from(Array(maxPayloadSize).fill(1)),
+        revertOptions
       )
       .preInstructions([
         ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }),
@@ -1948,7 +1982,8 @@ describe("Gateway", () => {
       .depositAndCall(
         new anchor.BN(1_000_000_000),
         Array.from(address),
-        Buffer.from("hello", "utf-8")
+        Buffer.from("hello", "utf-8"),
+        revertOptions
       )
       .rpc({ commitment: "processed" });
     await conn.getParsedTransaction(txsig, "confirmed");
@@ -2221,7 +2256,8 @@ describe("Gateway", () => {
         .depositAndCall(
           new anchor.BN(1_000_000),
           Array.from(address),
-          Buffer.from("hi", "utf-8")
+          Buffer.from("hi", "utf-8"),
+          revertOptions
         )
         .rpc();
       throw new Error("Expected error not thrown");

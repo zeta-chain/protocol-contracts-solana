@@ -6,9 +6,12 @@ use solana_program::secp256k1_recover::secp256k1_recover;
 
 use crate::errors::Errors;
 use crate::state::Pda;
+use crate::errors::InstructionId;
 
 /// Prefix used for outbounds message hashes.
 pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
+/// Default gas cost in lamports for SPL token operations
+pub const DEFAULT_GAS_COST: u64 = 5000;
 
 // Verifies provided nonce is correct and updates pda nonce.
 pub fn verify_and_update_nonce(pda: &mut Account<Pda>, nonce: u64) -> Result<()> {
@@ -50,33 +53,78 @@ pub fn recover_and_verify_eth_address(
     Ok(())
 }
 
-/// Recovers and verifies tss signature for whitelist and unwhitelist instructions.
-pub fn validate_whitelist_tss_signature(
-    pda: &mut Account<Pda>,
-    whitelist_candidate_key: Pubkey,
-    signature: [u8; 64],
-    recovery_id: u8,
-    message_hash: [u8; 32],
+/// Creates and validates a message hash for cross-chain instruction verification
+/// Creates and validates a message hash for cross-chain instruction verification
+/// with optional amount inclusion
+pub fn validate_message_hash(
+    instruction_id: InstructionId,
+    chain_id: u64,
     nonce: u64,
-    instruction: u8,
+    amount: Option<u64>, // Make amount optional
+    additional_data: &[&[u8]],
+    message_hash: &[u8; 32],
 ) -> Result<()> {
-    verify_and_update_nonce(pda, nonce)?;
-
     let mut concatenated_buffer = Vec::new();
+
     concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
-    concatenated_buffer.push(instruction);
-    concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+    concatenated_buffer.push(instruction_id as u8);
+    concatenated_buffer.extend_from_slice(&chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&whitelist_candidate_key.to_bytes());
+
+    // Only include amount in the hash if it's provided
+    if let Some(amount_value) = amount {
+        concatenated_buffer.extend_from_slice(&amount_value.to_be_bytes());
+    }
+
+    for data in additional_data {
+        concatenated_buffer.extend_from_slice(data);
+    }
+
+    let computed_hash = hash(&concatenated_buffer[..]).to_bytes();
     require!(
-        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+        *message_hash == computed_hash,
         Errors::MessageHashMismatch
     );
 
     msg!("Computed message hash: {:?}", message_hash);
 
-    recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
+    Ok(())
+}
 
+/// Perform common cross-chain verification steps
+pub fn validate_message(
+    pda: &mut Account<Pda>,
+    instruction_id: InstructionId,
+    nonce: u64,
+    amount: u64,
+    additional_data: &[&[u8]],
+    message_hash: &[u8; 32],
+    signature: &[u8; 64],
+    recovery_id: u8,
+) -> Result<()> {
+    verify_and_update_nonce(pda, nonce)?;
+
+    validate_message_hash(
+        instruction_id,
+        pda.chain_id,
+        nonce,
+        Some(amount),
+        additional_data,
+        message_hash,
+    )?;
+
+    recover_and_verify_eth_address(pda, message_hash, recovery_id, signature)?;
+
+    Ok(())
+}
+
+/// Verify ATA address matches expected value
+pub fn verify_ata_match(owner: &Pubkey, mint: &Pubkey, actual_ata: &Pubkey) -> Result<()> {
+    let expected_ata = get_associated_token_address(owner, mint);
+    require!(
+        expected_ata == *actual_ata,
+        Errors::SPLAtaAndMintAddressMismatch
+    );
     Ok(())
 }
 
@@ -109,14 +157,4 @@ pub fn prepare_account_metas(
     }
 
     Ok(account_metas)
-}
-
-// Utility function to verify SPL token ATA matches
-pub fn verify_ata_match(pda_key: &Pubkey, mint_key: &Pubkey, actual_ata: &Pubkey) -> Result<()> {
-    let expected_ata = get_associated_token_address(pda_key, mint_key);
-    require!(
-        expected_ata == *actual_ata,
-        Errors::SPLAtaAndMintAddressMismatch
-    );
-    Ok(())
 }

@@ -128,7 +128,9 @@ pub fn handle_spl(
 /// * `ctx` - The instruction context.
 /// * `amount` - The amount of SPL tokens to deposit.
 /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-/// * `message` - The message passed to the contract.///
+/// * `message` - The message passed to the contract.
+/// * `deposit_fee` - The fee to be deducted from the deposited amount.
+/// * `max_message_size` - The maximum allowed message size.
 pub fn handle_spl_with_call(
     ctx: Context<DepositSplToken>,
     amount: u64,
@@ -150,9 +152,9 @@ pub fn handle_spl_with_call(
 
 /// Calls a contract on ZetaChain zEVM.
 /// # Arguments
-/// * `ctx` - The instruction context.
 /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
 /// * `message` - The message passed to the contract.
+/// * `max_message_size` - The maximum allowed message size.
 pub fn handle_call(
     receiver: [u8; 20],
     message: Vec<u8>,

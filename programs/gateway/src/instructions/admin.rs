@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 use crate::{
     contexts::{Initialize, UpdateTss, UpdateAuthority, UpdatePaused, Whitelist, Unwhitelist},
-    errors::Errors,
+    errors::{Errors,InstructionId},
     state::Pda,
-    utils::validate_whitelist_tss_signature,
+    utils::{verify_and_update_nonce,validate_message_hash,recover_and_verify_eth_address}
 };
 
 /// Initializes the gateway PDA.
@@ -110,15 +110,21 @@ pub fn whitelist_spl_mint(
     let authority = &ctx.accounts.authority;
 
     if signature != [0u8; 64] {
-        validate_whitelist_tss_signature(
-            pda,
-            whitelist_candidate.key(),
-            signature,
-            recovery_id,
-            message_hash,
+        // Verify and update nonce
+        verify_and_update_nonce(pda, nonce)?;
+
+        // Validate message hash - pass None for amount to match original whitelist hash structure
+        validate_message_hash(
+            InstructionId::WhitelistSplToken,
+            pda.chain_id,
             nonce,
-            crate::errors::InstructionId::WhitelistSplToken as u8,
+            None, // Skip amount in hash calculation
+            &[&whitelist_candidate.key().to_bytes()],
+            &message_hash,
         )?;
+
+        // Verify TSS signature
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
     } else {
         require!(
             authority.key() == pda.authority,
@@ -155,15 +161,21 @@ pub fn unwhitelist_spl_mint(
     let authority = &ctx.accounts.authority;
 
     if signature != [0u8; 64] {
-        validate_whitelist_tss_signature(
-            pda,
-            whitelist_candidate.key(),
-            signature,
-            recovery_id,
-            message_hash,
+        // Verify and update nonce
+        verify_and_update_nonce(pda, nonce)?;
+
+        // Validate message hash
+        validate_message_hash(
+            InstructionId::UnwhitelistSplToken,
+            pda.chain_id,
             nonce,
-            crate::errors::InstructionId::UnwhitelistSplToken as u8,
+            None, // Skip amount in hash calculation
+            &[&whitelist_candidate.key().to_bytes()],
+            &message_hash,
         )?;
+
+        // Verify TSS signature
+        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
     } else {
         require!(
             authority.key() == pda.authority,

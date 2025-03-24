@@ -5,23 +5,25 @@ use anchor_spl::{
 };
 use solana_program::{
     program::invoke,
-    keccak::hash,
 };
 use spl_associated_token_account::instruction::create_associated_token_account;
 use crate::{
     contexts::{Withdraw, WithdrawSPLToken},
     errors::{Errors, InstructionId},
-    utils::{verify_and_update_nonce, recover_and_verify_eth_address,ZETACHAIN_PREFIX},
+    utils::{
+        validate_message, verify_ata_match, DEFAULT_GAS_COST
+    },
+    state::Pda
 };
 
 /// Withdraws SOL. Caller is TSS.
-/// # Arguments
+/// Arguments:
 /// * `ctx` - The instruction context.
-/// * `amount` - The amount of SOL to withdraw.
-/// * `signature` - The TSS signature.
-/// * `recovery_id` - The recovery ID for signature verification.
-/// * `message_hash` - Message hash for signature verification.
-/// * `nonce` - The current nonce value.
+/// * `amount` - The amount of lamports to withdraw.
+/// * `signature` - The signature of the message.
+/// * `recovery_id` - The recovery ID of the signature.
+/// * `message_hash` - The hash of the message.
+/// * `nonce` - The nonce of the message.
 pub fn handle_sol(
     ctx: Context<Withdraw>,
     amount: u64,
@@ -32,27 +34,23 @@ pub fn handle_sol(
 ) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
 
-    verify_and_update_nonce(pda, nonce)?;
+    // 1. Verify cross-chain message
+    validate_message(
+        pda,
+        InstructionId::Withdraw,
+        nonce,
+        amount,
+        &[&ctx.accounts.recipient.key().to_bytes()],
+        &message_hash,
+        &signature,
+        recovery_id,
+    )?;
 
-    let mut concatenated_buffer = Vec::new();
-    concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
-    concatenated_buffer.push(InstructionId::Withdraw as u8);
-    concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&ctx.accounts.recipient.key().to_bytes());
-    require!(
-        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
-        Errors::MessageHashMismatch
-    );
-
-    msg!("Computed message hash: {:?}", message_hash);
-
-    recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
-
+    // 2. Transfer SOL
     pda.sub_lamports(amount)?;
     ctx.accounts.recipient.add_lamports(amount)?;
 
+    // 3. Log success
     msg!(
         "Withdraw executed: amount = {}, recipient = {}, pda = {}",
         amount,
@@ -64,14 +62,14 @@ pub fn handle_sol(
 }
 
 /// Withdraws SPL tokens. Caller is TSS.
-/// # Arguments
+/// Arguments:
 /// * `ctx` - The instruction context.
-/// * `decimals` - Token decimals for precision.
-/// * `amount` - The amount of tokens to withdraw.
-/// * `signature` - The TSS signature.
-/// * `recovery_id` - The recovery ID for signature verification.
-/// * `message_hash` - Message hash for signature verification.
-/// * `nonce` - The current nonce value.
+/// * `decimals` - The decimals of the token.
+/// * `amount` - The amount of tokens to transfer.
+/// * `signature` - The signature of the message.
+/// * `recovery_id` - The recovery ID of the signature.
+/// * `message_hash` - The hash of the message.
+/// * `nonce` - The nonce of the message.
 pub fn handle_spl(
     ctx: Context<WithdrawSPLToken>,
     decimals: u8,
@@ -83,61 +81,47 @@ pub fn handle_spl(
 ) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
 
-    verify_and_update_nonce(pda, nonce)?;
+    // 1. Validate message
+    validate_message(
+        pda,
+        InstructionId::WithdrawSplToken,
+        nonce,
+        amount,
+        &[
+            &ctx.accounts.mint_account.key().to_bytes(),
+            &ctx.accounts.recipient_ata.key().to_bytes(),
+        ],
+        &message_hash,
+        &signature,
+        recovery_id,
+    )?;
 
-    let mut concatenated_buffer = Vec::new();
-    concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
-    concatenated_buffer.push(InstructionId::WithdrawSplToken as u8);
-    concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-    concatenated_buffer.extend_from_slice(&ctx.accounts.mint_account.key().to_bytes());
-    concatenated_buffer.extend_from_slice(&ctx.accounts.recipient_ata.key().to_bytes());
-    require!(
-        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
-        Errors::MessageHashMismatch
-    );
+    // 2. Verify token accounts
+    verify_ata_match(
+        &pda.key(),
+        &ctx.accounts.mint_account.key(),
+        &ctx.accounts.pda_ata.key()
+    )?;
 
-    msg!("Computed message hash: {:?}", message_hash);
-
-    recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
-
-    // associated token address (ATA) of the program PDA
-    // the PDA is the "wallet" (owner) of the token account
-    // the token is stored in ATA account owned by the PDA
-    let pda_ata = get_associated_token_address(&pda.key(), &ctx.accounts.mint_account.key());
-    require!(
-        pda_ata == ctx.accounts.pda_ata.to_account_info().key(),
-        Errors::SPLAtaAndMintAddressMismatch,
-    );
-
-    let token = &ctx.accounts.token_program;
-    let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
-
-    // make sure that ctx.accounts.recipient_ata is ATA (PDA account of token program)
-    let recipient_ata = get_associated_token_address(
+    verify_ata_match(
         &ctx.accounts.recipient.key(),
         &ctx.accounts.mint_account.key(),
-    );
-    require!(
-        recipient_ata == ctx.accounts.recipient_ata.to_account_info().key(),
-        Errors::SPLAtaAndMintAddressMismatch,
-    );
+        &ctx.accounts.recipient_ata.key()
+    )?;
 
-    let cost_gas = 5000; // default gas cost in lamports
-    let cost_ata_create = &mut 0; // will be updated if ATA creation is needed
-
-    // test whether the recipient_ata is created or not; if not, create it
+    // 3. Create recipient ATA if needed and calculate costs
+    let mut cost_ata_create: u64 = 0;
     let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();
-    if recipient_ata_account.lamports() == 0
-        || *recipient_ata_account.owner == ctx.accounts.system_program.key()
-    {
-        // if lamports of recipient_ata_account is 0 or its owner being system program then it's not created
+
+    if recipient_ata_account.lamports() == 0 ||
+        *recipient_ata_account.owner == ctx.accounts.system_program.key() {
+        // ATA needs to be created
         msg!(
             "Creating associated token account {:?} for recipient {:?}...",
             recipient_ata_account.key(),
             ctx.accounts.recipient.key(),
         );
+
         let bal_before = ctx.accounts.signer.lamports();
         invoke(
             &create_associated_token_account(
@@ -153,22 +137,24 @@ pub fn handle_spl(
                 ctx.accounts.signer.to_account_info().clone(),
                 ctx.accounts.system_program.to_account_info().clone(),
                 ctx.accounts.token_program.to_account_info().clone(),
-                ctx.accounts
-                    .associated_token_program
-                    .to_account_info()
-                    .clone(),
+                ctx.accounts.associated_token_program.to_account_info().clone(),
             ],
         )?;
-        let bal_after = ctx.accounts.signer.lamports();
-        *cost_ata_create = bal_before - bal_after;
 
-        msg!("Associated token account for recipient created!");
+        let bal_after = ctx.accounts.signer.lamports();
+        cost_ata_create = bal_before - bal_after;
+
+        msg!("Associated token account created!");
         msg!(
             "Refunding the rent ({:?} lamports) paid by the signer {:?}",
             cost_ata_create,
             ctx.accounts.signer.to_account_info().key
         );
     }
+
+    // 4. Transfer tokens
+    let token = &ctx.accounts.token_program;
+    let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
 
     let xfer_ctx = CpiContext::new_with_signer(
         token.to_account_info(),
@@ -183,15 +169,12 @@ pub fn handle_spl(
 
     transfer_checked(xfer_ctx, amount, decimals)?;
 
-    // Note: this pda.sub_lamports() must be done here due to this issue https://github.com/solana-labs/solana/issues/9711
-    // otherwise the previous CPI calls might fail with error:
-    // "sum of account balances before and after instruction do not match"
-    // Note2: to keep PDA from deficit, all SPL ZRC20 contracts needs to charge withdraw fee of
-    // at least 5000(gas)+2039280(rent) lamports.
-    let reimbursement = cost_gas + *cost_ata_create;
+    // 5. Reimburse gas costs
+    let reimbursement = DEFAULT_GAS_COST + cost_ata_create;
     pda.sub_lamports(reimbursement)?;
     ctx.accounts.signer.add_lamports(reimbursement)?;
 
+    // 6. Log success
     msg!(
         "Withdraw SPL executed: amount = {}, decimals = {}, recipient = {}, mint = {}, pda = {}",
         amount,

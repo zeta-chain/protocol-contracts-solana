@@ -8,6 +8,11 @@ use crate::{
 };
 
 /// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `amount` - The amount of lamports to deposit.
+/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+/// * `deposit_fee` - The fee to be deducted from the deposited amount.
 pub fn handle_sol(
     ctx: Context<Deposit>,
     amount: u64,
@@ -40,6 +45,10 @@ pub fn handle_sol(
 }
 
 /// Deposits SOL and calls a contract on ZetaChain zEVM.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `amount` - The amount of SPL tokens to deposit.
+/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
 pub fn handle_sol_with_call(
     ctx: Context<Deposit>,
     amount: u64,
@@ -60,6 +69,10 @@ pub fn handle_sol_with_call(
 }
 
 /// Deposits SPL tokens and credits the `receiver` on ZetaChain zEVM.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `amount` - The amount of SPL tokens to deposit.
+/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
 pub fn handle_spl(
     ctx: Context<DepositSplToken>,
     amount: u64,
@@ -111,6 +124,11 @@ pub fn handle_spl(
 }
 
 /// Deposits SPL tokens and calls a contract on ZetaChain zEVM.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `amount` - The amount of SPL tokens to deposit.
+/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+/// * `message` - The message passed to the contract.///
 pub fn handle_spl_with_call(
     ctx: Context<DepositSplToken>,
     amount: u64,
@@ -131,6 +149,10 @@ pub fn handle_spl_with_call(
 }
 
 /// Calls a contract on ZetaChain zEVM.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+/// * `message` - The message passed to the contract.
 pub fn handle_call(
     receiver: [u8; 20],
     message: Vec<u8>,

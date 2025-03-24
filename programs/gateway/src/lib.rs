@@ -27,8 +27,7 @@ declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
 #[cfg(not(feature = "dev"))]
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
-/// Prefix used for outbounds message hashes.
-pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
+
 
 #[program]
 pub mod gateway {
@@ -71,7 +70,7 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        instructions::execute::handle(ctx, amount, sender, data, signature, recovery_id, message_hash, nonce)
+        instructions::execute::handle_sol(ctx, amount, sender, data, signature, recovery_id, message_hash, nonce)
     }
 
     // Execute SPL Token instruction

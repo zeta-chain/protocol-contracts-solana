@@ -31,6 +31,9 @@ pub fn initialize(
 }
 
 /// Updates the TSS address. Caller is authority stored in PDA.
+//     /// # Arguments
+//     /// * `ctx` - The instruction context.
+//     /// * `tss_address` - The new Ethereum TSS address (20 bytes).
 pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
     require!(
@@ -49,6 +52,9 @@ pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> 
 }
 
 /// Updates the PDA authority. Caller is authority stored in PDA.
+//     /// # Arguments
+//     /// * `ctx` - The instruction context.
+//     /// * `new_authority_address` - The new authority's public key.
 pub fn update_authority(
     ctx: Context<UpdateAuthority>,
     new_authority_address: Pubkey,
@@ -70,6 +76,9 @@ pub fn update_authority(
 }
 
 /// Pauses or unpauses deposits. Caller is authority stored in PDA.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `deposit_paused` - Boolean flag to pause or unpause deposits.
 pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
     require!(
@@ -83,6 +92,12 @@ pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> R
 }
 
 /// Whitelists a new SPL token. Caller is TSS.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `signature` - The TSS signature.
+/// * `recovery_id` - The recovery ID for signature verification.
+/// * `message_hash` - Message hash for signature verification.
+/// * `nonce` - The current nonce value.
 pub fn whitelist_spl_mint(
     ctx: Context<Whitelist>,
     signature: [u8; 64],
@@ -122,6 +137,12 @@ pub fn whitelist_spl_mint(
 }
 
 /// Unwhitelists an SPL token. Caller is TSS.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `signature` - The TSS signature.
+/// * `recovery_id` - The recovery ID for signature verification.
+/// * `message_hash` - Message hash for signature verification.
+/// * `nonce` - The current nonce value.
 pub fn unwhitelist_spl_mint(
     ctx: Context<Unwhitelist>,
     signature: [u8; 64],

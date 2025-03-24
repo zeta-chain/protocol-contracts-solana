@@ -6,7 +6,9 @@ use solana_program::secp256k1_recover::secp256k1_recover;
 
 use crate::errors::Errors;
 use crate::state::Pda;
-use crate::ZETACHAIN_PREFIX;
+
+/// Prefix used for outbounds message hashes.
+pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
 
 // Verifies provided nonce is correct and updates pda nonce.
 pub fn verify_and_update_nonce(pda: &mut Account<Pda>, nonce: u64) -> Result<()> {

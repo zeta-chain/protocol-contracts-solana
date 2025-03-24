@@ -11,13 +11,17 @@ use spl_associated_token_account::instruction::create_associated_token_account;
 use crate::{
     contexts::{Withdraw, WithdrawSPLToken},
     errors::{Errors, InstructionId},
-    utils::{verify_and_update_nonce, recover_and_verify_eth_address},
+    utils::{verify_and_update_nonce, recover_and_verify_eth_address,ZETACHAIN_PREFIX},
 };
 
-/// Prefix used for outbounds message hashes.
-pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
-
 /// Withdraws SOL. Caller is TSS.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `amount` - The amount of SOL to withdraw.
+/// * `signature` - The TSS signature.
+/// * `recovery_id` - The recovery ID for signature verification.
+/// * `message_hash` - Message hash for signature verification.
+/// * `nonce` - The current nonce value.
 pub fn handle_sol(
     ctx: Context<Withdraw>,
     amount: u64,
@@ -60,6 +64,14 @@ pub fn handle_sol(
 }
 
 /// Withdraws SPL tokens. Caller is TSS.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `decimals` - Token decimals for precision.
+/// * `amount` - The amount of tokens to withdraw.
+/// * `signature` - The TSS signature.
+/// * `recovery_id` - The recovery ID for signature verification.
+/// * `message_hash` - Message hash for signature verification.
+/// * `nonce` - The current nonce value.
 pub fn handle_spl(
     ctx: Context<WithdrawSPLToken>,
     decimals: u8,

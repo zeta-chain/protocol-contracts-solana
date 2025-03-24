@@ -12,11 +12,9 @@ use crate::{
     contexts::{Execute, ExecuteSPLToken, IncrementNonce},
     errors::{Errors, InstructionId},
     state::{CallableInstruction},
-    utils::{verify_and_update_nonce, recover_and_verify_eth_address, prepare_account_metas},
+    utils::{verify_and_update_nonce, recover_and_verify_eth_address, prepare_account_metas,ZETACHAIN_PREFIX},
 };
 
-/// Prefix used for outbounds message hashes.
-pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
 
 /// Increments nonce, used by TSS in case outbound fails.
 pub fn increment_nonce(
@@ -50,7 +48,16 @@ pub fn increment_nonce(
 }
 
 /// Withdraws amount to destination program pda, and calls on_call on destination program
-pub fn handle(
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `amount` - The amount of SOL to withdraw.
+/// * `sender` - Sender from ZEVM.
+/// * `data` - Data to pass to destination program.
+/// * `signature` - The TSS signature.
+/// * `recovery_id` - The recovery ID for signature verification.
+/// * `message_hash` - Message hash for signature verification.
+/// * `nonce` - The current nonce value.
+pub fn handle_sol(
     ctx: Context<Execute>,
     amount: u64,
     sender: [u8; 20],
@@ -118,6 +125,16 @@ pub fn handle(
 }
 
 /// Execute with SPL tokens. Caller is TSS.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `decimals` - Token decimals for precision.
+/// * `amount` - The amount of tokens to withdraw.
+/// * `sender` - Sender from ZEVM.
+/// * `data` - Data to pass to destination program.
+/// * `signature` - The TSS signature.
+/// * `recovery_id` - The recovery ID for signature verification.
+/// * `message_hash` - Message hash for signature verification.
+/// * `nonce` - The current nonce value.
 pub fn handle_spl_token(
     ctx: Context<ExecuteSPLToken>,
     decimals: u8,

@@ -118,8 +118,6 @@ pub mod gateway {
     const DEPOSIT_FEE: u64 = 2_000_000;
     /// Prefix used for outbounds message hashes.
     pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
-    /// Max deposit payload size
-    const MAX_DEPOSIT_PAYLOAD_SIZE: usize = 745;
 
     /// Initializes the gateway PDA.
     ///
@@ -557,12 +555,8 @@ pub mod gateway {
         receiver: [u8; 20],
         revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        if let Some(opts) = &revert_options {
-            require!(
-                opts.revert_message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
-                Errors::MemoLengthExceeded
-            );
-        }
+        verify_payload_size(None, &revert_options)?;
+
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
@@ -604,15 +598,8 @@ pub mod gateway {
         message: Vec<u8>,
         revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        let revert_message_len = revert_options
-            .as_ref()
-            .and_then(|opts| Some(opts.revert_message.len()))
-            .unwrap_or(0);
+        verify_payload_size(Some(&message), &revert_options)?;
 
-        require!(
-            message.len() + revert_message_len <= MAX_DEPOSIT_PAYLOAD_SIZE,
-            Errors::MemoLengthExceeded
-        );
         deposit(ctx, amount, receiver, revert_options)?;
 
         msg!("Deposit and call executed with message = {:?}", message);
@@ -633,12 +620,8 @@ pub mod gateway {
         receiver: [u8; 20],
         revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        if let Some(opts) = &revert_options {
-            require!(
-                opts.revert_message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
-                Errors::MemoLengthExceeded
-            );
-        }
+        verify_payload_size(None, &revert_options)?;
+
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
 
@@ -699,15 +682,8 @@ pub mod gateway {
         message: Vec<u8>,
         revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        let revert_message_len = revert_options
-            .as_ref()
-            .and_then(|opts| Some(opts.revert_message.len()))
-            .unwrap_or(0);
+        verify_payload_size(Some(&message), &revert_options)?;
 
-        require!(
-            message.len() + revert_message_len <= MAX_DEPOSIT_PAYLOAD_SIZE,
-            Errors::MemoLengthExceeded
-        );
         deposit_spl_token(ctx, amount, receiver, revert_options)?;
 
         msg!("Deposit SPL and call executed with message = {:?}", message);
@@ -729,15 +705,7 @@ pub mod gateway {
         revert_options: Option<RevertOptions>,
     ) -> Result<()> {
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
-        let revert_message_len = revert_options
-            .as_ref()
-            .and_then(|opts| Some(opts.revert_message.len()))
-            .unwrap_or(0);
-
-        require!(
-            message.len() + revert_message_len <= MAX_DEPOSIT_PAYLOAD_SIZE,
-            Errors::MemoLengthExceeded
-        );
+        verify_payload_size(Some(&message), &revert_options)?;
 
         msg!(
             "Call executed: receiver = {:?}, message = {:?}, revert options = {:?}",
@@ -1039,6 +1007,26 @@ fn prepare_account_metas(
     }
 
     Ok(account_metas)
+}
+
+fn verify_payload_size(
+    message: Option<&Vec<u8>>,
+    revert_options: &Option<RevertOptions>,
+) -> Result<()> {
+    /// Max deposit payload size
+    const MAX_DEPOSIT_PAYLOAD_SIZE: usize = 745;
+    let msg_len = message.map(|m| m.len()).unwrap_or(0);
+    let revert_len = revert_options
+        .as_ref()
+        .map(|opts| opts.revert_message.len())
+        .unwrap_or(0);
+
+    require!(
+        msg_len + revert_len <= MAX_DEPOSIT_PAYLOAD_SIZE,
+        Errors::MemoLengthExceeded
+    );
+
+    Ok(())
 }
 
 /// Instruction context for initializing the program.

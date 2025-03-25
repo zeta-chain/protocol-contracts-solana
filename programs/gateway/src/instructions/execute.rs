@@ -1,16 +1,11 @@
-use anchor_lang::prelude::*;
-use solana_program::{
-    program::invoke,
-    instruction::Instruction,
-};
 use crate::{
     contexts::{Execute, ExecuteSPLToken, IncrementNonce},
     errors::InstructionId,
-    state::{CallableInstruction},
-    utils::{
-        validate_message, verify_ata_match, prepare_account_metas
-    },
+    state::CallableInstruction,
+    utils::{prepare_account_metas, validate_message, verify_ata_match},
 };
+use anchor_lang::prelude::*;
+use solana_program::{instruction::Instruction, program::invoke};
 
 /// Increments nonce, used by TSS in case outbound fails.
 /// # Arguments:
@@ -36,7 +31,7 @@ pub fn increment_nonce(
         InstructionId::IncrementNonce,
         nonce,
         amount,
-        &[],  // No additional data for this instruction
+        &[], // No additional data for this instruction
         &message_hash,
         &signature,
         recovery_id,
@@ -72,10 +67,7 @@ pub fn handle_sol(
         InstructionId::Execute,
         nonce,
         amount,
-        &[
-            &ctx.accounts.destination_program.key().to_bytes(),
-            &data,
-        ],
+        &[&ctx.accounts.destination_program.key().to_bytes(), &data],
         &message_hash,
         &signature,
         recovery_id,
@@ -86,13 +78,10 @@ pub fn handle_sol(
         amount,
         sender,
         data,
-    }.pack();
+    }
+    .pack();
 
-    let account_metas = prepare_account_metas(
-        ctx.remaining_accounts,
-        &ctx.accounts.signer,
-        pda
-    )?;
+    let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
 
     let ix = Instruction {
         program_id: ctx.accounts.destination_program.key(),
@@ -162,13 +151,10 @@ pub fn handle_spl_token(
         amount,
         sender,
         data,
-    }.pack();
+    }
+    .pack();
 
-    let account_metas = prepare_account_metas(
-        ctx.remaining_accounts,
-        &ctx.accounts.signer,
-        pda
-    )?;
+    let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
 
     let ix = Instruction {
         program_id: ctx.accounts.destination_program.key(),
@@ -180,13 +166,13 @@ pub fn handle_spl_token(
     verify_ata_match(
         &pda.key(),
         &ctx.accounts.mint_account.key(),
-        &ctx.accounts.pda_ata.key()
+        &ctx.accounts.pda_ata.key(),
     )?;
 
     verify_ata_match(
         &ctx.accounts.destination_program_pda.key(),
         &ctx.accounts.mint_account.key(),
-        &ctx.accounts.destination_program_pda_ata.key()
+        &ctx.accounts.destination_program_pda_ata.key(),
     )?;
 
     // 4. Transfer tokens

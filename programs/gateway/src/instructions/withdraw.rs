@@ -1,16 +1,12 @@
-use anchor_lang::prelude::*;
-use anchor_spl::token::transfer_checked;
-use solana_program::{
-    program::invoke,
-};
-use spl_associated_token_account::instruction::create_associated_token_account;
 use crate::{
     contexts::{Withdraw, WithdrawSPLToken},
     errors::InstructionId,
-    utils::{
-        validate_message, verify_ata_match, DEFAULT_GAS_COST
-    }
+    utils::{validate_message, verify_ata_match, DEFAULT_GAS_COST},
 };
+use anchor_lang::prelude::*;
+use anchor_spl::token::transfer_checked;
+use solana_program::program::invoke;
+use spl_associated_token_account::instruction::create_associated_token_account;
 
 /// Withdraws SOL. Caller is TSS.
 /// Arguments:
@@ -96,21 +92,22 @@ pub fn handle_spl(
     verify_ata_match(
         &pda.key(),
         &ctx.accounts.mint_account.key(),
-        &ctx.accounts.pda_ata.key()
+        &ctx.accounts.pda_ata.key(),
     )?;
 
     verify_ata_match(
         &ctx.accounts.recipient.key(),
         &ctx.accounts.mint_account.key(),
-        &ctx.accounts.recipient_ata.key()
+        &ctx.accounts.recipient_ata.key(),
     )?;
 
     // 3. Create recipient ATA if needed and calculate costs
     let mut cost_ata_create: u64 = 0;
     let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();
 
-    if recipient_ata_account.lamports() == 0 ||
-        *recipient_ata_account.owner == ctx.accounts.system_program.key() {
+    if recipient_ata_account.lamports() == 0
+        || *recipient_ata_account.owner == ctx.accounts.system_program.key()
+    {
         // ATA needs to be created
         msg!(
             "Creating associated token account {:?} for recipient {:?}...",
@@ -133,7 +130,10 @@ pub fn handle_spl(
                 ctx.accounts.signer.to_account_info().clone(),
                 ctx.accounts.system_program.to_account_info().clone(),
                 ctx.accounts.token_program.to_account_info().clone(),
-                ctx.accounts.associated_token_program.to_account_info().clone(),
+                ctx.accounts
+                    .associated_token_program
+                    .to_account_info()
+                    .clone(),
             ],
         )?;
 

@@ -5,8 +5,8 @@ use solana_program::program_error::ProgramError;
 use solana_program::secp256k1_recover::secp256k1_recover;
 
 use crate::errors::Errors;
-use crate::state::Pda;
 use crate::errors::InstructionId;
+use crate::state::Pda;
 
 /// Prefix used for outbounds message hashes.
 pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
@@ -81,10 +81,7 @@ pub fn validate_message_hash(
     }
 
     let computed_hash = hash(&concatenated_buffer[..]).to_bytes();
-    require!(
-        *message_hash == computed_hash,
-        Errors::MessageHashMismatch
-    );
+    require!(*message_hash == computed_hash, Errors::MessageHashMismatch);
 
     msg!("Computed message hash: {:?}", message_hash);
 

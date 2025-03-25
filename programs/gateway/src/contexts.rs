@@ -1,8 +1,8 @@
+use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::{AssociatedToken};
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 use std::mem::size_of;
-use crate::state::*;
 
 /// Instruction context for initializing the program.
 #[derive(Accounts)]

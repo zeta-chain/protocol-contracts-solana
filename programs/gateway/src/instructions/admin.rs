@@ -1,16 +1,12 @@
-use anchor_lang::prelude::*;
 use crate::{
-    contexts::{Initialize, UpdateTss, UpdateAuthority, UpdatePaused, Whitelist, Unwhitelist},
-    errors::{Errors,InstructionId},
-    utils::{verify_and_update_nonce,validate_message_hash,recover_and_verify_eth_address}
+    contexts::{Initialize, Unwhitelist, UpdateAuthority, UpdatePaused, UpdateTss, Whitelist},
+    errors::{Errors, InstructionId},
+    utils::{recover_and_verify_eth_address, validate_message_hash, verify_and_update_nonce},
 };
+use anchor_lang::prelude::*;
 
 /// Initializes the gateway PDA.
-pub fn initialize(
-    ctx: Context<Initialize>,
-    tss_address: [u8; 20],
-    chain_id: u64,
-) -> Result<()> {
+pub fn initialize(ctx: Context<Initialize>, tss_address: [u8; 20], chain_id: u64) -> Result<()> {
     let initialized_pda = &mut ctx.accounts.pda;
 
     initialized_pda.nonce = 0;

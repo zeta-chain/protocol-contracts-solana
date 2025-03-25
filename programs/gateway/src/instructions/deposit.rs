@@ -1,11 +1,11 @@
-use anchor_lang::prelude::*;
-use anchor_lang::system_program;
-use anchor_spl::token::transfer;
-use anchor_spl::associated_token::get_associated_token_address;
 use crate::{
     contexts::{Deposit, DepositSplToken},
     errors::Errors,
 };
+use anchor_lang::prelude::*;
+use anchor_lang::system_program;
+use anchor_spl::associated_token::get_associated_token_address;
+use anchor_spl::token::transfer;
 
 /// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
 /// # Arguments
@@ -17,7 +17,7 @@ pub fn handle_sol(
     ctx: Context<Deposit>,
     amount: u64,
     receiver: [u8; 20],
-    deposit_fee: u64
+    deposit_fee: u64,
 ) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
     require!(!pda.deposit_paused, Errors::DepositPaused);
@@ -55,7 +55,7 @@ pub fn handle_sol_with_call(
     receiver: [u8; 20],
     message: Vec<u8>,
     deposit_fee: u64,
-    max_message_size: usize
+    max_message_size: usize,
 ) -> Result<()> {
     require!(
         message.len() <= max_message_size,
@@ -77,7 +77,7 @@ pub fn handle_spl(
     ctx: Context<DepositSplToken>,
     amount: u64,
     receiver: [u8; 20],
-    deposit_fee: u64
+    deposit_fee: u64,
 ) -> Result<()> {
     let token = &ctx.accounts.token_program;
     let from = &ctx.accounts.from;
@@ -137,7 +137,7 @@ pub fn handle_spl_with_call(
     receiver: [u8; 20],
     message: Vec<u8>,
     deposit_fee: u64,
-    max_message_size: usize
+    max_message_size: usize,
 ) -> Result<()> {
     require!(
         message.len() <= max_message_size,
@@ -155,11 +155,7 @@ pub fn handle_spl_with_call(
 /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
 /// * `message` - The message passed to the contract.
 /// * `max_message_size` - The maximum allowed message size.
-pub fn handle_call(
-    receiver: [u8; 20],
-    message: Vec<u8>,
-    max_message_size: usize
-) -> Result<()> {
+pub fn handle_call(receiver: [u8; 20], message: Vec<u8>, max_message_size: usize) -> Result<()> {
     require!(receiver != [0u8; 20], Errors::EmptyReceiver);
     require!(
         message.len() <= max_message_size,

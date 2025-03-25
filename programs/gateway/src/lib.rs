@@ -1,24 +1,22 @@
 use anchor_lang::prelude::*;
 
 // Import your modules
-mod errors;
-mod state;
 mod contexts;
-mod utils;
+mod errors;
 mod instructions;
+mod state;
+mod utils;
 
 // Re-export needed items
+pub use contexts::*;
 pub use errors::*;
 pub use state::*;
-pub use contexts::*;
 
 // Define the program ID
 #[cfg(feature = "dev")]
 declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
 #[cfg(not(feature = "dev"))]
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
-
-
 
 #[program]
 pub mod gateway {
@@ -47,7 +45,14 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        instructions::execute::increment_nonce(ctx, amount, signature, recovery_id, message_hash, nonce)
+        instructions::execute::increment_nonce(
+            ctx,
+            amount,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+        )
     }
 
     // Execute instruction
@@ -61,7 +66,16 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        instructions::execute::handle_sol(ctx, amount, sender, data, signature, recovery_id, message_hash, nonce)
+        instructions::execute::handle_sol(
+            ctx,
+            amount,
+            sender,
+            data,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+        )
     }
 
     // Execute SPL Token instruction
@@ -77,7 +91,15 @@ pub mod gateway {
         nonce: u64,
     ) -> Result<()> {
         instructions::execute::handle_spl_token(
-            ctx, decimals, amount, sender, data, signature, recovery_id, message_hash, nonce
+            ctx,
+            decimals,
+            amount,
+            sender,
+            data,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
         )
     }
 
@@ -133,8 +155,14 @@ pub mod gateway {
         receiver: [u8; 20],
         message: Vec<u8>,
     ) -> Result<()> {
-        instructions::deposit::handle_sol_with_call(ctx, amount, receiver, message,
-                                                    DEPOSIT_FEE, MAX_DEPOSIT_PAYLOAD_SIZE)
+        instructions::deposit::handle_sol_with_call(
+            ctx,
+            amount,
+            receiver,
+            message,
+            DEPOSIT_FEE,
+            MAX_DEPOSIT_PAYLOAD_SIZE,
+        )
     }
 
     // Deposit SPL token instruction
@@ -153,8 +181,14 @@ pub mod gateway {
         receiver: [u8; 20],
         message: Vec<u8>,
     ) -> Result<()> {
-        instructions::deposit::handle_spl_with_call(ctx, amount, receiver, message,
-                                                    DEPOSIT_FEE, MAX_DEPOSIT_PAYLOAD_SIZE)
+        instructions::deposit::handle_spl_with_call(
+            ctx,
+            amount,
+            receiver,
+            message,
+            DEPOSIT_FEE,
+            MAX_DEPOSIT_PAYLOAD_SIZE,
+        )
     }
 
     // Call instruction
@@ -184,7 +218,15 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        instructions::withdraw::handle_spl(ctx, decimals, amount, signature, recovery_id, message_hash, nonce)
+        instructions::withdraw::handle_spl(
+            ctx,
+            decimals,
+            amount,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+        )
     }
 
     /// Returns true to indicate program has been upgraded

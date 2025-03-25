@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::system_program;
 use anchor_spl::associated_token::{AssociatedToken};
 use anchor_spl::token::{Mint, Token, TokenAccount};
 use std::mem::size_of;

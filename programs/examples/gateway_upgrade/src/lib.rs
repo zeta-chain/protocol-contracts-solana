@@ -51,6 +51,9 @@ declare_id!("94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d");
 #[cfg(not(feature = "dev"))]
 declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
+/// Prefix used for outbounds message hashes.
+pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
+
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallableInstruction {
@@ -716,7 +719,7 @@ pub mod gateway {
     }
 
     /// Returns true to indicate program has been upgraded
-    pub fn upgraded(ctx: Context<Upgrade>) -> Result<bool> {
+    pub fn upgraded(_ctx: Context<Upgrade>) -> Result<bool> {
         msg!("Program has been upgraded!");
         Ok(true)
     }

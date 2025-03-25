@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use crate::{
     contexts::{Initialize, UpdateTss, UpdateAuthority, UpdatePaused, Whitelist, Unwhitelist},
     errors::{Errors,InstructionId},
-    state::Pda,
     utils::{verify_and_update_nonce,validate_message_hash,recover_and_verify_eth_address}
 };
 

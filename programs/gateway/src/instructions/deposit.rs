@@ -3,7 +3,7 @@ use anchor_lang::system_program;
 use anchor_spl::token::transfer;
 use anchor_spl::associated_token::get_associated_token_address;
 use crate::{
-    contexts::{Deposit, DepositSplToken, Call},
+    contexts::{Deposit, DepositSplToken},
     errors::Errors,
 };
 

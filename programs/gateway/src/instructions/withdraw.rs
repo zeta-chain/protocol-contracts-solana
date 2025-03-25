@@ -1,19 +1,15 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::transfer_checked,
-    associated_token::get_associated_token_address
-};
+use anchor_spl::token::transfer_checked;
 use solana_program::{
     program::invoke,
 };
 use spl_associated_token_account::instruction::create_associated_token_account;
 use crate::{
     contexts::{Withdraw, WithdrawSPLToken},
-    errors::{Errors, InstructionId},
+    errors::InstructionId,
     utils::{
         validate_message, verify_ata_match, DEFAULT_GAS_COST
-    },
-    state::Pda
+    }
 };
 
 /// Withdraws SOL. Caller is TSS.

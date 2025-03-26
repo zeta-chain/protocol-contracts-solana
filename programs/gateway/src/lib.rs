@@ -1,13 +1,11 @@
 use anchor_lang::prelude::*;
 
-// Import your modules
 mod contexts;
 mod errors;
 mod instructions;
 mod state;
 mod utils;
 
-// Re-export needed items
 pub use contexts::*;
 pub use errors::*;
 pub use state::*;

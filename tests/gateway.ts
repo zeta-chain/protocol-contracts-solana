@@ -26,6 +26,7 @@ const maxPayloadSize = 745;
 // generic revertOptions
 const revertOptions = {
   revertAddress: anchor.web3.Keypair.generate().publicKey,
+  abortAddress: anchor.web3.Keypair.generate().publicKey,
   callOnRevert: false,
   revertMessage: Buffer.from("", "utf-8"),
   onRevertGasLimit: new anchor.BN(0),

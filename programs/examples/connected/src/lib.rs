@@ -31,9 +31,9 @@ pub mod connected {
         pda.sub_lamports(amount / 2)?;
         ctx.accounts.random_wallet.add_lamports(amount / 2)?;
 
-        // Check if the message is "revert" and return an error if so
-        if pda.last_message == "revert" {
-            msg!("Reverting transaction due to 'revert' message.");
+        // Check if the message contains "revert" and return an error if so
+        if pda.last_message.contains("revert") {
+            msg!("Reverting transaction due to message: '{}'", pda.last_message);
             return Err(ErrorCode::RevertMessage.into());
         }
 

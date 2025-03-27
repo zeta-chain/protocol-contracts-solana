@@ -36,6 +36,7 @@ pub enum Errors {
 
 /// Enumeration for instruction identifiers in message hashes.
 #[repr(u8)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
 enum InstructionId {
     Withdraw = 1,
     WithdrawSplToken = 2,
@@ -44,6 +45,7 @@ enum InstructionId {
     Execute = 5,
     ExecuteSplToken = 6,
     IncrementNonce = 7,
+    ExecuteRevert = 8,
 }
 
 #[cfg(feature = "dev")]
@@ -53,8 +55,8 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
-pub enum CallableInstruction {
-    OnCall {
+enum CallableInstruction {
+    ConnectedCall {
         amount: u64,
         sender: [u8; 20],
         data: Vec<u8>,
@@ -62,37 +64,31 @@ pub enum CallableInstruction {
 }
 
 impl CallableInstruction {
-    pub fn pack(&self) -> Vec<u8> {
-        let mut buf;
+    pub fn pack(&self, instruction_id: InstructionId) -> Vec<u8> {
+        let discriminator = match instruction_id {
+            InstructionId::Execute => [16, 136, 66, 32, 254, 40, 181, 8],       // on_call
+            InstructionId::ExecuteRevert => [226, 44, 101, 52, 224, 214, 41, 9],  // on_revert
+            _ => panic!("Unsupported instruction ID for packing"),
+        };
+
         match self {
-            CallableInstruction::OnCall {
+            CallableInstruction::ConnectedCall {
                 amount,
                 sender,
                 data,
             } => {
                 let data_len = data.len() as u32;
-                //8 (discriminator) + 8 (u64 amount) + 20 (sender) + 4 (data length)
-                buf = Vec::with_capacity(40 + data_len as usize);
+                let mut buf = Vec::with_capacity(40 + data_len as usize);
 
-                // Discriminator for instruction (example)
-                // This ensures the program knows how to handle this instruction.
-                // Example discriminator: anchor typically uses `hash("global:on_call")`
-                buf.extend_from_slice(&[16, 136, 66, 32, 254, 40, 181, 8]);
-
-                // Encode amount (u64) in little-endian format
+                buf.extend_from_slice(&discriminator);
                 buf.extend_from_slice(&amount.to_le_bytes());
-
-                // Encode sender ([u8; 20])
                 buf.extend_from_slice(sender);
-
-                // Encode the length of the data array (u32)
                 buf.extend_from_slice(&data_len.to_le_bytes());
-
-                // Encode the data itself
                 buf.extend_from_slice(data);
+
+                buf
             }
         }
-        buf
     }
 }
 
@@ -212,59 +208,53 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        let pda = &mut ctx.accounts.pda;
-
-        verify_and_update_nonce(pda, nonce)?;
-
-        let mut concatenated_buffer = Vec::new();
-        concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
-        concatenated_buffer.push(InstructionId::Execute as u8);
-        concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
-        concatenated_buffer.extend_from_slice(&ctx.accounts.destination_program.key().to_bytes());
-        concatenated_buffer.extend_from_slice(&data);
-        require!(
-            message_hash == hash(&concatenated_buffer[..]).to_bytes(),
-            Errors::MessageHashMismatch
-        );
-
-        msg!("Computed message hash: {:?}", message_hash);
-
-        recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
-
-        // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
-        // since any contract with on_call instruction can be called
-        let instruction_data = CallableInstruction::OnCall {
+        execute_common(
+            ctx,
             amount,
             sender,
-            data,
-        }
-        .pack();
+            data.clone(),
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+            InstructionId::Execute,
+        )?;
 
-        // account metas for remaining accounts
-        let account_metas =
-            prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
+        Ok(())
+    }
 
-        let ix = Instruction {
-            program_id: ctx.accounts.destination_program.key(),
-            accounts: account_metas,
-            data: instruction_data,
-        };
-
-        // withdraw to destination program pda
-        pda.sub_lamports(amount)?;
-        ctx.accounts.destination_program_pda.add_lamports(amount)?;
-
-        // invoke destination program on_call function
-        invoke(&ix, ctx.remaining_accounts)?;
-
-        msg!(
-            "Execute done: destination contract = {}, amount = {}, sender = {:?}",
+    /// Withdraws amount to destination program pda, and calls on_revert on destination program
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SOL to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
+    pub fn execute_revert(
+        ctx: Context<Execute>,
+        amount: u64,
+        sender: [u8; 20],
+        data: Vec<u8>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    ) -> Result<()> {
+        execute_common(
+            ctx,
             amount,
-            ctx.accounts.destination_program.key(),
             sender,
-        );
+            data.clone(),
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+            InstructionId::ExecuteRevert,
+        )?;
 
         Ok(())
     }
@@ -316,12 +306,12 @@ pub mod gateway {
 
         // NOTE: have to manually create Instruction, pack it and invoke since there is no crate for contract
         // since any contract with on_call instruction can be called
-        let instruction_data = CallableInstruction::OnCall {
+        let instruction_data = CallableInstruction::ConnectedCall {
             amount,
             sender,
             data,
         }
-        .pack();
+        .pack(InstructionId::Execute);
 
         // account metas for remaining accounts
         let account_metas =
@@ -909,6 +899,69 @@ pub mod gateway {
 
         Ok(())
     }
+}
+
+fn execute_common(
+    ctx: Context<Execute>,
+    amount: u64,
+    sender: [u8; 20],
+    data: Vec<u8>,
+    signature: [u8; 64],
+    recovery_id: u8,
+    message_hash: [u8; 32],
+    nonce: u64,
+    instruction_id: InstructionId,
+) -> Result<()> {
+    let pda = &mut ctx.accounts.pda;
+
+    verify_and_update_nonce(pda, nonce)?;
+
+    let mut concatenated_buffer = Vec::new();
+    concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
+    concatenated_buffer.push(instruction_id as u8);
+    concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+    concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+    concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+    concatenated_buffer.extend_from_slice(&ctx.accounts.destination_program.key().to_bytes());
+    concatenated_buffer.extend_from_slice(&data);
+
+    require!(
+        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+        Errors::MessageHashMismatch
+    );
+
+    msg!("Computed message hash: {:?}", message_hash);
+
+    recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
+
+    let instruction = CallableInstruction::ConnectedCall {
+        amount,
+        sender,
+        data,
+    }.pack(instruction_id);
+
+    let account_metas =
+        prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
+
+    let ix = Instruction {
+        program_id: ctx.accounts.destination_program.key(),
+        accounts: account_metas,
+        data: instruction,
+    };
+
+    pda.sub_lamports(amount)?;
+    ctx.accounts.destination_program_pda.add_lamports(amount)?;
+
+    invoke(&ix, ctx.remaining_accounts)?;
+
+    msg!(
+        "Execute done: destination contract = {}, amount = {}, sender = {:?}",
+        ctx.accounts.destination_program.key(),
+        amount,
+        sender,
+    );
+
+    Ok(())
 }
 
 // Verifies provided nonce is correct and updates pda nonce.

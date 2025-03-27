@@ -21,14 +21,11 @@ pub fn prepare_account_metas(
         // Gateway pda can be added as not writable
         if *account_key == pda.key() {
             account_metas.push(AccountMeta::new_readonly(*account_key, false));
+        } else if account_info.is_writable {
+            account_metas.push(AccountMeta::new(*account_key, false));
         } else {
-            if account_info.is_writable {
-                account_metas.push(AccountMeta::new(*account_key, false));
-            } else {
-                account_metas.push(AccountMeta::new_readonly(*account_key, false));
+            account_metas.push(AccountMeta::new_readonly(*account_key, false));
             }
         }
-    }
-
     Ok(account_metas)
 }

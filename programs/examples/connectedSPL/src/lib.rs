@@ -47,7 +47,10 @@ pub mod connected_spl {
 
         // Check if the message contains "revert" and return an error if so
         if pda.last_message.contains("revert") {
-            msg!("Reverting transaction due to message: '{}'", pda.last_message);
+            msg!(
+                "Reverting transaction due to message: '{}'",
+                pda.last_message
+            );
             return Err(ErrorCode::RevertMessage.into());
         }
 

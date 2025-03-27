@@ -26,9 +26,9 @@ pub fn initialize(ctx: Context<Initialize>, tss_address: [u8; 20], chain_id: u64
 }
 
 /// Updates the TSS address. Caller is authority stored in PDA.
-//     /// # Arguments
-//     /// * `ctx` - The instruction context.
-//     /// * `tss_address` - The new Ethereum TSS address (20 bytes).
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `tss_address` - The new Ethereum TSS address (20 bytes).
 pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
     require!(

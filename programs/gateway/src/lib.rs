@@ -9,6 +9,7 @@ mod utils;
 pub use contexts::*;
 pub use errors::*;
 pub use state::*;
+pub use utils::DEPOSIT_FEE;
 
 // Define the program ID
 #[cfg(feature = "dev")]
@@ -19,12 +20,6 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 #[program]
 pub mod gateway {
     use super::*;
-
-    /// Deposit fee used when depositing SOL or SPL tokens.
-    const DEPOSIT_FEE: u64 = 2_000_000;
-    /// Max deposit payload size
-    const MAX_DEPOSIT_PAYLOAD_SIZE: usize = 750;
-
     // Initialize instruction
     pub fn initialize(
         ctx: Context<Initialize>,
@@ -142,8 +137,12 @@ pub mod gateway {
     }
 
     // Deposit instruction
-    pub fn deposit(ctx: Context<Deposit>, amount: u64, receiver: [u8; 20]) -> Result<()> {
-        instructions::deposit::handle_sol(ctx, amount, receiver, DEPOSIT_FEE)
+    pub fn deposit(ctx: Context<Deposit>,
+                   amount: u64,
+                   receiver: [u8; 20],
+                   revert_options: Option<RevertOptions>,
+    ) -> Result<()> {
+        instructions::deposit::handle_sol(ctx, amount, receiver,revert_options,DEPOSIT_FEE)
     }
 
     // Deposit and call instruction
@@ -152,14 +151,15 @@ pub mod gateway {
         amount: u64,
         receiver: [u8; 20],
         message: Vec<u8>,
+        revert_options: Option<RevertOptions>,
     ) -> Result<()> {
         instructions::deposit::handle_sol_with_call(
             ctx,
             amount,
             receiver,
             message,
+            revert_options,
             DEPOSIT_FEE,
-            MAX_DEPOSIT_PAYLOAD_SIZE,
         )
     }
 
@@ -168,8 +168,15 @@ pub mod gateway {
         ctx: Context<DepositSplToken>,
         amount: u64,
         receiver: [u8; 20],
+        revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        instructions::deposit::handle_spl(ctx, amount, receiver, DEPOSIT_FEE)
+        instructions::deposit::handle_spl(
+            ctx,
+            amount,
+            receiver,
+            revert_options,
+            DEPOSIT_FEE
+        )
     }
 
     // Deposit SPL token and call instruction
@@ -178,20 +185,30 @@ pub mod gateway {
         amount: u64,
         receiver: [u8; 20],
         message: Vec<u8>,
+        revert_options: Option<RevertOptions>,
     ) -> Result<()> {
         instructions::deposit::handle_spl_with_call(
             ctx,
             amount,
             receiver,
             message,
+            revert_options,
             DEPOSIT_FEE,
-            MAX_DEPOSIT_PAYLOAD_SIZE,
         )
     }
 
     // Call instruction
-    pub fn call(_ctx: Context<Call>, receiver: [u8; 20], message: Vec<u8>) -> Result<()> {
-        instructions::deposit::handle_call(receiver, message, MAX_DEPOSIT_PAYLOAD_SIZE)
+    pub fn call(
+        ctx: Context<Call>,
+        receiver: [u8; 20],
+        message: Vec<u8>,
+        revert_options: Option<RevertOptions>,
+    ) -> Result<()> {
+        instructions::deposit::handle_call(
+            ctx,
+            receiver,
+            message,
+            revert_options)
     }
 
     // Withdraw instruction

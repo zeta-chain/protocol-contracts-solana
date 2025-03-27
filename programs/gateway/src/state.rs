@@ -63,3 +63,19 @@ impl CallableInstruction {
         buf
     }
 }
+
+/// Struct containing revert options
+/// # Arguments
+/// * `revert_address` Address to receive revert.
+/// * `abort_address` Address to receive funds if aborted.
+/// * `call_on_revert` Flag if on_revert hook should be called.
+/// * `revert_message` Arbitrary data sent back in on_revert.
+/// * `on_revert_gas_limit` Gas limit for revert tx.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
+pub struct RevertOptions {
+    pub revert_address: Pubkey,
+    pub abort_address: Pubkey,
+    pub call_on_revert: bool,
+    pub revert_message: Vec<u8>,
+    pub on_revert_gas_limit: u64,
+}

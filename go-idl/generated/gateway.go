@@ -15,6 +15,19 @@ var IDLGateway = types.IDL{
 	},
 	Instructions: []types.Instruction{
 		{
+			Name:          "call",
+			Discriminator: [8]byte{181, 94, 56, 161, 194, 221, 200, 3},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+			},
+		},
+		{
 			Name:          "deposit",
 			Discriminator: [8]byte{242, 35, 198, 137, 82, 225, 242, 182},
 			Accounts: []types.Account{
@@ -219,7 +232,7 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "destination_program_pda",
-					Writable: false,
+					Writable: true,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,
@@ -267,7 +280,7 @@ var IDLGateway = types.IDL{
 				},
 				{
 					Name:     "destination_program_pda",
-					Writable: false,
+					Writable: true,
 					Signer:   false,
 					Address:  "",
 					PDA:      nil,
@@ -444,6 +457,19 @@ var IDLGateway = types.IDL{
 			},
 		},
 		{
+			Name:          "upgraded",
+			Discriminator: [8]byte{5, 128, 180, 115, 13, 248, 217, 167},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: false,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+			},
+		},
+		{
 			Name:          "whitelist_spl_mint",
 			Discriminator: [8]byte{30, 110, 162, 42, 208, 147, 254, 219},
 			Accounts: []types.Account{
@@ -612,6 +638,7 @@ var IDLGateway = types.IDL{
 }
 
 const (
+	InstructionCall                       = "call"
 	InstructionDeposit                    = "deposit"
 	InstructionDeposit_and_call           = "deposit_and_call"
 	InstructionDeposit_spl_token          = "deposit_spl_token"
@@ -624,6 +651,7 @@ const (
 	InstructionUnwhitelist_spl_mint       = "unwhitelist_spl_mint"
 	InstructionUpdate_authority           = "update_authority"
 	InstructionUpdate_tss                 = "update_tss"
+	InstructionUpgraded                   = "upgraded"
 	InstructionWhitelist_spl_mint         = "whitelist_spl_mint"
 	InstructionWithdraw                   = "withdraw"
 	InstructionWithdraw_spl_token         = "withdraw_spl_token"

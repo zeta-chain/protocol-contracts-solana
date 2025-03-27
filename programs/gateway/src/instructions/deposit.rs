@@ -1,7 +1,10 @@
 use crate::{
-    contexts::{Deposit, DepositSplToken},
+    contexts::{Deposit, DepositSplToken,Call},
     errors::Errors,
+   state::RevertOptions,
+    utils::verify_payload_size,
 };
+
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::associated_token::get_associated_token_address;
@@ -17,8 +20,11 @@ pub fn handle_sol(
     ctx: Context<Deposit>,
     amount: u64,
     receiver: [u8; 20],
+    revert_options: Option<RevertOptions>,
     deposit_fee: u64,
 ) -> Result<()> {
+    verify_payload_size(None, &revert_options)?;
+
     let pda = &mut ctx.accounts.pda;
     require!(!pda.deposit_paused, Errors::DepositPaused);
     require!(receiver != [0u8; 20], Errors::EmptyReceiver);
@@ -33,12 +39,12 @@ pub fn handle_sol(
     );
     system_program::transfer(cpi_context, amount_with_fees)?;
 
-    msg!(
-        "Deposit executed: amount = {}, fee = {}, receiver = {:?}, pda = {}",
-        amount,
-        deposit_fee,
-        receiver,
-        ctx.accounts.pda.key()
+    msg!("Deposit executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, revert options = {:?}",
+            amount,
+            deposit_fee,
+            receiver,
+            ctx.accounts.pda.key(),
+            revert_options
     );
 
     Ok(())
@@ -54,14 +60,13 @@ pub fn handle_sol_with_call(
     amount: u64,
     receiver: [u8; 20],
     message: Vec<u8>,
+    revert_options: Option<RevertOptions>,
     deposit_fee: u64,
-    max_message_size: usize,
 ) -> Result<()> {
-    require!(
-        message.len() <= max_message_size,
-        Errors::MemoLengthExceeded
-    );
-    handle_sol(ctx, amount, receiver, deposit_fee)?;
+
+    verify_payload_size(Some(&message), &revert_options)?;
+
+    handle_sol(ctx, amount, receiver,revert_options, deposit_fee)?;
 
     msg!("Deposit and call executed with message = {:?}", message);
 
@@ -77,8 +82,10 @@ pub fn handle_spl(
     ctx: Context<DepositSplToken>,
     amount: u64,
     receiver: [u8; 20],
+    revert_options: Option<RevertOptions>,
     deposit_fee: u64,
 ) -> Result<()> {
+    verify_payload_size(None, &revert_options)?;
     let token = &ctx.accounts.token_program;
     let from = &ctx.accounts.from;
 
@@ -112,13 +119,14 @@ pub fn handle_spl(
     transfer(xfer_ctx, amount)?;
 
     msg!(
-        "Deposit SPL executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, mint = {}",
-        amount,
-        deposit_fee,
-        receiver,
-        ctx.accounts.pda.key(),
-        ctx.accounts.mint_account.key()
-    );
+            "Deposit SPL executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, mint = {}, revert options = {:?}",
+            amount,
+            deposit_fee,
+            receiver,
+            ctx.accounts.pda.key(),
+            ctx.accounts.mint_account.key(),
+            revert_options
+        );
 
     Ok(())
 }
@@ -136,14 +144,12 @@ pub fn handle_spl_with_call(
     amount: u64,
     receiver: [u8; 20],
     message: Vec<u8>,
+    revert_options: Option<RevertOptions>,
     deposit_fee: u64,
-    max_message_size: usize,
 ) -> Result<()> {
-    require!(
-        message.len() <= max_message_size,
-        Errors::MemoLengthExceeded
-    );
-    handle_spl(ctx, amount, receiver, deposit_fee)?;
+    verify_payload_size(Some(&message), &revert_options)?;
+
+    handle_spl(ctx, amount, receiver, revert_options,deposit_fee)?;
 
     msg!("Deposit SPL and call executed with message = {:?}", message);
 
@@ -155,18 +161,21 @@ pub fn handle_spl_with_call(
 /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
 /// * `message` - The message passed to the contract.
 /// * `max_message_size` - The maximum allowed message size.
-pub fn handle_call(receiver: [u8; 20], message: Vec<u8>, max_message_size: usize) -> Result<()> {
+pub fn handle_call(
+    _ctx: Context<Call>,
+    receiver: [u8; 20],
+    message: Vec<u8>,
+    revert_options: Option<RevertOptions>,
+) -> Result<()> {
     require!(receiver != [0u8; 20], Errors::EmptyReceiver);
-    require!(
-        message.len() <= max_message_size,
-        Errors::MemoLengthExceeded
-    );
+    verify_payload_size(Some(&message), &revert_options)?;
 
     msg!(
-        "Call executed: receiver = {:?}, message = {:?}",
-        receiver,
-        message
-    );
+            "Call executed: receiver = {:?}, message = {:?}, revert options = {:?}",
+            receiver,
+            message,
+            revert_options
+        );
 
     Ok(())
 }

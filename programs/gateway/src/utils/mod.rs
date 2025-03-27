@@ -5,6 +5,7 @@ pub mod validate_message;
 pub mod validate_message_hash;
 pub mod verify_and_update_nonce;
 pub mod verify_ata_match;
+pub mod verify_payload_size;
 
 pub use constants::*;
 pub use prepare_account_metas::*;
@@ -13,3 +14,4 @@ pub use validate_message::*;
 pub use validate_message_hash::*;
 pub use verify_and_update_nonce::*;
 pub use verify_ata_match::*;
+pub use verify_payload_size::*;

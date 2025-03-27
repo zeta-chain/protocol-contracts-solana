@@ -47,9 +47,9 @@ pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> 
 }
 
 /// Updates the PDA authority. Caller is authority stored in PDA.
-//     /// # Arguments
-//     /// * `ctx` - The instruction context.
-//     /// * `new_authority_address` - The new authority's public key.
+/// # Arguments
+/// * `ctx` - The instruction context.
+/// * `new_authority_address` - The new authority's public key.
 pub fn update_authority(
     ctx: Context<UpdateAuthority>,
     new_authority_address: Pubkey,

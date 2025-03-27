@@ -78,12 +78,24 @@ impl CallableInstruction {
                 data,
             } => {
                 let data_len = data.len() as u32;
+                // 8 (discriminator) + 8 (u64 amount) + 20 (sender) + 4 (data length)
                 let mut buf = Vec::with_capacity(40 + data_len as usize);
 
+                // Discriminator for instruction (example)
+                // This ensures the program knows how to handle this instruction.
+                // Example discriminator: anchor typically uses `hash("global:on_call")`
                 buf.extend_from_slice(&discriminator);
+
+                // Encode amount (u64) in little-endian format
                 buf.extend_from_slice(&amount.to_le_bytes());
+
+                // Encode sender ([u8; 20])
                 buf.extend_from_slice(sender);
+
+                // Encode the length of the data array (u32)
                 buf.extend_from_slice(&data_len.to_le_bytes());
+
+                // Encode the data itself
                 buf.extend_from_slice(data);
 
                 buf
@@ -208,7 +220,7 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        execute_common(
+        execute_connected_call(
             ctx,
             amount,
             sender,
@@ -244,7 +256,7 @@ pub mod gateway {
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        execute_common(
+        execute_connected_call(
             ctx,
             amount,
             sender,
@@ -901,7 +913,7 @@ pub mod gateway {
     }
 }
 
-fn execute_common(
+fn execute_connected_call(
     ctx: Context<Execute>,
     amount: u64,
     sender: [u8; 20],

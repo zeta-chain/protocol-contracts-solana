@@ -1,7 +1,10 @@
 use crate::{
     contexts::{Initialize, Unwhitelist, UpdateAuthority, UpdatePaused, UpdateTss, Whitelist},
-    errors::{Errors, InstructionId},
-    utils::{recover_and_verify_eth_address, validate_message_hash, verify_and_update_nonce},
+    errors::InstructionId,
+    utils::{
+        recover_and_verify_eth_address, validate_message_hash, verify_and_update_nonce,
+        verify_authority,
+    },
 };
 use anchor_lang::prelude::*;
 
@@ -30,11 +33,8 @@ pub fn initialize(ctx: Context<Initialize>, tss_address: [u8; 20], chain_id: u64
 /// * `ctx` - The instruction context.
 /// * `tss_address` - The new Ethereum TSS address (20 bytes).
 pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
+    verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
     let pda = &mut ctx.accounts.pda;
-    require!(
-        ctx.accounts.signer.key() == pda.authority,
-        Errors::SignerIsNotAuthority
-    );
     pda.tss_address = tss_address;
 
     msg!(
@@ -54,11 +54,8 @@ pub fn update_authority(
     ctx: Context<UpdateAuthority>,
     new_authority_address: Pubkey,
 ) -> Result<()> {
+    verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
     let pda = &mut ctx.accounts.pda;
-    require!(
-        ctx.accounts.signer.key() == pda.authority,
-        Errors::SignerIsNotAuthority
-    );
     pda.authority = new_authority_address;
 
     msg!(
@@ -75,11 +72,9 @@ pub fn update_authority(
 /// * `ctx` - The instruction context.
 /// * `deposit_paused` - Boolean flag to pause or unpause deposits.
 pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
+    verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
     let pda = &mut ctx.accounts.pda;
-    require!(
-        ctx.accounts.signer.key() == pda.authority,
-        Errors::SignerIsNotAuthority
-    );
+
     pda.deposit_paused = deposit_paused;
 
     msg!("Set deposit paused: {:?}", deposit_paused);
@@ -104,6 +99,7 @@ pub fn whitelist_spl_mint(
     let whitelist_candidate = &mut ctx.accounts.whitelist_candidate;
     let authority = &ctx.accounts.authority;
 
+    // If signature is not zero, verify the signature is valid and signed by TSS
     if signature != [0u8; 64] {
         // Verify and update nonce
         verify_and_update_nonce(pda, nonce)?;
@@ -121,10 +117,8 @@ pub fn whitelist_spl_mint(
         // Verify TSS signature
         recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
     } else {
-        require!(
-            authority.key() == pda.authority,
-            Errors::SignerIsNotAuthority
-        );
+        // If signature is zero, authority must sign the transaction
+        verify_authority(&authority.key(), &ctx.accounts.pda)?;
     }
 
     msg!(
@@ -155,6 +149,7 @@ pub fn unwhitelist_spl_mint(
     let whitelist_candidate = &mut ctx.accounts.whitelist_candidate;
     let authority = &ctx.accounts.authority;
 
+    // If signature is not zero, verify the signature is valid and signed by TSS
     if signature != [0u8; 64] {
         // Verify and update nonce
         verify_and_update_nonce(pda, nonce)?;
@@ -172,10 +167,8 @@ pub fn unwhitelist_spl_mint(
         // Verify TSS signature
         recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
     } else {
-        require!(
-            authority.key() == pda.authority,
-            Errors::SignerIsNotAuthority
-        );
+        // If signature is zero, authority must sign the transaction
+        verify_authority(&authority.key(), &ctx.accounts.pda)?;
     }
 
     msg!(

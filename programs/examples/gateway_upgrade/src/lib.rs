@@ -959,7 +959,6 @@ fn prepare_account_metas(
         } else {
             account_metas.push(AccountMeta::new_readonly(*account_key, false));
         }
-
     }
 
     Ok(account_metas)

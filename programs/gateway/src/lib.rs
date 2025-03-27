@@ -66,8 +66,8 @@ enum CallableInstruction {
 impl CallableInstruction {
     pub fn pack(&self, instruction_id: InstructionId) -> Vec<u8> {
         let discriminator = match instruction_id {
-            InstructionId::Execute => [16, 136, 66, 32, 254, 40, 181, 8],       // on_call
-            InstructionId::ExecuteRevert => [226, 44, 101, 52, 224, 214, 41, 9],  // on_revert
+            InstructionId::Execute => [16, 136, 66, 32, 254, 40, 181, 8], // on_call
+            InstructionId::ExecuteRevert => [226, 44, 101, 52, 224, 214, 41, 9], // on_revert
             _ => panic!("Unsupported instruction ID for packing"),
         };
 
@@ -938,10 +938,10 @@ fn execute_common(
         amount,
         sender,
         data,
-    }.pack(instruction_id);
+    }
+    .pack(instruction_id);
 
-    let account_metas =
-        prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
+    let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
 
     let ix = Instruction {
         program_id: ctx.accounts.destination_program.key(),

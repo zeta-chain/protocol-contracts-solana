@@ -96,6 +96,22 @@ impl CallableInstruction {
     }
 }
 
+/// Struct containing revert options
+/// # Arguments
+/// * `revert_address` Address to receive revert.
+/// * `abort_address` Address to receive funds if aborted.
+/// * `call_on_revert` Flag if on_revert hook should be called.
+/// * `revert_message` Arbitrary data sent back in on_revert.
+/// * `on_revert_gas_limit` Gas limit for revert tx.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
+pub struct RevertOptions {
+    pub revert_address: Pubkey,
+    pub abort_address: Pubkey,
+    pub call_on_revert: bool,
+    pub revert_message: Vec<u8>,
+    pub on_revert_gas_limit: u64,
+}
+
 #[program]
 pub mod gateway {
     use super::*;
@@ -104,8 +120,6 @@ pub mod gateway {
     const DEPOSIT_FEE: u64 = 2_000_000;
     /// Prefix used for outbounds message hashes.
     pub const ZETACHAIN_PREFIX: &[u8] = b"ZETACHAIN";
-    /// Max deposit payload size
-    const MAX_DEPOSIT_PAYLOAD_SIZE: usize = 750;
 
     /// Initializes the gateway PDA.
     ///
@@ -536,7 +550,15 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `amount` - The amount of lamports to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-    pub fn deposit(ctx: Context<Deposit>, amount: u64, receiver: [u8; 20]) -> Result<()> {
+    /// * `revert_options` - Revert options.
+    pub fn deposit(
+        ctx: Context<Deposit>,
+        amount: u64,
+        receiver: [u8; 20],
+        revert_options: Option<RevertOptions>,
+    ) -> Result<()> {
+        verify_payload_size(None, &revert_options)?;
+
         let pda = &mut ctx.accounts.pda;
         require!(!pda.deposit_paused, Errors::DepositPaused);
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
@@ -552,11 +574,12 @@ pub mod gateway {
         system_program::transfer(cpi_context, amount_with_fees)?;
 
         msg!(
-            "Deposit executed: amount = {}, fee = {}, receiver = {:?}, pda = {}",
+            "Deposit executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, revert options = {:?}",
             amount,
             DEPOSIT_FEE,
             receiver,
-            ctx.accounts.pda.key()
+            ctx.accounts.pda.key(),
+            revert_options
         );
 
         Ok(())
@@ -569,17 +592,17 @@ pub mod gateway {
     /// * `amount` - The amount of lamports to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     /// * `message` - The message passed to the contract.
+    /// * `revert_options` - Revert options.
     pub fn deposit_and_call(
         ctx: Context<Deposit>,
         amount: u64,
         receiver: [u8; 20],
         message: Vec<u8>,
+        revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        require!(
-            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
-            Errors::MemoLengthExceeded
-        );
-        deposit(ctx, amount, receiver)?;
+        verify_payload_size(Some(&message), &revert_options)?;
+
+        deposit(ctx, amount, receiver, revert_options)?;
 
         msg!("Deposit and call executed with message = {:?}", message);
 
@@ -592,11 +615,15 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `amount` - The amount of SPL tokens to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `revert_options` - Revert options.
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
         receiver: [u8; 20],
+        revert_options: Option<RevertOptions>,
     ) -> Result<()> {
+        verify_payload_size(None, &revert_options)?;
+
         let token = &ctx.accounts.token_program;
         let from = &ctx.accounts.from;
 
@@ -630,12 +657,13 @@ pub mod gateway {
         transfer(xfer_ctx, amount)?;
 
         msg!(
-            "Deposit SPL executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, mint = {}",
+            "Deposit SPL executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, mint = {}, revert options = {:?}",
             amount,
             DEPOSIT_FEE,
             receiver,
             ctx.accounts.pda.key(),
-            ctx.accounts.mint_account.key()
+            ctx.accounts.mint_account.key(),
+            revert_options
         );
 
         Ok(())
@@ -648,17 +676,17 @@ pub mod gateway {
     /// * `amount` - The amount of SPL tokens to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     /// * `message` - The message passed to the contract.
+    /// * `revert_options` - Revert options.
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,
         amount: u64,
         receiver: [u8; 20],
         message: Vec<u8>,
+        revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        require!(
-            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
-            Errors::MemoLengthExceeded
-        );
-        deposit_spl_token(ctx, amount, receiver)?;
+        verify_payload_size(Some(&message), &revert_options)?;
+
+        deposit_spl_token(ctx, amount, receiver, revert_options)?;
 
         msg!("Deposit SPL and call executed with message = {:?}", message);
 
@@ -671,17 +699,21 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     /// * `message` - The message passed to the contract.
-    pub fn call(_ctx: Context<Call>, receiver: [u8; 20], message: Vec<u8>) -> Result<()> {
+    /// * `revert_options` - Revert options.
+    pub fn call(
+        _ctx: Context<Call>,
+        receiver: [u8; 20],
+        message: Vec<u8>,
+        revert_options: Option<RevertOptions>,
+    ) -> Result<()> {
         require!(receiver != [0u8; 20], Errors::EmptyReceiver);
-        require!(
-            message.len() <= MAX_DEPOSIT_PAYLOAD_SIZE,
-            Errors::MemoLengthExceeded
-        );
+        verify_payload_size(Some(&message), &revert_options)?;
 
         msg!(
-            "Call executed: receiver = {:?}, message = {:?}",
+            "Call executed: receiver = {:?}, message = {:?}, revert options = {:?}",
             receiver,
-            message
+            message,
+            revert_options
         );
 
         Ok(())
@@ -977,6 +1009,26 @@ fn prepare_account_metas(
     }
 
     Ok(account_metas)
+}
+
+fn verify_payload_size(
+    message: Option<&Vec<u8>>,
+    revert_options: &Option<RevertOptions>,
+) -> Result<()> {
+    /// Max deposit payload size
+    const MAX_DEPOSIT_PAYLOAD_SIZE: usize = 745;
+    let msg_len = message.map(|m| m.len()).unwrap_or(0);
+    let revert_len = revert_options
+        .as_ref()
+        .map(|opts| opts.revert_message.len())
+        .unwrap_or(0);
+
+    require!(
+        msg_len + revert_len <= MAX_DEPOSIT_PAYLOAD_SIZE,
+        Errors::MemoLengthExceeded
+    );
+
+    Ok(())
 }
 
 /// Instruction context for initializing the program.

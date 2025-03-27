@@ -9,7 +9,7 @@ declare_id!("8iUjRRhUCn8BjrvsWPfj8mguTe9L81ES4oAUApiF8JFC");
 pub mod connected_spl {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
         Ok(())
     }
 

@@ -1,7 +1,7 @@
 use crate::{
-    contexts::{Deposit, DepositSplToken,Call},
+    contexts::{Call, Deposit, DepositSplToken},
     errors::Errors,
-   state::RevertOptions,
+    state::RevertOptions,
     utils::verify_payload_size,
 };
 
@@ -39,12 +39,13 @@ pub fn handle_sol(
     );
     system_program::transfer(cpi_context, amount_with_fees)?;
 
-    msg!("Deposit executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, revert options = {:?}",
-            amount,
-            deposit_fee,
-            receiver,
-            ctx.accounts.pda.key(),
-            revert_options
+    msg!(
+        "Deposit executed: amount = {}, fee = {}, receiver = {:?}, pda = {}, revert options = {:?}",
+        amount,
+        deposit_fee,
+        receiver,
+        ctx.accounts.pda.key(),
+        revert_options
     );
 
     Ok(())
@@ -63,10 +64,9 @@ pub fn handle_sol_with_call(
     revert_options: Option<RevertOptions>,
     deposit_fee: u64,
 ) -> Result<()> {
-
     verify_payload_size(Some(&message), &revert_options)?;
 
-    handle_sol(ctx, amount, receiver,revert_options, deposit_fee)?;
+    handle_sol(ctx, amount, receiver, revert_options, deposit_fee)?;
 
     msg!("Deposit and call executed with message = {:?}", message);
 
@@ -149,7 +149,7 @@ pub fn handle_spl_with_call(
 ) -> Result<()> {
     verify_payload_size(Some(&message), &revert_options)?;
 
-    handle_spl(ctx, amount, receiver, revert_options,deposit_fee)?;
+    handle_spl(ctx, amount, receiver, revert_options, deposit_fee)?;
 
     msg!("Deposit SPL and call executed with message = {:?}", message);
 
@@ -171,11 +171,11 @@ pub fn handle_call(
     verify_payload_size(Some(&message), &revert_options)?;
 
     msg!(
-            "Call executed: receiver = {:?}, message = {:?}, revert options = {:?}",
-            receiver,
-            message,
-            revert_options
-        );
+        "Call executed: receiver = {:?}, message = {:?}, revert options = {:?}",
+        receiver,
+        message,
+        revert_options
+    );
 
     Ok(())
 }

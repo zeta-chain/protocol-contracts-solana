@@ -137,12 +137,13 @@ pub mod gateway {
     }
 
     // Deposit instruction
-    pub fn deposit(ctx: Context<Deposit>,
-                   amount: u64,
-                   receiver: [u8; 20],
-                   revert_options: Option<RevertOptions>,
+    pub fn deposit(
+        ctx: Context<Deposit>,
+        amount: u64,
+        receiver: [u8; 20],
+        revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        instructions::deposit::handle_sol(ctx, amount, receiver,revert_options,DEPOSIT_FEE)
+        instructions::deposit::handle_sol(ctx, amount, receiver, revert_options, DEPOSIT_FEE)
     }
 
     // Deposit and call instruction
@@ -170,13 +171,7 @@ pub mod gateway {
         receiver: [u8; 20],
         revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        instructions::deposit::handle_spl(
-            ctx,
-            amount,
-            receiver,
-            revert_options,
-            DEPOSIT_FEE
-        )
+        instructions::deposit::handle_spl(ctx, amount, receiver, revert_options, DEPOSIT_FEE)
     }
 
     // Deposit SPL token and call instruction
@@ -204,11 +199,7 @@ pub mod gateway {
         message: Vec<u8>,
         revert_options: Option<RevertOptions>,
     ) -> Result<()> {
-        instructions::deposit::handle_call(
-            ctx,
-            receiver,
-            message,
-            revert_options)
+        instructions::deposit::handle_call(ctx, receiver, message, revert_options)
     }
 
     // Withdraw instruction
@@ -242,11 +233,5 @@ pub mod gateway {
             message_hash,
             nonce,
         )
-    }
-
-    /// Returns true to indicate program has been upgraded
-    pub fn upgraded(_ctx: Context<Upgrade>) -> Result<bool> {
-        msg!("Program has been upgraded!");
-        Ok(true)
     }
 }

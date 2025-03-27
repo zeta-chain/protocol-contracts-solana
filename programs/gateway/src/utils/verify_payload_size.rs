@@ -1,8 +1,7 @@
+use super::constants::MAX_DEPOSIT_PAYLOAD_SIZE;
 use crate::errors::Errors;
 use crate::state::RevertOptions;
 use anchor_lang::prelude::*;
-use super::constants::MAX_DEPOSIT_PAYLOAD_SIZE;
-
 
 /// Verify the size of the payload for deposit transactions
 /// ## Arguments

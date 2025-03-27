@@ -457,19 +457,6 @@ var IDLGateway = types.IDL{
 			},
 		},
 		{
-			Name:          "upgraded",
-			Discriminator: [8]byte{5, 128, 180, 115, 13, 248, 217, 167},
-			Accounts: []types.Account{
-				{
-					Name:     "signer",
-					Writable: false,
-					Signer:   true,
-					Address:  "",
-					PDA:      nil,
-				},
-			},
-		},
-		{
 			Name:          "whitelist_spl_mint",
 			Discriminator: [8]byte{30, 110, 162, 42, 208, 147, 254, 219},
 			Accounts: []types.Account{
@@ -651,7 +638,6 @@ const (
 	InstructionUnwhitelist_spl_mint       = "unwhitelist_spl_mint"
 	InstructionUpdate_authority           = "update_authority"
 	InstructionUpdate_tss                 = "update_tss"
-	InstructionUpgraded                   = "upgraded"
 	InstructionWhitelist_spl_mint         = "whitelist_spl_mint"
 	InstructionWithdraw                   = "withdraw"
 	InstructionWithdraw_spl_token         = "withdraw_spl_token"

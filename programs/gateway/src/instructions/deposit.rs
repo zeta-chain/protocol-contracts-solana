@@ -10,12 +10,7 @@ use anchor_lang::system_program;
 use anchor_spl::associated_token::get_associated_token_address;
 use anchor_spl::token::transfer;
 
-/// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `amount` - The amount of lamports to deposit.
-/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-/// * `deposit_fee` - The fee to be deducted from the deposited amount.
+// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
 pub fn handle_sol(
     ctx: Context<Deposit>,
     amount: u64,
@@ -51,11 +46,7 @@ pub fn handle_sol(
     Ok(())
 }
 
-/// Deposits SOL and calls a contract on ZetaChain zEVM.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `amount` - The amount of SPL tokens to deposit.
-/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+// Deposits SOL and calls a contract on ZetaChain zEVM.
 pub fn handle_sol_with_call(
     ctx: Context<Deposit>,
     amount: u64,
@@ -73,11 +64,7 @@ pub fn handle_sol_with_call(
     Ok(())
 }
 
-/// Deposits SPL tokens and credits the `receiver` on ZetaChain zEVM.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `amount` - The amount of SPL tokens to deposit.
-/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+// Deposits SPL tokens and credits the `receiver` on ZetaChain zEVM.
 pub fn handle_spl(
     ctx: Context<DepositSplToken>,
     amount: u64,
@@ -131,14 +118,7 @@ pub fn handle_spl(
     Ok(())
 }
 
-/// Deposits SPL tokens and calls a contract on ZetaChain zEVM.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `amount` - The amount of SPL tokens to deposit.
-/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-/// * `message` - The message passed to the contract.
-/// * `deposit_fee` - The fee to be deducted from the deposited amount.
-/// * `max_message_size` - The maximum allowed message size.
+// Deposits SPL tokens and calls a contract on ZetaChain zEVM.
 pub fn handle_spl_with_call(
     ctx: Context<DepositSplToken>,
     amount: u64,
@@ -156,11 +136,7 @@ pub fn handle_spl_with_call(
     Ok(())
 }
 
-/// Calls a contract on ZetaChain zEVM.
-/// # Arguments
-/// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-/// * `message` - The message passed to the contract.
-/// * `max_message_size` - The maximum allowed message size.
+// Calls a contract on ZetaChain zEVM.
 pub fn handle_call(
     _ctx: Context<Call>,
     receiver: [u8; 20],

@@ -7,14 +7,7 @@ use crate::{
 use anchor_lang::prelude::*;
 use solana_program::{instruction::Instruction, program::invoke};
 
-/// Increments nonce, used by TSS in case outbound fails.
-/// # Arguments:
-/// * `ctx` - The instruction context.
-/// * `amount` - The amount of lamports to increment.
-/// * `signature` - The signature of the message.
-/// * `recovery_id` - The recovery ID of the signature.
-/// * `message_hash` - The hash of the message.
-/// * `nonce` - The nonce of the message.
+// Increments nonce, used by TSS in case outbound fails.
 pub fn increment_nonce(
     ctx: Context<IncrementNonce>,
     amount: u64,
@@ -40,15 +33,7 @@ pub fn increment_nonce(
     Ok(())
 }
 
-/// Withdraws amount to destination program pda, and calls on_call on destination program
-/// # Arguments:
-/// * `amount`: Amount of SOL to transfer
-/// * `sender`: Sender's address
-/// * `data`: Arbitrary data to pass to the destination program
-/// * `signature`: Signature of the message
-/// * `recovery_id`: Recovery ID of the signature
-/// * `message_hash`: Hash of the message
-/// * `nonce`: Nonce of the message
+// Withdraws amount to destination program pda, and calls on_call on destination program
 pub fn handle_sol(
     ctx: Context<Execute>,
     amount: u64,
@@ -107,16 +92,7 @@ pub fn handle_sol(
     Ok(())
 }
 
-/// Execute with SPL tokens. Caller is TSS.
-/// # Arguments:
-/// * `decimals`: Decimals of the token
-/// * `amount`: Amount of tokens to transfer
-/// * `sender`: Sender's Ethereum address
-/// * `data`: Arbitrary data to pass to the destination program
-/// * `signature`: Signature of the message
-/// * `recovery_id`: Recovery ID of the signature
-/// * `message_hash`: Hash of the message
-/// * `nonce`: Nonce of the message
+// Execute with SPL tokens. Caller is TSS.
 pub fn handle_spl_token(
     ctx: Context<ExecuteSPLToken>,
     decimals: u8,

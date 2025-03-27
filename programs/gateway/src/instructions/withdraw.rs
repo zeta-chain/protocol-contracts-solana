@@ -8,14 +8,7 @@ use anchor_spl::token::transfer_checked;
 use solana_program::program::invoke;
 use spl_associated_token_account::instruction::create_associated_token_account;
 
-/// Withdraws SOL. Caller is TSS.
-/// Arguments:
-/// * `ctx` - The instruction context.
-/// * `amount` - The amount of lamports to withdraw.
-/// * `signature` - The signature of the message.
-/// * `recovery_id` - The recovery ID of the signature.
-/// * `message_hash` - The hash of the message.
-/// * `nonce` - The nonce of the message.
+// Withdraws SOL. Caller is TSS.
 pub fn handle_sol(
     ctx: Context<Withdraw>,
     amount: u64,
@@ -53,15 +46,7 @@ pub fn handle_sol(
     Ok(())
 }
 
-/// Withdraws SPL tokens. Caller is TSS.
-/// Arguments:
-/// * `ctx` - The instruction context.
-/// * `decimals` - The decimals of the token.
-/// * `amount` - The amount of tokens to transfer.
-/// * `signature` - The signature of the message.
-/// * `recovery_id` - The recovery ID of the signature.
-/// * `message_hash` - The hash of the message.
-/// * `nonce` - The nonce of the message.
+// Withdraws SPL tokens. Caller is TSS
 pub fn handle_spl(
     ctx: Context<WithdrawSPLToken>,
     decimals: u8,

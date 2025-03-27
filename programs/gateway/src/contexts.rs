@@ -19,6 +19,7 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Instruction context for executing a call on program.
 #[derive(Accounts)]
 pub struct Execute<'info> {
     /// The account of the signer making the deposit.

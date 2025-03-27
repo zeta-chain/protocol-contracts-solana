@@ -20,7 +20,12 @@ declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 #[program]
 pub mod gateway {
     use super::*;
-    // Initialize instruction
+    /// Initializes the gateway PDA.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `tss_address` - The Ethereum TSS address (20 bytes).
+    /// * `chain_id` - The chain ID associated with the PDA.
     pub fn initialize(
         ctx: Context<Initialize>,
         tss_address: [u8; 20],
@@ -29,7 +34,14 @@ pub mod gateway {
         instructions::admin::initialize(ctx, tss_address, chain_id)
     }
 
-    // Increment nonce instruction
+    /// Increments nonce, used by TSS in case outbound fails.
+    /// # Arguments:
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of lamports to increment.
+    /// * `signature` - The signature of the message.
+    /// * `recovery_id` - The recovery ID of the signature.
+    /// * `message_hash` - The hash of the message.
+    /// * `nonce` - The nonce of the message.
     pub fn increment_nonce(
         ctx: Context<IncrementNonce>,
         amount: u64,
@@ -48,7 +60,15 @@ pub mod gateway {
         )
     }
 
-    // Execute instruction
+    /// Withdraws amount to destination program pda, and calls on_call on destination program
+    /// # Arguments:
+    /// * `amount`: Amount of SOL to transfer
+    /// * `sender`: Sender's address
+    /// * `data`: Arbitrary data to pass to the destination program
+    /// * `signature`: Signature of the message
+    /// * `recovery_id`: Recovery ID of the signature
+    /// * `message_hash`: Hash of the message
+    /// * `nonce`: Nonce of the message
     pub fn execute(
         ctx: Context<Execute>,
         amount: u64,
@@ -71,7 +91,16 @@ pub mod gateway {
         )
     }
 
-    // Execute SPL Token instruction
+    /// Execute with SPL tokens. Caller is TSS.
+    /// # Arguments:
+    /// * `decimals`: Decimals of the token
+    /// * `amount`: Amount of tokens to transfer
+    /// * `sender`: Sender's Ethereum address
+    /// * `data`: Arbitrary data to pass to the destination program
+    /// * `signature`: Signature of the message
+    /// * `recovery_id`: Recovery ID of the signature
+    /// * `message_hash`: Hash of the message
+    /// * `nonce`: Nonce of the message
     pub fn execute_spl_token(
         ctx: Context<ExecuteSPLToken>,
         decimals: u8,
@@ -96,17 +125,26 @@ pub mod gateway {
         )
     }
 
-    // Set deposit paused instruction
+    /// Pauses or unpauses deposits. Caller is authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `deposit_paused` - Boolean flag to pause or unpause deposits.
     pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
         instructions::admin::set_deposit_paused(ctx, deposit_paused)
     }
 
-    // Update TSS address instruction
+    /// Updates the TSS address. Caller is authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `tss_address` - The new Ethereum TSS address (20 bytes).
     pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
         instructions::admin::update_tss(ctx, tss_address)
     }
 
-    // Update authority instruction
+    /// Updates the PDA authority. Caller is authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `new_authority_address` - The new authority's public key.
     pub fn update_authority(
         ctx: Context<UpdateAuthority>,
         new_authority_address: Pubkey,
@@ -114,7 +152,13 @@ pub mod gateway {
         instructions::admin::update_authority(ctx, new_authority_address)
     }
 
-    // Whitelist SPL mint instruction
+    /// Whitelists a new SPL token. Caller is TSS.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn whitelist_spl_mint(
         ctx: Context<Whitelist>,
         signature: [u8; 64],
@@ -125,7 +169,13 @@ pub mod gateway {
         instructions::admin::whitelist_spl_mint(ctx, signature, recovery_id, message_hash, nonce)
     }
 
-    // Unwhitelist SPL mint instruction
+    /// Unwhitelists an SPL token. Caller is TSS.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn unwhitelist_spl_mint(
         ctx: Context<Unwhitelist>,
         signature: [u8; 64],
@@ -136,7 +186,12 @@ pub mod gateway {
         instructions::admin::unwhitelist_spl_mint(ctx, signature, recovery_id, message_hash, nonce)
     }
 
-    // Deposit instruction
+    /// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of lamports to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `deposit_fee` - The fee to be deducted from the deposited amount.
     pub fn deposit(
         ctx: Context<Deposit>,
         amount: u64,
@@ -146,7 +201,13 @@ pub mod gateway {
         instructions::deposit::handle_sol(ctx, amount, receiver, revert_options, DEPOSIT_FEE)
     }
 
-    // Deposit and call instruction
+    /// Deposits SOL and calls a contract on ZetaChain zEVM.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SPL tokens to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `message` - The message passed to the contract.
+    /// * `revert_options` - The revert options created by the caller.
     pub fn deposit_and_call(
         ctx: Context<Deposit>,
         amount: u64,
@@ -164,7 +225,11 @@ pub mod gateway {
         )
     }
 
-    // Deposit SPL token instruction
+    /// Deposits SPL tokens and credits the `receiver` on ZetaChain zEVM.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SPL tokens to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -174,7 +239,14 @@ pub mod gateway {
         instructions::deposit::handle_spl(ctx, amount, receiver, revert_options, DEPOSIT_FEE)
     }
 
-    // Deposit SPL token and call instruction
+    /// Deposits SPL tokens and calls a contract on ZetaChain zEVM.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SPL tokens to deposit.
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `message` - The message passed to the contract.
+    /// * `deposit_fee` - The fee to be deducted from the deposited amount.
+    /// * `max_message_size` - The maximum allowed message size.
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -192,7 +264,11 @@ pub mod gateway {
         )
     }
 
-    // Call instruction
+    /// Calls a contract on ZetaChain zEVM.
+    /// # Arguments
+    /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `message` - The message passed to the contract.
+    /// * `max_message_size` - The maximum allowed message size.
     pub fn call(
         ctx: Context<Call>,
         receiver: [u8; 20],
@@ -202,7 +278,14 @@ pub mod gateway {
         instructions::deposit::handle_call(ctx, receiver, message, revert_options)
     }
 
-    // Withdraw instruction
+    /// Withdraws SOL. Caller is TSS.
+    /// Arguments:
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of lamports to withdraw.
+    /// * `signature` - The signature of the message.
+    /// * `recovery_id` - The recovery ID of the signature.
+    /// * `message_hash` - The hash of the message.
+    /// * `nonce` - The nonce of the message.
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
@@ -214,7 +297,15 @@ pub mod gateway {
         instructions::withdraw::handle_sol(ctx, amount, signature, recovery_id, message_hash, nonce)
     }
 
-    // Withdraw SPL token instruction
+    /// Withdraws SPL tokens. Caller is TSS.
+    /// Arguments:
+    /// * `ctx` - The instruction context.
+    /// * `decimals` - The decimals of the token.
+    /// * `amount` - The amount of tokens to transfer.
+    /// * `signature` - The signature of the message.
+    /// * `recovery_id` - The recovery ID of the signature.
+    /// * `message_hash` - The hash of the message.
+    /// * `nonce` - The nonce of the message.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
         decimals: u8,

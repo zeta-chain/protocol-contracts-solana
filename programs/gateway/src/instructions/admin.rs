@@ -5,18 +5,21 @@ use crate::{
         recover_and_verify_eth_address, validate_message_hash, verify_and_update_nonce,
         verify_authority,
     },
+    Pda,
 };
 use anchor_lang::prelude::*;
 
-/// Initializes the gateway PDA.
+// Initializes the gateway PDA.
 pub fn initialize(ctx: Context<Initialize>, tss_address: [u8; 20], chain_id: u64) -> Result<()> {
     let initialized_pda = &mut ctx.accounts.pda;
 
-    initialized_pda.nonce = 0;
-    initialized_pda.tss_address = tss_address;
-    initialized_pda.authority = ctx.accounts.signer.key();
-    initialized_pda.chain_id = chain_id;
-    initialized_pda.deposit_paused = false;
+    **initialized_pda = Pda {
+        nonce: 0,
+        tss_address,
+        authority: ctx.accounts.signer.key(),
+        chain_id,
+        deposit_paused: false,
+    };
 
     msg!(
         "Gateway initialized: PDA authority = {}, chain_id = {}, TSS address = {:?}",
@@ -29,9 +32,6 @@ pub fn initialize(ctx: Context<Initialize>, tss_address: [u8; 20], chain_id: u64
 }
 
 /// Updates the TSS address. Caller is authority stored in PDA.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `tss_address` - The new Ethereum TSS address (20 bytes).
 pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
     verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
     let pda = &mut ctx.accounts.pda;
@@ -46,10 +46,7 @@ pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> 
     Ok(())
 }
 
-/// Updates the PDA authority. Caller is authority stored in PDA.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `new_authority_address` - The new authority's public key.
+// Updates the PDA authority. Caller is authority stored in PDA.
 pub fn update_authority(
     ctx: Context<UpdateAuthority>,
     new_authority_address: Pubkey,
@@ -67,10 +64,7 @@ pub fn update_authority(
     Ok(())
 }
 
-/// Pauses or unpauses deposits. Caller is authority stored in PDA.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `deposit_paused` - Boolean flag to pause or unpause deposits.
+// Pauses or unpauses deposits. Caller is authority stored in PDA.
 pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> Result<()> {
     verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
     let pda = &mut ctx.accounts.pda;
@@ -81,13 +75,7 @@ pub fn set_deposit_paused(ctx: Context<UpdatePaused>, deposit_paused: bool) -> R
     Ok(())
 }
 
-/// Whitelists a new SPL token. Caller is TSS.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `signature` - The TSS signature.
-/// * `recovery_id` - The recovery ID for signature verification.
-/// * `message_hash` - Message hash for signature verification.
-/// * `nonce` - The current nonce value.
+// Whitelists a new SPL token. Caller is TSS
 pub fn whitelist_spl_mint(
     ctx: Context<Whitelist>,
     signature: [u8; 64],
@@ -131,13 +119,7 @@ pub fn whitelist_spl_mint(
     Ok(())
 }
 
-/// Unwhitelists an SPL token. Caller is TSS.
-/// # Arguments
-/// * `ctx` - The instruction context.
-/// * `signature` - The TSS signature.
-/// * `recovery_id` - The recovery ID for signature verification.
-/// * `message_hash` - Message hash for signature verification.
-/// * `nonce` - The current nonce value.
+// Unwhitelists an SPL token. Caller is TSS.
 pub fn unwhitelist_spl_mint(
     ctx: Context<Unwhitelist>,
     signature: [u8; 64],

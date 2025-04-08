@@ -15,6 +15,19 @@ var IDLGateway = types.IDL{
 	},
 	Instructions: []types.Instruction{
 		{
+			Name:          "call",
+			Discriminator: [8]byte{181, 94, 56, 161, 194, 221, 200, 3},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+			},
+		},
+		{
 			Name:          "deposit",
 			Discriminator: [8]byte{242, 35, 198, 137, 82, 225, 242, 182},
 			Accounts: []types.Account{
@@ -195,6 +208,40 @@ var IDLGateway = types.IDL{
 		{
 			Name:          "execute",
 			Discriminator: [8]byte{130, 221, 242, 154, 13, 193, 189, 29},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program_pda",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+			},
+		},
+		{
+			Name:          "execute_revert",
+			Discriminator: [8]byte{68, 87, 162, 3, 218, 222, 236, 121},
 			Accounts: []types.Account{
 				{
 					Name:     "signer",
@@ -612,11 +659,13 @@ var IDLGateway = types.IDL{
 }
 
 const (
+	InstructionCall                       = "call"
 	InstructionDeposit                    = "deposit"
 	InstructionDeposit_and_call           = "deposit_and_call"
 	InstructionDeposit_spl_token          = "deposit_spl_token"
 	InstructionDeposit_spl_token_and_call = "deposit_spl_token_and_call"
 	InstructionExecute                    = "execute"
+	InstructionExecute_revert             = "execute_revert"
 	InstructionExecute_spl_token          = "execute_spl_token"
 	InstructionIncrement_nonce            = "increment_nonce"
 	InstructionInitialize                 = "initialize"

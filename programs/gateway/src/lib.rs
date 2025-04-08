@@ -61,43 +61,46 @@ enum CallableInstruction {
         sender: [u8; 20],
         data: Vec<u8>,
     },
+    ConnectedRevert {
+        amount: u64,
+        sender: Pubkey,
+        data: Vec<u8>,
+    },
 }
 
 impl CallableInstruction {
-    pub fn pack(&self, instruction_id: InstructionId) -> Vec<u8> {
-        let discriminator = match instruction_id {
-            InstructionId::Execute => [16, 136, 66, 32, 254, 40, 181, 8], // on_call
-            InstructionId::ExecuteRevert => [226, 44, 101, 52, 224, 214, 41, 9], // on_revert
-            _ => panic!("Unsupported instruction ID for packing"),
-        };
-
+    pub fn pack(&self) -> Vec<u8> {
         match self {
             CallableInstruction::ConnectedCall {
                 amount,
                 sender,
                 data,
             } => {
+                let discriminator = [16, 136, 66, 32, 254, 40, 181, 8]; // on_call
                 let data_len = data.len() as u32;
-                // 8 (discriminator) + 8 (u64 amount) + 20 (sender) + 4 (data length)
-                let mut buf = Vec::with_capacity(40 + data_len as usize);
 
-                // Discriminator for instruction (example)
-                // This ensures the program knows how to handle this instruction.
-                // Example discriminator: anchor typically uses `hash("global:on_call")`
+                let mut buf = Vec::with_capacity(8 + 8 + 20 + 4 + data.len());
                 buf.extend_from_slice(&discriminator);
-
-                // Encode amount (u64) in little-endian format
                 buf.extend_from_slice(&amount.to_le_bytes());
-
-                // Encode sender ([u8; 20])
                 buf.extend_from_slice(sender);
-
-                // Encode the length of the data array (u32)
                 buf.extend_from_slice(&data_len.to_le_bytes());
-
-                // Encode the data itself
                 buf.extend_from_slice(data);
+                buf
+            }
+            CallableInstruction::ConnectedRevert {
+                amount,
+                sender,
+                data,
+            } => {
+                let discriminator = [226, 44, 101, 52, 224, 214, 41, 9]; // on_revert
+                let data_len = data.len() as u32;
 
+                let mut buf = Vec::with_capacity(8 + 8 + 32 + 4 + data.len());
+                buf.extend_from_slice(&discriminator);
+                buf.extend_from_slice(&amount.to_le_bytes());
+                buf.extend_from_slice(sender.as_ref());
+                buf.extend_from_slice(&data_len.to_le_bytes());
+                buf.extend_from_slice(data);
                 buf
             }
         }
@@ -224,15 +227,12 @@ pub mod gateway {
             ctx,
             amount,
             sender,
-            data.clone(),
+            data,
             signature,
             recovery_id,
             message_hash,
             nonce,
-            InstructionId::Execute,
-        )?;
-
-        Ok(())
+        )
     }
 
     /// Withdraws amount to destination program pda, and calls on_revert on destination program
@@ -249,26 +249,23 @@ pub mod gateway {
     pub fn execute_revert(
         ctx: Context<Execute>,
         amount: u64,
-        sender: [u8; 20],
+        sender: Pubkey,
         data: Vec<u8>,
         signature: [u8; 64],
         recovery_id: u8,
         message_hash: [u8; 32],
         nonce: u64,
     ) -> Result<()> {
-        execute_connected_call(
+        execute_connected_revert_call(
             ctx,
             amount,
             sender,
-            data.clone(),
+            data,
             signature,
             recovery_id,
             message_hash,
             nonce,
-            InstructionId::ExecuteRevert,
-        )?;
-
-        Ok(())
+        )
     }
 
     /// Execute with SPL tokens. Caller is TSS.
@@ -323,7 +320,7 @@ pub mod gateway {
             sender,
             data,
         }
-        .pack(InstructionId::Execute);
+        .pack();
 
         // account metas for remaining accounts
         let account_metas =
@@ -922,7 +919,6 @@ fn execute_connected_call(
     recovery_id: u8,
     message_hash: [u8; 32],
     nonce: u64,
-    instruction_id: InstructionId,
 ) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
 
@@ -930,7 +926,7 @@ fn execute_connected_call(
 
     let mut concatenated_buffer = Vec::new();
     concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
-    concatenated_buffer.push(instruction_id as u8);
+    concatenated_buffer.push(InstructionId::Execute as u8);
     concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
     concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
     concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
@@ -938,7 +934,7 @@ fn execute_connected_call(
     concatenated_buffer.extend_from_slice(&data);
 
     require!(
-        message_hash == hash(&concatenated_buffer[..]).to_bytes(),
+        message_hash == hash(&concatenated_buffer).to_bytes(),
         Errors::MessageHashMismatch
     );
 
@@ -946,19 +942,19 @@ fn execute_connected_call(
 
     recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
 
-    let instruction = CallableInstruction::ConnectedCall {
+    let instruction_data = CallableInstruction::ConnectedCall {
         amount,
         sender,
         data,
     }
-    .pack(instruction_id);
+    .pack();
 
     let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
 
     let ix = Instruction {
         program_id: ctx.accounts.destination_program.key(),
         accounts: account_metas,
-        data: instruction,
+        data: instruction_data,
     };
 
     pda.sub_lamports(amount)?;
@@ -968,6 +964,68 @@ fn execute_connected_call(
 
     msg!(
         "Execute done: destination contract = {}, amount = {}, sender = {:?}",
+        ctx.accounts.destination_program.key(),
+        amount,
+        sender,
+    );
+
+    Ok(())
+}
+
+fn execute_connected_revert_call(
+    ctx: Context<Execute>,
+    amount: u64,
+    sender: Pubkey,
+    data: Vec<u8>,
+    signature: [u8; 64],
+    recovery_id: u8,
+    message_hash: [u8; 32],
+    nonce: u64,
+) -> Result<()> {
+    let pda = &mut ctx.accounts.pda;
+
+    verify_and_update_nonce(pda, nonce)?;
+
+    let mut concatenated_buffer = Vec::new();
+    concatenated_buffer.extend_from_slice(ZETACHAIN_PREFIX);
+    concatenated_buffer.push(InstructionId::ExecuteRevert as u8);
+    concatenated_buffer.extend_from_slice(&pda.chain_id.to_be_bytes());
+    concatenated_buffer.extend_from_slice(&nonce.to_be_bytes());
+    concatenated_buffer.extend_from_slice(&amount.to_be_bytes());
+    concatenated_buffer.extend_from_slice(&ctx.accounts.destination_program.key().to_bytes());
+    concatenated_buffer.extend_from_slice(&data);
+
+    require!(
+        message_hash == hash(&concatenated_buffer).to_bytes(),
+        Errors::MessageHashMismatch
+    );
+
+    msg!("Computed message hash: {:?}", message_hash);
+
+    recover_and_verify_eth_address(pda, &message_hash, recovery_id, &signature)?;
+
+    let instruction_data = CallableInstruction::ConnectedRevert {
+        amount,
+        sender,
+        data,
+    }
+    .pack();
+
+    let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
+
+    let ix = Instruction {
+        program_id: ctx.accounts.destination_program.key(),
+        accounts: account_metas,
+        data: instruction_data,
+    };
+
+    pda.sub_lamports(amount)?;
+    ctx.accounts.destination_program_pda.add_lamports(amount)?;
+
+    invoke(&ix, ctx.remaining_accounts)?;
+
+    msg!(
+        "ExecuteRevert done: destination contract = {}, amount = {}, sender = {}",
         ctx.accounts.destination_program.key(),
         amount,
         sender,

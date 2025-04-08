@@ -53,7 +53,7 @@ pub mod connected {
     pub fn on_revert(
         ctx: Context<OnRevert>,
         amount: u64,
-        sender: [u8; 20],
+        sender: Pubkey,
         data: Vec<u8>,
     ) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
@@ -123,7 +123,7 @@ pub struct OnRevert<'info> {
 pub struct Pda {
     pub last_sender: [u8; 20],
     pub last_message: String,
-    pub last_revert_sender: [u8; 20],
+    pub last_revert_sender: Pubkey,
     pub last_revert_message: String,
 }
 

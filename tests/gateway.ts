@@ -158,6 +158,7 @@ describe("Gateway", () => {
   const wallet = anchor.workspace.Gateway.provider.wallet.payer;
   const mint = anchor.web3.Keypair.generate();
   const mint_fake = anchor.web3.Keypair.generate(); // for testing purpose
+  const random_account = anchor.web3.Keypair.generate();
 
   let wallet_ata: anchor.web3.PublicKey;
   let pdaAccount: anchor.web3.PublicKey;
@@ -1149,7 +1150,7 @@ describe("Gateway", () => {
     await gatewayProgram.methods
       .executeRevert(
         amount,
-        Array.from(address),
+        random_account.publicKey,
         data,
         Array.from(signatureBuffer),
         Number(recoveryParam),
@@ -1181,8 +1182,8 @@ describe("Gateway", () => {
 
     // check connected pda state was updated
     expect(connectedPdaAfter.lastRevertMessage).to.be.eq(lastMessageData);
-    expect(Array.from(connectedPdaAfter.lastRevertSender)).to.be.deep.eq(
-      Array.from(address)
+    expect(connectedPdaAfter.lastRevertSender.toString()).to.be.eq(
+      random_account.publicKey.toString()
     );
 
     // check balances were updated
@@ -1231,7 +1232,7 @@ describe("Gateway", () => {
       await gatewayProgram.methods
         .executeRevert(
           amount,
-          Array.from(address),
+          random_account.publicKey,
           data,
           Array.from(signatureBuffer),
           Number(recoveryParam),
@@ -1301,7 +1302,7 @@ describe("Gateway", () => {
       await gatewayProgram.methods
         .executeRevert(
           amount,
-          Array.from(address),
+          random_account.publicKey,
           data,
           Array.from(signatureBuffer),
           Number(recoveryParam),
@@ -1373,7 +1374,7 @@ describe("Gateway", () => {
       await gatewayProgram.methods
         .executeRevert(
           amount,
-          Array.from(address),
+          random_account.publicKey,
           data,
           Array.from(signatureBuffer),
           Number(recoveryParam),
@@ -1444,7 +1445,7 @@ describe("Gateway", () => {
       await gatewayProgram.methods
         .executeRevert(
           amount,
-          Array.from(address),
+          random_account.publicKey,
           data,
           Array.from(signatureBuffer),
           Number(recoveryParam),

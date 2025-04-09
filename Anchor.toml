@@ -1,8 +1,5 @@
 [toolchain]
 anchor_version = "0.30.1-ca7fcee6b8269b732b66536f72ff3fb48cf1b5f9"
-rust_version = "1.81.0"
-components = ["rustfmt", "clippy"]
-targets = ["wasm32-unknown-unknown"]
 
 [workspace]
 members = [

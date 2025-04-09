@@ -2070,6 +2070,519 @@ describe("Gateway", () => {
     }
   });
 
+  it("Calls execute spl token and onRevert", async () => {
+    const randomWallet = anchor.web3.Keypair.generate();
+    const lastMessageData = "execute_spl";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedSPLProgram.programId
+    );
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      connectedPdaAccount,
+      true
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x09]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    // balances before
+    const destinationPdaAtaAccBefore = await spl.getAccount(
+      conn,
+      destinationPdaAta.address
+    );
+
+    // call the `execute_spl_token_revert` function in the gateway program
+    await gatewayProgram.methods
+      .executeSplTokenRevert(
+        usdcDecimals,
+        amount,
+        randomWallet.publicKey,
+        data,
+        Array.from(signatureBuffer),
+        Number(recoveryParam),
+        Array.from(message_hash),
+        nonce
+      )
+      .accountsPartial({
+        // mandatory predefined accounts
+        signer: wallet.publicKey,
+        pda: pdaAccount,
+        pdaAta: pda_ata,
+        mintAccount: mint.publicKey,
+        destinationProgram: connectedSPLProgram.programId,
+        destinationProgramPda: connectedPdaAccount,
+        destinationProgramPdaAta: destinationPdaAta.address,
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .remainingAccounts([
+        // accounts coming from revert msg
+        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+        {
+          pubkey: destinationPdaAta.address,
+          isSigner: false,
+          isWritable: true,
+        },
+        { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+        { pubkey: pdaAccount, isSigner: false, isWritable: false },
+        {
+          pubkey: spl.TOKEN_PROGRAM_ID,
+          isSigner: false,
+          isWritable: false,
+        },
+        {
+          pubkey: SYSTEM_PROGRAM_ID,
+          isSigner: false,
+          isWritable: false,
+        },
+      ])
+      .rpc();
+
+    const connectedPdaAfter = await connectedSPLProgram.account.pda.fetch(
+      connectedPdaAccount
+    );
+
+    // check connected pda state was updated
+    expect(connectedPdaAfter.lastRevertMessage).to.be.eq(lastMessageData);
+    expect(connectedPdaAfter.lastRevertSender.toString()).to.be.deep.eq(
+      randomWallet.publicKey.toString()
+    );
+
+    // check balances were updated
+    const destinationPdaAtaAcc = await spl.getAccount(
+      conn,
+      destinationPdaAta.address
+    );
+
+    expect(Number(destinationPdaAtaAcc.amount.toString())).to.be.eq(
+      Number(destinationPdaAtaAccBefore.amount) + amount.toNumber()
+    );
+  });
+
+  it("Calls execute spl token and onRevert reverts if connected program reverts", async () => {
+    const randomWallet = anchor.web3.Keypair.generate();
+    const lastMessageData = "execute_spl_revert";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedSPLProgram.programId
+    );
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      connectedPdaAccount,
+      true
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x09]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      // call the `execute_spl_token_revert` function in the gateway program
+      await gatewayProgram.methods
+        .executeSplTokenRevert(
+          usdcDecimals,
+          amount,
+          randomWallet.publicKey,
+          data,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          Array.from(message_hash),
+          nonce
+        )
+        .accountsPartial({
+          // mandatory predefined accounts
+          signer: wallet.publicKey,
+          pda: pdaAccount,
+          pdaAta: pda_ata,
+          mintAccount: mint.publicKey,
+          destinationProgram: connectedSPLProgram.programId,
+          destinationProgramPda: connectedPdaAccount,
+          destinationProgramPdaAta: destinationPdaAta.address,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          // accounts coming from revert msg
+          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+          {
+            pubkey: destinationPdaAta.address,
+            isSigner: false,
+            isWritable: true,
+          },
+          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: pdaAccount, isSigner: false, isWritable: false },
+          {
+            pubkey: spl.TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: SYSTEM_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+        ])
+        .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+    }
+  });
+
+  it("Calls execute spl token and onRevert reverts if signer is passed in remaining accounts", async () => {
+    const randomWallet = anchor.web3.Keypair.generate();
+    const lastMessageData = "execute_spl";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedSPLProgram.programId
+    );
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      connectedPdaAccount,
+      true
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x09]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      // call the `execute_spl_token_revert` function in the gateway program
+      await gatewayProgram.methods
+        .executeSplTokenRevert(
+          usdcDecimals,
+          amount,
+          randomWallet.publicKey,
+          data,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          Array.from(message_hash),
+          nonce
+        )
+        .accountsPartial({
+          // mandatory predefined accounts
+          signer: wallet.publicKey,
+          pda: pdaAccount,
+          pdaAta: pda_ata,
+          mintAccount: mint.publicKey,
+          destinationProgram: connectedSPLProgram.programId,
+          destinationProgramPda: connectedPdaAccount,
+          destinationProgramPdaAta: destinationPdaAta.address,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          // accounts coming from revert msg
+          { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+          {
+            pubkey: destinationPdaAta.address,
+            isSigner: false,
+            isWritable: true,
+          },
+          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: pdaAccount, isSigner: false, isWritable: false },
+          {
+            pubkey: spl.TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: SYSTEM_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+        ])
+        .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+    } catch (err) {
+      expect(err.message).to.include("InvalidInstructionData");
+    }
+  });
+
+  it("Calls execute spl token and onRevert reverts if wrong message hash", async () => {
+    const randomWallet = anchor.web3.Keypair.generate();
+    const lastMessageData = "execute_spl";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedSPLProgram.programId
+    );
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      connectedPdaAccount,
+      true
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x09]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.subn(1).toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      // call the `execute_spl_token_revert` function in the gateway program
+      await gatewayProgram.methods
+        .executeSplTokenRevert(
+          usdcDecimals,
+          amount,
+          randomWallet.publicKey,
+          data,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          Array.from(message_hash),
+          nonce
+        )
+        .accountsPartial({
+          // mandatory predefined accounts
+          signer: wallet.publicKey,
+          pda: pdaAccount,
+          pdaAta: pda_ata,
+          mintAccount: mint.publicKey,
+          destinationProgram: connectedSPLProgram.programId,
+          destinationProgramPda: connectedPdaAccount,
+          destinationProgramPdaAta: destinationPdaAta.address,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          // accounts coming from revert msg
+          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+          {
+            pubkey: destinationPdaAta.address,
+            isSigner: false,
+            isWritable: true,
+          },
+          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: pdaAccount, isSigner: false, isWritable: false },
+          {
+            pubkey: spl.TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: SYSTEM_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+        ])
+        .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+    } catch (err) {
+      expect(err.message).to.include("MessageHashMismatch");
+    }
+  });
+
+  it("Calls execute spl token and onRevert reverts if wrong signer", async () => {
+    const key = ec.genKeyPair(); // non TSS key pair
+    const randomWallet = anchor.web3.Keypair.generate();
+    const lastMessageData = "execute_spl";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedSPLProgram.programId
+    );
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      connectedPdaAccount,
+      true
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x09]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = key.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    try {
+      // call the `execute_spl_token_revert` function in the gateway program
+      await gatewayProgram.methods
+        .executeSplTokenRevert(
+          usdcDecimals,
+          amount,
+          randomWallet.publicKey,
+          data,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          Array.from(message_hash),
+          nonce
+        )
+        .accountsPartial({
+          // mandatory predefined accounts
+          signer: wallet.publicKey,
+          pda: pdaAccount,
+          pdaAta: pda_ata,
+          mintAccount: mint.publicKey,
+          destinationProgram: connectedSPLProgram.programId,
+          destinationProgramPda: connectedPdaAccount,
+          destinationProgramPdaAta: destinationPdaAta.address,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          // accounts coming from revert msg
+          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+          {
+            pubkey: destinationPdaAta.address,
+            isSigner: false,
+            isWritable: true,
+          },
+          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: pdaAccount, isSigner: false, isWritable: false },
+          {
+            pubkey: spl.TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: SYSTEM_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+        ])
+        .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+    } catch (err) {
+      expect(err.message).to.include("TSSAuthenticationFailed");
+    }
+  });
+
   it("Withdraw SPL token to a non-existent account should succeed by creating it", async () => {
     let rentPayerPdaBal0 = await conn.getBalance(pdaAccount);
     let pda_ata = await spl.getAssociatedTokenAddress(

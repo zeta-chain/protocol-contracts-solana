@@ -350,6 +350,82 @@ var IDLGateway = types.IDL{
 			},
 		},
 		{
+			Name:          "execute_spl_token_revert",
+			Discriminator: [8]byte{240, 160, 44, 253, 131, 37, 159, 196},
+			Accounts: []types.Account{
+				{
+					Name:     "signer",
+					Writable: true,
+					Signer:   true,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "pda_ata",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "mint_account",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program_pda",
+					Writable: false,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "destination_program_pda_ata",
+					Writable: true,
+					Signer:   false,
+					Address:  "",
+					PDA:      nil,
+				},
+				{
+					Name:     "token_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+					PDA:      nil,
+				},
+				{
+					Name:     "associated_token_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+					PDA:      nil,
+				},
+				{
+					Name:     "system_program",
+					Writable: false,
+					Signer:   false,
+					Address:  "11111111111111111111111111111111",
+					PDA:      nil,
+				},
+			},
+		},
+		{
 			Name:          "increment_nonce",
 			Discriminator: [8]byte{84, 149, 209, 233, 228, 66, 195, 237},
 			Accounts: []types.Account{
@@ -667,6 +743,7 @@ const (
 	InstructionExecute                    = "execute"
 	InstructionExecute_revert             = "execute_revert"
 	InstructionExecute_spl_token          = "execute_spl_token"
+	InstructionExecute_spl_token_revert   = "execute_spl_token_revert"
 	InstructionIncrement_nonce            = "increment_nonce"
 	InstructionInitialize                 = "initialize"
 	InstructionSet_deposit_paused         = "set_deposit_paused"

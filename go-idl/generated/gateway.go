@@ -6,7 +6,7 @@ import (
 )
 
 var IDLGateway = types.IDL{
-	Address: "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis",
+	Address: "94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d",
 	Metadata: types.Metadata{
 		Name:        "gateway",
 		Version:     "0.1.0",

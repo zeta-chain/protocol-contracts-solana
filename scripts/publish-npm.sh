@@ -68,10 +68,8 @@ module.exports = {
 };
 EOF
 
-echo "Publishing to NPM..."
 cd $TEMP_DIR && npm publish
 
-echo "Cleaning up..."
 cd ..
 rm -rf $TEMP_DIR
 

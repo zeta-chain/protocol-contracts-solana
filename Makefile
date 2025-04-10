@@ -15,3 +15,14 @@ generate:
 	    (cd go-idl && go fmt $$output_file); \
 	done
 
+
+
+.PHONY: publish-npm
+
+# Default version if not specified
+VERSION ?= 0.1.3
+
+publish-npm:
+	@echo "Starting npm package publishing process for version $(VERSION)"
+	@chmod +x ./scripts/publish-npm.sh
+	@./scripts/publish-npm.sh $(VERSION)

@@ -91,6 +91,39 @@ pub mod gateway {
         )
     }
 
+    /// Withdraws amount to destination program pda, and calls on_revert on destination program
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SOL to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
+    pub fn execute_revert(
+        ctx: Context<Execute>,
+        amount: u64,
+        sender: Pubkey,
+        data: Vec<u8>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    ) -> Result<()> {
+        instructions::execute::handle_sol_revert(
+            ctx,
+            amount,
+            sender,
+            data,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+        )
+    }
+
     /// Execute with SPL tokens. Caller is TSS.
     /// # Arguments:
     /// * `decimals`: Decimals of the token

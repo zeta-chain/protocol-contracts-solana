@@ -22,45 +22,54 @@ pub struct WhitelistEntry {}
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallableInstruction {
-    OnCall {
+    ConnectedCall {
         amount: u64,
         sender: [u8; 20],
+        data: Vec<u8>,
+    },
+    ConnectedRevert {
+        amount: u64,
+        sender: Pubkey,
         data: Vec<u8>,
     },
 }
 
 impl CallableInstruction {
     pub fn pack(&self) -> Vec<u8> {
-        let mut buf;
         match self {
-            CallableInstruction::OnCall {
+            CallableInstruction::ConnectedCall {
                 amount,
                 sender,
                 data,
             } => {
+                let discriminator = [16, 136, 66, 32, 254, 40, 181, 8]; // on_call
                 let data_len = data.len() as u32;
-                //8 (discriminator) + 8 (u64 amount) + 20 (sender) + 4 (data length)
-                buf = Vec::with_capacity(40 + data_len as usize);
 
-                // Discriminator for instruction (example)
-                // This ensures the program knows how to handle this instruction.
-                // Example discriminator: anchor typically uses `hash("global:on_call")`
-                buf.extend_from_slice(&[16, 136, 66, 32, 254, 40, 181, 8]);
-
-                // Encode amount (u64) in little-endian format
+                let mut buf = Vec::with_capacity(8 + 8 + 20 + 4 + data.len());
+                buf.extend_from_slice(&discriminator);
                 buf.extend_from_slice(&amount.to_le_bytes());
-
-                // Encode sender ([u8; 20])
                 buf.extend_from_slice(sender);
-
-                // Encode the length of the data array (u32)
                 buf.extend_from_slice(&data_len.to_le_bytes());
-
-                // Encode the data itself
                 buf.extend_from_slice(data);
+                buf
+            }
+            CallableInstruction::ConnectedRevert {
+                amount,
+                sender,
+                data,
+            } => {
+                let discriminator = [226, 44, 101, 52, 224, 214, 41, 9]; // on_revert
+                let data_len = data.len() as u32;
+
+                let mut buf = Vec::with_capacity(8 + 8 + 32 + 4 + data.len());
+                buf.extend_from_slice(&discriminator);
+                buf.extend_from_slice(&amount.to_le_bytes());
+                buf.extend_from_slice(sender.as_ref());
+                buf.extend_from_slice(&data_len.to_le_bytes());
+                buf.extend_from_slice(data);
+                buf
             }
         }
-        buf
     }
 }
 

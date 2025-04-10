@@ -49,6 +49,41 @@ pub mod connected {
 
         Ok(())
     }
+
+    pub fn on_revert(
+        ctx: Context<OnRevert>,
+        amount: u64,
+        sender: Pubkey,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+
+        // Store the sender's public key
+        pda.last_revert_sender = sender;
+
+        // Convert data to a string and store it
+        let message = String::from_utf8(data).map_err(|_| ErrorCode::InvalidDataFormat)?;
+        pda.last_revert_message = message;
+
+        // Transfer some portion of lamports transferred from gateway to another account
+        // Check if the message contains "revert" and return an error if so
+        if pda.last_revert_message.contains("revert") {
+            msg!(
+                "Reverting transaction due to message: '{}'",
+                pda.last_revert_message
+            );
+            return Err(ErrorCode::RevertMessage.into());
+        }
+
+        msg!(
+            "On revert executed with amount {}, sender {:?} and message {}",
+            amount,
+            pda.last_revert_sender,
+            pda.last_revert_message
+        );
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -74,10 +109,22 @@ pub struct OnCall<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+pub struct OnRevert<'info> {
+    #[account(mut, seeds = [b"connected"], bump)]
+    pub pda: Account<'info, Pda>,
+
+    pub gateway_pda: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Pda {
     pub last_sender: [u8; 20],
     pub last_message: String,
+    pub last_revert_sender: Pubkey,
+    pub last_revert_message: String,
 }
 
 #[error_code]

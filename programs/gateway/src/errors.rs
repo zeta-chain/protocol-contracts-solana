@@ -35,4 +35,5 @@ pub enum InstructionId {
     Execute = 5,
     ExecuteSplToken = 6,
     IncrementNonce = 7,
+    ExecuteRevert = 8,
 }

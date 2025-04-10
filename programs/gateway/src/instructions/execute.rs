@@ -59,7 +59,7 @@ pub fn handle_sol(
     )?;
 
     // 2. Prepare on_call instruction
-    let instruction_data = CallableInstruction::OnCall {
+    let instruction_data = CallableInstruction::ConnectedCall {
         amount,
         sender,
         data,
@@ -123,7 +123,7 @@ pub fn handle_spl_token(
     )?;
 
     // 2. Prepare on_call instruction
-    let instruction_data = CallableInstruction::OnCall {
+    let instruction_data = CallableInstruction::ConnectedCall {
         amount,
         sender,
         data,
@@ -179,6 +179,65 @@ pub fn handle_spl_token(
         ctx.accounts.destination_program_pda.key(),
         ctx.accounts.mint_account.key(),
         ctx.accounts.pda.key()
+    );
+
+    Ok(())
+}
+
+// Withdraws amount to destination program pda, and calls on_revert on destination program
+pub fn handle_sol_revert(
+    ctx: Context<Execute>,
+    amount: u64,
+    sender: Pubkey,
+    data: Vec<u8>,
+    signature: [u8; 64],
+    recovery_id: u8,
+    message_hash: [u8; 32],
+    nonce: u64,
+) -> Result<()> {
+    let pda = &mut ctx.accounts.pda;
+
+    // 1. Validate message
+    validate_message(
+        pda,
+        InstructionId::ExecuteRevert,
+        nonce,
+        amount,
+        &[&ctx.accounts.destination_program.key().to_bytes(), &data],
+        &message_hash,
+        &signature,
+        recovery_id,
+    )?;
+
+    // 2. Prepare on_call instruction
+    let instruction_data = CallableInstruction::ConnectedRevert {
+        amount,
+        sender,
+        data,
+    }
+    .pack();
+
+    let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
+
+    let ix = Instruction {
+        program_id: ctx.accounts.destination_program.key(),
+        accounts: account_metas,
+        data: instruction_data,
+    };
+
+    // 3. Transfer SOL to destination program PDA
+    pda.sub_lamports(amount)?;
+    ctx.accounts.destination_program_pda.add_lamports(amount)?;
+
+    // 4. Invoke destination program's on_call function
+    invoke(&ix, ctx.remaining_accounts)?;
+
+    // 5. Log success
+    msg!(
+        "Execute done: destination contract = {}, amount = {}, sender = {:?}",
+        ctx.accounts.destination_program.key(),
+        amount,
+        sender,
     );
 
     Ok(())

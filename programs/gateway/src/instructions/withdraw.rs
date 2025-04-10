@@ -1,6 +1,6 @@
 use crate::{
     contexts::{Withdraw, WithdrawSPLToken},
-    errors::InstructionId,
+    state::InstructionId,
     utils::{validate_message, verify_ata_match, DEFAULT_GAS_COST},
 };
 use anchor_lang::prelude::*;

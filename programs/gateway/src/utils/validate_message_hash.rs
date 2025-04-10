@@ -2,7 +2,8 @@ use anchor_lang::prelude::*;
 use solana_program::keccak::hash;
 
 use super::constants::ZETACHAIN_PREFIX;
-use crate::errors::{Errors, InstructionId};
+use crate::errors::Errors;
+use crate::state::InstructionId;
 
 /// Creates and validates a message hash for cross-chain instruction verification
 /// with optional amount inclusion

@@ -24,17 +24,3 @@ pub enum Errors {
     #[msg("InvalidInstructionData")]
     InvalidInstructionData,
 }
-
-/// Enumeration for instruction identifiers in message hashes.
-#[repr(u8)]
-pub enum InstructionId {
-    Withdraw = 1,
-    WithdrawSplToken = 2,
-    WhitelistSplToken = 3,
-    UnwhitelistSplToken = 4,
-    Execute = 5,
-    ExecuteSplToken = 6,
-    IncrementNonce = 7,
-    ExecuteRevert = 8,
-    ExecuteSplTokenRevert = 9,
-}

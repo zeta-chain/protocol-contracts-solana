@@ -79,3 +79,15 @@ pub struct RevertOptions {
     pub revert_message: Vec<u8>,
     pub on_revert_gas_limit: u64,
 }
+
+/// Enumeration for instruction identifiers in message hashes.
+#[repr(u8)]
+pub enum InstructionId {
+    Withdraw = 1,
+    WithdrawSplToken = 2,
+    WhitelistSplToken = 3,
+    UnwhitelistSplToken = 4,
+    Execute = 5,
+    ExecuteSplToken = 6,
+    IncrementNonce = 7,
+}

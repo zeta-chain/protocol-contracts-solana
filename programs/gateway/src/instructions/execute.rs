@@ -1,7 +1,7 @@
 use crate::{
     contexts::{Execute, ExecuteSPLToken, IncrementNonce},
-    errors::InstructionId,
     state::CallableInstruction,
+    state::InstructionId,
     utils::{prepare_account_metas, validate_message, verify_ata_match},
 };
 use anchor_lang::prelude::*;
@@ -92,7 +92,7 @@ pub fn handle_sol(
     Ok(())
 }
 
-// Execute with SPL tokens. Caller is TSS.
+// Withdraws amount of SPL tokens to destination program pda, and calls on_call on destination program
 pub fn handle_spl_token(
     ctx: Context<ExecuteSPLToken>,
     decimals: u8,

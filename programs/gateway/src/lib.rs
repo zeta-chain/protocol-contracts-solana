@@ -62,6 +62,7 @@ pub mod gateway {
 
     /// Withdraws amount to destination program pda, and calls on_call on destination program
     /// # Arguments
+    /// * `ctx` - The instruction context.
     /// * `amount` - Amount of SOL to transfer.
     /// * `sender` - Sender's address.
     /// * `data` - Arbitrary data to pass to the destination program.
@@ -124,7 +125,7 @@ pub mod gateway {
         )
     }
 
-    /// Execute with SPL tokens. Caller is TSS.
+    /// Withdraws amount of SPL tokens to destination program pda, and calls on_call on destination program
     /// # Arguments
     /// * `ctx` - The instruction context.
     /// * `decimals` - Token decimals for precision.
@@ -370,7 +371,7 @@ pub mod gateway {
     /// Withdraws SPL tokens. Caller is TSS.
     /// # Arguments
     /// * `ctx` - The instruction context.
-    ///  * `decimals` - Token decimals for precision.
+    /// * `decimals` - Token decimals for precision.
     /// * `amount` - The amount of tokens to withdraw.
     /// * `signature` - The TSS signature.
     /// * `recovery_id` - The recovery ID for signature verification.

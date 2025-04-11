@@ -1,6 +1,6 @@
 use crate::{
     contexts::{Initialize, Unwhitelist, UpdateAuthority, UpdatePaused, UpdateTss, Whitelist},
-    errors::InstructionId,
+    state::InstructionId,
     utils::{
         recover_and_verify_eth_address, validate_message_hash, verify_and_update_nonce,
         verify_authority,

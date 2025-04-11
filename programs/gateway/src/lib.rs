@@ -35,13 +35,13 @@ pub mod gateway {
     }
 
     /// Increments nonce, used by TSS in case outbound fails.
-    /// # Arguments:
+    /// # Arguments
     /// * `ctx` - The instruction context.
-    /// * `amount` - The amount of lamports to increment.
-    /// * `signature` - The signature of the message.
-    /// * `recovery_id` - The recovery ID of the signature.
-    /// * `message_hash` - The hash of the message.
-    /// * `nonce` - The nonce of the message.
+    /// * `amount` - The amount in original outbound.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn increment_nonce(
         ctx: Context<IncrementNonce>,
         amount: u64,
@@ -61,14 +61,15 @@ pub mod gateway {
     }
 
     /// Withdraws amount to destination program pda, and calls on_call on destination program
-    /// # Arguments:
-    /// * `amount`: Amount of SOL to transfer
-    /// * `sender`: Sender's address
-    /// * `data`: Arbitrary data to pass to the destination program
-    /// * `signature`: Signature of the message
-    /// * `recovery_id`: Recovery ID of the signature
-    /// * `message_hash`: Hash of the message
-    /// * `nonce`: Nonce of the message
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - Amount of SOL to transfer.
+    /// * `sender` - Sender's address.
+    /// * `data` - Arbitrary data to pass to the destination program.
+    /// * `signature` - Signature of the message.
+    /// * `recovery_id` - Recovery ID of the signature.
+    /// * `message_hash` - Hash of the message.
+    /// * `nonce` - Nonce of the message.
     pub fn execute(
         ctx: Context<Execute>,
         amount: u64,
@@ -92,15 +93,16 @@ pub mod gateway {
     }
 
     /// Execute with SPL tokens. Caller is TSS.
-    /// # Arguments:
-    /// * `decimals`: Decimals of the token
-    /// * `amount`: Amount of tokens to transfer
-    /// * `sender`: Sender's Ethereum address
-    /// * `data`: Arbitrary data to pass to the destination program
-    /// * `signature`: Signature of the message
-    /// * `recovery_id`: Recovery ID of the signature
-    /// * `message_hash`: Hash of the message
-    /// * `nonce`: Nonce of the message
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `decimals` - Token decimals for precision.
+    /// * `amount` - The amount of tokens to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn execute_spl_token(
         ctx: Context<ExecuteSPLToken>,
         decimals: u8,
@@ -191,7 +193,7 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `amount` - The amount of lamports to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
-    /// * `deposit_fee` - The fee to be deducted from the deposited amount.
+    /// * `revert_options` - The revert options created by the caller.
     pub fn deposit(
         ctx: Context<Deposit>,
         amount: u64,
@@ -204,7 +206,7 @@ pub mod gateway {
     /// Deposits SOL and calls a contract on ZetaChain zEVM.
     /// # Arguments
     /// * `ctx` - The instruction context.
-    /// * `amount` - The amount of SPL tokens to deposit.
+    /// * `amount` - The amount of lamports to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     /// * `message` - The message passed to the contract.
     /// * `revert_options` - The revert options created by the caller.
@@ -230,6 +232,7 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `amount` - The amount of SPL tokens to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
+    /// * `revert_options` - The revert options created by the caller.
     pub fn deposit_spl_token(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -245,8 +248,7 @@ pub mod gateway {
     /// * `amount` - The amount of SPL tokens to deposit.
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     /// * `message` - The message passed to the contract.
-    /// * `deposit_fee` - The fee to be deducted from the deposited amount.
-    /// * `max_message_size` - The maximum allowed message size.
+    /// * `revert_options` - The revert options created by the caller.
     pub fn deposit_spl_token_and_call(
         ctx: Context<DepositSplToken>,
         amount: u64,
@@ -268,7 +270,7 @@ pub mod gateway {
     /// # Arguments
     /// * `receiver` - The Ethereum address of the receiver on ZetaChain zEVM.
     /// * `message` - The message passed to the contract.
-    /// * `max_message_size` - The maximum allowed message size.
+    /// * `revert_options` - The revert options created by the caller.
     pub fn call(
         ctx: Context<Call>,
         receiver: [u8; 20],
@@ -279,13 +281,13 @@ pub mod gateway {
     }
 
     /// Withdraws SOL. Caller is TSS.
-    /// Arguments:
+    /// # Arguments
     /// * `ctx` - The instruction context.
-    /// * `amount` - The amount of lamports to withdraw.
-    /// * `signature` - The signature of the message.
-    /// * `recovery_id` - The recovery ID of the signature.
-    /// * `message_hash` - The hash of the message.
-    /// * `nonce` - The nonce of the message.
+    /// * `amount` - The amount of SOL to withdraw.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn withdraw(
         ctx: Context<Withdraw>,
         amount: u64,
@@ -298,14 +300,14 @@ pub mod gateway {
     }
 
     /// Withdraws SPL tokens. Caller is TSS.
-    /// Arguments:
+    /// # Arguments
     /// * `ctx` - The instruction context.
-    /// * `decimals` - The decimals of the token.
-    /// * `amount` - The amount of tokens to transfer.
-    /// * `signature` - The signature of the message.
-    /// * `recovery_id` - The recovery ID of the signature.
-    /// * `message_hash` - The hash of the message.
-    /// * `nonce` - The nonce of the message.
+    /// * `decimals` - Token decimals for precision.
+    /// * `amount` - The amount of tokens to withdraw.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
     pub fn withdraw_spl_token(
         ctx: Context<WithdrawSPLToken>,
         decimals: u8,

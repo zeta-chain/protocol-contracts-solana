@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use super::recover_and_verify_eth_address::recover_and_verify_eth_address;
 use super::validate_message_hash::validate_message_hash;
 use super::verify_and_update_nonce::verify_and_update_nonce;
-use crate::errors::InstructionId;
+use crate::state::InstructionId;
 use crate::state::Pda;
 
 /// Perform common cross-chain verification steps

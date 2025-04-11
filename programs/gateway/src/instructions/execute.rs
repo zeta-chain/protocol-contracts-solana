@@ -92,7 +92,7 @@ pub fn handle_sol(
     Ok(())
 }
 
-// Execute with SPL tokens. Caller is TSS.
+// Withdraws amount of SPL tokens to destination program pda, and calls on_call on destination program
 pub fn handle_spl_token(
     ctx: Context<ExecuteSPLToken>,
     decimals: u8,

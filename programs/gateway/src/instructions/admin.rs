@@ -31,7 +31,7 @@ pub fn initialize(ctx: Context<Initialize>, tss_address: [u8; 20], chain_id: u64
     Ok(())
 }
 
-/// Updates the TSS address. Caller is authority stored in PDA.
+// Updates the TSS address. Caller is authority stored in PDA.
 pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> {
     verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
     let pda = &mut ctx.accounts.pda;

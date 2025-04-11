@@ -92,7 +92,7 @@ pub mod gateway {
         )
     }
 
-    /// Execute with SPL tokens. Caller is TSS.
+    /// Withdraws amount of SPL tokens to destination program pda, and calls on_call on destination program
     /// # Arguments
     /// * `ctx` - The instruction context.
     /// * `decimals` - Token decimals for precision.

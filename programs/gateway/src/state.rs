@@ -22,12 +22,12 @@ pub struct WhitelistEntry {}
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum CallableInstruction {
-    ConnectedCall {
+    OnCall {
         amount: u64,
         sender: [u8; 20],
         data: Vec<u8>,
     },
-    ConnectedRevert {
+    OnRevert {
         amount: u64,
         sender: Pubkey,
         data: Vec<u8>,
@@ -37,7 +37,7 @@ pub enum CallableInstruction {
 impl CallableInstruction {
     pub fn pack(&self) -> Vec<u8> {
         match self {
-            CallableInstruction::ConnectedCall {
+            CallableInstruction::OnCall {
                 amount,
                 sender,
                 data,
@@ -53,7 +53,7 @@ impl CallableInstruction {
                 buf.extend_from_slice(data);
                 buf
             }
-            CallableInstruction::ConnectedRevert {
+            CallableInstruction::OnRevert {
                 amount,
                 sender,
                 data,
@@ -96,9 +96,9 @@ pub enum InstructionId {
     WithdrawSplToken = 2,
     WhitelistSplToken = 3,
     UnwhitelistSplToken = 4,
-    Execute = 5,
+    ExecuteSol = 5,
     ExecuteSplToken = 6,
     IncrementNonce = 7,
-    ExecuteRevert = 8,
+    ExecuteSolRevert = 8,
     ExecuteSplTokenRevert = 9,
 }

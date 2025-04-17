@@ -95,7 +95,7 @@ pub fn handle_sol(
     message_hash: [u8; 32],
     nonce: u64,
 ) -> Result<()> {
-    let instruction_data = CallableInstruction::ConnectedCall {
+    let instruction_data = CallableInstruction::OnCall {
         amount,
         sender,
         data: data.clone(),
@@ -110,7 +110,7 @@ pub fn handle_sol(
         recovery_id,
         message_hash,
         nonce,
-        InstructionId::Execute,
+        InstructionId::ExecuteSol,
         instruction_data,
     )
 }
@@ -126,7 +126,7 @@ pub fn handle_sol_revert(
     message_hash: [u8; 32],
     nonce: u64,
 ) -> Result<()> {
-    let instruction_data = CallableInstruction::ConnectedRevert {
+    let instruction_data = CallableInstruction::OnRevert {
         amount,
         sender,
         data: data.clone(),
@@ -141,7 +141,7 @@ pub fn handle_sol_revert(
         recovery_id,
         message_hash,
         nonce,
-        InstructionId::ExecuteRevert,
+        InstructionId::ExecuteSolRevert,
         instruction_data,
     )
 }
@@ -243,7 +243,7 @@ pub fn handle_spl_token(
     message_hash: [u8; 32],
     nonce: u64,
 ) -> Result<()> {
-    let instruction_data = CallableInstruction::ConnectedCall {
+    let instruction_data = CallableInstruction::OnCall {
         amount,
         sender,
         data: data.clone(),
@@ -276,7 +276,7 @@ pub fn handle_spl_token_revert(
     message_hash: [u8; 32],
     nonce: u64,
 ) -> Result<()> {
-    let instruction_data = CallableInstruction::ConnectedRevert {
+    let instruction_data = CallableInstruction::OnRevert {
         amount,
         sender,
         data: data.clone(),

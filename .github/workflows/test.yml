@@ -13,10 +13,6 @@ jobs:
 
       - name: Setup Anchor
         uses: heyAyushh/setup-anchor@v4.93
-        with:
-          node-version: '21.1.0'
-          solana-cli-version: '2.1.21'
-          anchor-version: '0.31.2'
 
       - name: Cache node_modules
         uses: actions/cache@v3

@@ -1,54 +1,62 @@
-name: test
+name: Anchor Tests
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
+    branches: [main]
+    paths:
+      - "programs/**"
+      - "tests/**"
+      - "Anchor.toml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+  workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    env:
+      SOLANA_VERSION: "2.1.21"
+      ANCHOR_VERSION: "0.31.1"
+      NODE_VERSION: "20.11.0"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20.11.0'
-      - name: Cache Solana CLI tools
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/solana/
-            ~/.local/share/solana/
-          key: solana-cli-${{ runner.os }}-build-2.1.21
-      - name: Install Solana CLI tools
-        run: sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.21/install)"
-        shell: bash
-      - name: Update PATH
-        run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH 
-        shell: bash
-      - name: Install Anchor CLI via Cargo
-        run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.31.1 anchor-cli
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Cache node_modules
         uses: actions/cache@v3
         with:
           path: ./node_modules/
-          key: node-modules-${{ runner.os }}-build-20.11.0
+          key: node-modules-${{ runner.os }}-build-${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: yarn
-        shell: bash
+        run: yarn --frozen-lockfile
+
+      - name: Install Solana CLI
+        run: |
+          if [[ "${SOLANA_VERSION}" == 1* ]]; then
+            curl -sSfL https://release.solana.com/v${SOLANA_VERSION}/install | sh
+          else
+            curl -sSfL https://release.anza.xyz/v${SOLANA_VERSION}/install | sh
+          fi
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install Anchor CLI
+        run: cargo install --git https://github.com/coral-xyz/anchor --tag v${ANCHOR_VERSION} anchor-cli
 
       - name: Generate Solana keypair
         run: solana-keygen new --no-bip39-passphrase
-        shell: bash
 
-      - name: Patch Anchor.toml for runner
-        run: sed -i 's:/user/:/runner/:' Anchor.toml
-        shell: bash
+      - name: Patch Anchor.toml
+        run: sed -i 's:/user/:/runner/:' Anchor.toml || true
 
-      - name: Install Rust toolchain
+      - name: Setup Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -59,5 +67,4 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run Anchor tests
-        run: yarn anchor-test
-        shell: bash
+        run: anchor test

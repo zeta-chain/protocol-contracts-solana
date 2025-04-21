@@ -12,7 +12,7 @@ jobs:
       run: cargo install --git https://github.com/coral-xyz/anchor avm
     - uses: metadaoproject/anchor-test@v2.1
       with: 
-        anchor-version: '0.30.1'
+        anchor-version: '0.31.1'
         solana-cli-version: '1.18.18'
         node-version: '21.1.0'
   

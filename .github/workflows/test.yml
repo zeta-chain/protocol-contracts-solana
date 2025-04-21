@@ -47,5 +47,5 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run Anchor tests
-        run: anchor test
+        run: npx anchor test
         shell: bash

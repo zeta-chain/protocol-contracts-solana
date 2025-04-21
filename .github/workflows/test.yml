@@ -13,6 +13,8 @@ jobs:
 
       - name: Setup Anchor
         uses: heyAyushh/setup-anchor@v4.93
+        with:
+          use-avm: true
 
       - name: Cache node_modules
         uses: actions/cache@v3

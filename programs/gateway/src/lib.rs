@@ -92,6 +92,39 @@ pub mod gateway {
         )
     }
 
+    /// Withdraws amount to destination program pda, and calls on_revert on destination program
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of SOL to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
+    pub fn execute_revert(
+        ctx: Context<Execute>,
+        amount: u64,
+        sender: Pubkey,
+        data: Vec<u8>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    ) -> Result<()> {
+        instructions::execute::handle_sol_revert(
+            ctx,
+            amount,
+            sender,
+            data,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+        )
+    }
+
     /// Withdraws amount of SPL tokens to destination program pda, and calls on_call on destination program
     /// # Arguments
     /// * `ctx` - The instruction context.
@@ -115,6 +148,42 @@ pub mod gateway {
         nonce: u64,
     ) -> Result<()> {
         instructions::execute::handle_spl_token(
+            ctx,
+            decimals,
+            amount,
+            sender,
+            data,
+            signature,
+            recovery_id,
+            message_hash,
+            nonce,
+        )
+    }
+
+    /// Withdraws SPL token amount to destination program pda, and calls on_revert on destination program
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `decimals` - Token decimals for precision.
+    /// * `amount` - The amount of tokens to withdraw.
+    /// * `sender` - Sender from ZEVM.
+    /// * `data` - Data to pass to destination program.
+    /// * `signature` - The TSS signature.
+    /// * `recovery_id` - The recovery ID for signature verification.
+    /// * `message_hash` - Message hash for signature verification.
+    /// * `nonce` - The current nonce value.
+    pub fn execute_spl_token_revert(
+        ctx: Context<ExecuteSPLToken>,
+        decimals: u8,
+        amount: u64,
+        sender: Pubkey,
+        data: Vec<u8>,
+        signature: [u8; 64],
+        recovery_id: u8,
+        message_hash: [u8; 32],
+        nonce: u64,
+    ) -> Result<()> {
+        instructions::execute::handle_spl_token_revert(
             ctx,
             decimals,
             amount,

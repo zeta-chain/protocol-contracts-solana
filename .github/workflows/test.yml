@@ -19,7 +19,7 @@ jobs:
       - name: Display Versions
         run: |
           solana -V
-          solana-keygen new --no-bip39-passphrase
+          solana-keygen new --no-bip39-passphrase --force
           rustc -V
           anchor -V
 

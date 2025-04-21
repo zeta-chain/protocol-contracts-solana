@@ -2,25 +2,53 @@ name: test
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-      - uses: metaDAOproject/setup-anchor@v3.1
+
+      - name: Install AVM
+        run: cargo install --git https://github.com/coral-xyz/anchor avm
+
+      - name: Setup Anchor
+        uses: metadaoproject/setup-anchor@v3.1
         with:
-          anchor-version: "0.31.2"
-          solana-cli-version: "2.1.13"
-          node-version: "22.11.0"
+          node-version: '21.1.0'
+          solana-cli-version: '2.1.21'
+          anchor-version: '0.31.2'
 
-      - name: Make a default keypair
-        run: |
-          solana-keygen new --no-bip39-passphrase
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules/
+          key: node-modules-${{ runner.os }}-build-21.1.0
 
-      - name: Run tests
+      - name: Install dependencies
+        run: yarn
+        shell: bash
+
+      - name: Generate Solana keypair
+        run: solana-keygen new --no-bip39-passphrase
+        shell: bash
+
+      - name: Patch Anchor.toml for runner
+        run: sed -i 's:/user/:/runner/:' Anchor.toml
+        shell: bash
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: rustc
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Anchor tests
         run: anchor test
+        shell: bash

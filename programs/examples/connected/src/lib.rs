@@ -102,8 +102,10 @@ pub struct OnCall<'info> {
     #[account(mut, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// CHECK: This is test program.
     pub gateway_pda: UncheckedAccount<'info>,
 
+    /// CHECK: This is test program.
     pub random_wallet: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
@@ -114,6 +116,7 @@ pub struct OnRevert<'info> {
     #[account(mut, seeds = [b"connected"], bump)]
     pub pda: Account<'info, Pda>,
 
+    /// CHECK: This is test program.
     pub gateway_pda: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,

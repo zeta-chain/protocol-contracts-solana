@@ -13,6 +13,6 @@ jobs:
     - uses: metadaoproject/anchor-test@v2.1
       with: 
         anchor-version: '0.31.1'
-        solana-cli-version: '1.18.18'
+        solana-cli-version: '2.1.21'
         node-version: '21.1.0'
   

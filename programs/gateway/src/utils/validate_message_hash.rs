@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use solana_program::keccak::hash;
+use anchor_lang::solana_program::keccak::hash;
 
 use super::constants::ZETACHAIN_PREFIX;
 use crate::errors::Errors;

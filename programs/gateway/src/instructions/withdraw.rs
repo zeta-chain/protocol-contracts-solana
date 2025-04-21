@@ -4,8 +4,8 @@ use crate::{
     utils::{validate_message, verify_ata_match, DEFAULT_GAS_COST},
 };
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program::invoke;
 use anchor_spl::token::transfer_checked;
-use solana_program::program::invoke;
 use spl_associated_token_account::instruction::create_associated_token_account;
 
 // Withdraws SOL. Caller is TSS.

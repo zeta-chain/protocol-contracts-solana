@@ -14,13 +14,6 @@ jobs:
       - name: Setup Anchor
         uses: heyAyushh/setup-anchor@v4.93
 
-      - name: Display Versions
-        run: |
-          solana -V
-          solana-keygen new --no-bip39-passphrase
-          rustc -V
-          anchor -V
-
       - name: Cache node_modules
         uses: actions/cache@v3
         with:
@@ -29,6 +22,10 @@ jobs:
 
       - name: Install dependencies
         run: yarn
+        shell: bash
+
+      - name: Generate Solana keypair
+        run: solana-keygen new --no-bip39-passphrase
         shell: bash
 
       - name: Run Anchor tests

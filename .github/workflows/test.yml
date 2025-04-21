@@ -16,6 +16,13 @@ jobs:
         with:
           use-avm: true
 
+      - name: Display Versions and Install pnpm
+        run: |
+          solana -V
+          solana-keygen new --no-bip39-passphrase
+          rustc -V
+          anchor -V
+
       - name: Cache node_modules
         uses: actions/cache@v3
         with:

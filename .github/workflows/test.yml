@@ -11,9 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install AVM
-        run: cargo install --git https://github.com/coral-xyz/anchor avm
-
       - name: Setup Anchor
         uses: metadaoproject/setup-anchor@v3.1
         with:

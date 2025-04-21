@@ -27,7 +27,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./node_modules/
-          key: node-modules-${{ runner.os }}-build-21.1.0
+          key: node-modules-${{ runner.os }}-build-22.14.0
 
       - name: Install dependencies
         run: yarn

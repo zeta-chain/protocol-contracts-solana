@@ -18,6 +18,11 @@ jobs:
           solana-cli-version: '2.1.21'
           anchor-version: '0.31.1'
 
+      - name: Fix anchor binary permissions and path
+        run: |
+          echo "$(npm bin -g)" >> $GITHUB_PATH
+          chmod +x "$(npm bin -g)/anchor"
+
       - name: Cache node_modules
         uses: actions/cache@v3
         with:

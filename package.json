@@ -10,7 +10,8 @@
   "scripts": {
     "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "fmt": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "rust:fmt": "./scripts/fmt.sh"
+    "rust:fmt": "./scripts/fmt.sh",
+    "anchor-test": "anchor test"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",

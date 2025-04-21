@@ -15,9 +15,9 @@ cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
-idl-build = ["anchor-lang/idl-build"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 
 [dependencies]
 anchor-lang = { version = "=0.31.1" }
-anchor-spl = { version = "=0.31.1", features = ["idl-build"] }
+anchor-spl = { version = "=0.31.1" }
 spl-associated-token-account = { version = "3.0.2", features = ["no-entrypoint"] }

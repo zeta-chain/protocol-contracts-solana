@@ -16,7 +16,7 @@ jobs:
         with:
           use-avm: true
 
-      - name: Display Versions and Install pnpm
+      - name: Display Versions
         run: |
           solana -V
           solana-keygen new --no-bip39-passphrase

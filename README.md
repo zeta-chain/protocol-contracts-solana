@@ -29,20 +29,23 @@ Prerequisites: a recent version of `rust` compiler and `cargo` package manger mu
 
 Please install compatible Solana tools and anchor-cli before build, otherwise the program will not be built successfully
 ```bash
-$ solana-install init 1.18.15
+$ cargo install --git https://github.com/coral-xyz/anchor avm --force
 
-$ cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.0 anchor-cli --locked
+$ avm install 0.31.0
+
+$ sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.0/install)"
 ```
 
 To show the installed versions of the tools
 ```bash
-$ cargo-build-sbf --version
-solana-cargo-build-sbf 1.18.15
-platform-tools v1.41
-rustc 1.75.0
+$ olana --version
+solana-cli 2.1.0
+
+$ rustc --version
+rustc 1.81.0
 
 $ anchor --version
-anchor-cli 0.30.0
+anchor-cli 0.31.1
 ```
 
 To build (this will require at least 2GB disk space)

@@ -3,25 +3,17 @@ name: Anchor Tests
 on:
   push:
     branches: [main]
-    paths:
-      - "programs/**"
-      - "tests/**"
-      - "Anchor.toml"
-      - "Cargo.toml"
-      - "Cargo.lock"
-
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       program:
         description: "Program to test (subfolder under programs/)"
-        required: true
+        required: false
         default: "gateway"
 
 jobs:
   test:
-    # Call the Solana Developers’ reusable test workflow
     uses: solana-developers/github-workflows/.github/workflows/test.yaml@v0.2.5
     with:
-      program: ${{ github.event.inputs.program }}
-      # branch is optional (defaults to "*"), but you can pass it if needed:
-      # branch: ${{ github.ref_name }}
+      program: ${{ github.event.inputs.program || 'gateway' }}

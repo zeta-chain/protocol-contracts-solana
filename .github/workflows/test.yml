@@ -24,9 +24,9 @@ jobs:
         run: yarn
         shell: bash
 
-      - name: Generate Solana keypair
-        run: solana-keygen new --no-bip39-passphrase
-        shell: bash
+      # - name: Generate Solana keypair
+      #   run: solana-keygen new --no-bip39-passphrase
+      #   shell: bash
 
       - name: Run Anchor tests
         run: anchor test

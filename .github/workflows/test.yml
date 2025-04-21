@@ -9,62 +9,19 @@ on:
       - "Anchor.toml"
       - "Cargo.toml"
       - "Cargo.lock"
+
   workflow_dispatch:
+    inputs:
+      program:
+        description: "Program to test (subfolder under programs/)"
+        required: true
+        default: "gateway"
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
-    env:
-      SOLANA_VERSION: "2.1.21"
-      ANCHOR_VERSION: "0.31.1"
-      NODE_VERSION: "20.11.0"
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: ./node_modules/
-          key: node-modules-${{ runner.os }}-build-${{ env.NODE_VERSION }}
-
-      - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Install Solana CLI
-        run: |
-          if [[ "${SOLANA_VERSION}" == 1* ]]; then
-            curl -sSfL https://release.solana.com/v${SOLANA_VERSION}/install | sh
-          else
-            curl -sSfL https://release.anza.xyz/v${SOLANA_VERSION}/install | sh
-          fi
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-
-      - name: Install Anchor CLI
-        run: cargo install --git https://github.com/coral-xyz/anchor --tag v${ANCHOR_VERSION} anchor-cli
-
-      - name: Generate Solana keypair
-        run: solana-keygen new --no-bip39-passphrase
-
-      - name: Patch Anchor.toml
-        run: sed -i 's:/user/:/runner/:' Anchor.toml || true
-
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          components: rustc
-
-      - name: Cache Cargo dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run Anchor tests
-        run: anchor test
+    # Call the Solana Developers’ reusable test workflow
+    uses: solana-developers/github-workflows/.github/workflows/test.yaml@v0.2.5
+    with:
+      program: ${{ github.event.inputs.program }}
+      # branch is optional (defaults to "*"), but you can pass it if needed:
+      # branch: ${{ github.ref_name }}

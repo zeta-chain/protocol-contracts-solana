@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
-use solana_program::keccak::hash;
-use solana_program::program_error::ProgramError;
-use solana_program::secp256k1_recover::secp256k1_recover;
+use anchor_lang::solana_program::keccak::hash;
+use anchor_lang::solana_program::program_error::ProgramError;
+use anchor_lang::solana_program::secp256k1_recover::secp256k1_recover;
 
 use crate::errors::Errors;
 use crate::state::Pda;

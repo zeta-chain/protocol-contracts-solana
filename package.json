@@ -10,10 +10,11 @@
   "scripts": {
     "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "fmt": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "rust:fmt": "./scripts/fmt.sh"
+    "rust:fmt": "./scripts/fmt.sh",
+    "anchor-test": "anchor test"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.30.0",
+    "@coral-xyz/anchor": "^0.31.1",
     "@solana/spl-memo": "^0.2.5",
     "@solana/spl-token": "^0.4.6",
     "elliptic": "^6.5.7",

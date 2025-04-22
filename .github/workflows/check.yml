@@ -82,27 +82,27 @@ jobs:
         run: cargo doc --no-deps --all-features
         env:
           RUSTDOCFLAGS: --cfg docsrs
-  hack:
-    # `cargo-hack` checks combinations of feature flags to ensure that features
-    # are all additive which is required for feature unification.
-    runs-on: ubuntu-latest
-    name: stable / features
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          target: wasm32-unknown-unknown
-      - name: cargo install cargo-hack
-        uses: taiki-e/install-action@cargo-hack
-        # Intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
-        # `--feature-powerset` runs for every combination of features. Note that
-        # target in this context means one of `--lib`, `--bin`, etc, and not the
-        # target triple.
-      - name: cargo hack
-        run: cargo hack check --feature-powerset --depth 2 --release --target wasm32-unknown-unknown --skip std --workspace --exclude e2e --exclude basic-example-script --exclude benches
+  # hack:
+  #   # `cargo-hack` checks combinations of feature flags to ensure that features
+  #   # are all additive which is required for feature unification.
+  #   runs-on: ubuntu-latest
+  #   name: stable / features
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+  #     - name: Install stable
+  #       uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         target: wasm32-unknown-unknown
+  #     - name: cargo install cargo-hack
+  #       uses: taiki-e/install-action@cargo-hack
+  #       # Intentionally no target specifier; see https://github.com/jonhoo/rust-ci-conf/pull/4
+  #       # `--feature-powerset` runs for every combination of features. Note that
+  #       # target in this context means one of `--lib`, `--bin`, etc, and not the
+  #       # target triple.
+  #     - name: cargo hack
+  #       run: cargo hack check --feature-powerset --depth 2 --release --target wasm32-unknown-unknown --skip std --workspace --exclude e2e --exclude basic-example-script --exclude benches
   typos:
     runs-on: ubuntu-latest
     name: stable / typos

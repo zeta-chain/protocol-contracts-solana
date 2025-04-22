@@ -1,18 +1,38 @@
 name: test
+
 on:
   push:
     branches: [ main ]
   pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: cargo install avm
-      run: cargo install --git https://github.com/coral-xyz/anchor avm
-    - uses: metadaoproject/anchor-test@v2.1
-      with: 
-        anchor-version: '0.30.1'
-        solana-cli-version: '1.18.18'
-        node-version: '21.1.0'
-  
+      - uses: actions/checkout@v4
+
+      - name: Setup Anchor
+        uses: heyAyushh/setup-anchor@v4.93
+        with:
+          use-avm: true
+
+      - name: Display Versions
+        run: |
+          solana -V
+          solana-keygen new --no-bip39-passphrase --force
+          rustc -V
+          anchor -V
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules/
+          key: node-modules-${{ runner.os }}-build-22.14.0
+
+      - name: Install dependencies
+        run: yarn
+        shell: bash
+
+      - name: Run Anchor tests
+        run: anchor test
+        shell: bash

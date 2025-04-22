@@ -121,10 +121,13 @@ pub struct OnCall<'info> {
 
     pub mint_account: Account<'info, Mint>,
 
+    /// CHECK: This is test program.
     pub gateway_pda: UncheckedAccount<'info>,
 
+    /// CHECK: This is test program.
     pub random_wallet: UncheckedAccount<'info>,
 
+    /// CHECK: This is test program.
     #[account(mut)]
     pub random_wallet_ata: AccountInfo<'info>,
 
@@ -143,6 +146,7 @@ pub struct OnRevert<'info> {
 
     pub mint_account: Account<'info, Mint>,
 
+    /// CHECK: This is test program.
     pub gateway_pda: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,

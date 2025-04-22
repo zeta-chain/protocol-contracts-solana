@@ -5,7 +5,7 @@ use crate::{
     utils::{prepare_account_metas, validate_message, verify_ata_match},
 };
 use anchor_lang::prelude::*;
-use solana_program::{instruction::Instruction, program::invoke};
+use anchor_lang::solana_program::{instruction::Instruction, program::invoke};
 
 // Increments nonce, used by TSS in case outbound fails.
 pub fn increment_nonce(

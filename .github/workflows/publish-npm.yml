@@ -28,11 +28,36 @@ jobs:
           node-version: "21"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build
-        run: anchor build
+      - name: Build Mainnet
+        run: |
+          anchor run build-gateway
+          mkdir -p mainnet/lib
+          mkdir -p mainnet/idl
+          cp target/deploy/gateway.so mainnet/lib/
+          cp target/idl/gateway.json mainnet/idl/gateway.json
 
-      - name: Prepare IDL Files
-        run: mv target/idl ./
+      - name: Build Testnet
+        run: |
+          anchor run build-gateway-dev
+          mkdir -p testnet/lib
+          mkdir -p testnet/idl
+          cp target/deploy/gateway.so testnet/lib/
+          cp target/idl/gateway.json testnet/idl/gateway.json
+
+      - name: Create index.js
+        run: |
+          cat > index.js << EOF
+           module.exports = {
+            mainnet: {
+              programId: "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis",
+              idl: require("./mainnet/idl/gateway.json")
+            },
+            testnet: {
+              programId: "94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d",
+              idl: require("./testnet/idl/gateway.json")
+            }
+          };
+          EOF
 
       - name: Determine NPM Tag
         id: determine-npm-tag

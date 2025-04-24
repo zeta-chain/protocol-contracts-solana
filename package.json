@@ -3,9 +3,11 @@
   "private": false,
   "license": "MIT",
   "version": "0.0.0-set-on-publish",
-  "description": "Package contains IDL files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
+  "description": "Package contains IDL and files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
   "files": [
-    "idl"
+    "mainnet",
+    "testnet",
+    "index.js"
   ],
   "scripts": {
     "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",

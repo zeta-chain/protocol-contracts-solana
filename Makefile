@@ -29,9 +29,3 @@ generate-testnet: testnet generate
 # generate Go code for mainnet
 .PHONY: generate-mainnet
 generate-mainnet: mainnet generate
-
-.PHONY: publish-npm
-publish-npm:
-	@echo "Starting npm package publishing process for version $(VERSION)"
-	@chmod +x ./scripts/publish-npm.sh
-	@./scripts/publish-npm.sh $(VERSION)

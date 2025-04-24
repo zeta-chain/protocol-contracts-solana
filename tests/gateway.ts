@@ -2003,8 +2003,8 @@ describe("Gateway", () => {
     }
   });
 
-  it("Update nonce", async () => {
-    await gatewayProgram.methods.updateNonce(new anchor.BN(1000)).rpc();
+  it("Reset nonce", async () => {
+    await gatewayProgram.methods.resetNonce(new anchor.BN(1000)).rpc();
     const pdaAccountDataAfter = await gatewayProgram.account.pda.fetch(
       pdaAccount
     );
@@ -2026,9 +2026,9 @@ describe("Gateway", () => {
     }
   });
 
-  it("Update nonce fails if wrong authority", async () => {
+  it("Reset nonce fails if wrong authority", async () => {
     try {
-      await gatewayProgram.methods.updateNonce(new anchor.BN(1000)).rpc();
+      await gatewayProgram.methods.resetNonce(new anchor.BN(1000)).rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);

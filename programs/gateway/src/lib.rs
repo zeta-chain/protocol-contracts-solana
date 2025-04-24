@@ -441,12 +441,12 @@ pub mod gateway {
         Ok(())
     }
 
-    /// Updates the PDA nonce. Caller is authority stored in PDA.
+    /// Resets the PDA nonce. Caller is authority stored in PDA.
     ///
     /// # Arguments
     /// * `ctx` - The instruction context.
     /// * `new_nonce` - The new nonce.
-    pub fn update_nonce(ctx: Context<UpdateNonce>, new_nonce: u64) -> Result<()> {
+    pub fn reset_nonce(ctx: Context<ResetNonce>, new_nonce: u64) -> Result<()> {
         let pda = &mut ctx.accounts.pda;
         require!(
             ctx.accounts.signer.key() == pda.authority,
@@ -454,7 +454,7 @@ pub mod gateway {
         );
         pda.nonce = new_nonce;
 
-        msg!("PDA nonce updated: new nonce = {}", new_nonce);
+        msg!("PDA nonce reset: new nonce = {}", new_nonce);
 
         Ok(())
     }
@@ -1186,9 +1186,9 @@ pub struct UpdateAuthority<'info> {
     pub pda: Account<'info, Pda>,
 }
 
-/// Instruction context for updating the PDA nonce.
+/// Instruction context for resetting the PDA nonce.
 #[derive(Accounts)]
-pub struct UpdateNonce<'info> {
+pub struct ResetNonce<'info> {
     /// The account of the signer performing the update.
     #[account(mut)]
     pub signer: Signer<'info>,

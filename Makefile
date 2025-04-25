@@ -11,21 +11,21 @@ generate:
 	@./scripts/generate_go_bindings.sh $(IDL_DIR) $(GENERATED_DIR)
 
 # build program with dev features for testnet
-.PHONY: testnet
-testnet:
-	@echo "Building gateway with dev features..."
+.PHONY: dev
+dev:
+	@echo "Building gateway for development environments"
 	@anchor build --program-name gateway -- --features dev
 
 # build program for mainnet (without features)
-.PHONY: mainnet
-mainnet:
-	@echo "Building gateway for mainnet..."
+.PHONY: prod
+prod:
+	@echo "Building gateway for production environments"
 	@anchor build --program-name gateway
 
-# generate Go code for testnet (with dev features)
-.PHONY: generate-testnet
-generate-testnet: testnet generate
+# generate Go code for development networks (with dev features)
+.PHONY: generate-dev
+generate-dev: dev generate
 
 # generate Go code for mainnet
-.PHONY: generate-mainnet
-generate-mainnet: mainnet generate
+.PHONY: generate-prod
+generate-prod: prod generate

@@ -56,14 +56,14 @@ $ anchor test
 ```
 
 To generate Go bindings for program's IDL
-Testnet
+Development environments : Localnet
 ```bash
-$ make generate-testnet
+$ make generate-dev
 ```
 
-Mainnet
+Production environments : Mainnet,Testnet
 ```bash
-$ make generate-mainnet
+$ make generate-prod
 ```
 
 # Authentication and Authorization

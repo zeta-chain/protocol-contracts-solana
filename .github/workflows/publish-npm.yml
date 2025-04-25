@@ -28,31 +28,31 @@ jobs:
           node-version: "21"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build Mainnet
+      - name: Build Prod
         run: |
           anchor run build-gateway
-          mkdir -p mainnet/lib
-          mkdir -p mainnet/idl
-          cp target/deploy/gateway.so mainnet/lib/
-          cp target/idl/gateway.json mainnet/idl/gateway.json
+          mkdir -p prod/lib
+          mkdir -p prod/idl
+          cp target/deploy/gateway.so prod/lib/
+          cp target/idl/gateway.json prod/idl/gateway.json
 
-      - name: Build Testnet
+      - name: Build Dev
         run: |
           anchor run build-gateway-dev
-          mkdir -p testnet/lib
-          mkdir -p testnet/idl
-          cp target/deploy/gateway.so testnet/lib/
-          cp target/idl/gateway.json testnet/idl/gateway.json
+          mkdir -p dev/lib
+          mkdir -p dev/idl
+          cp target/deploy/gateway.so dev/lib/
+          cp target/idl/gateway.json dev/idl/gateway.json
 
       - name: Create index.js
         run: |
           cat > index.js << EOF
            module.exports = {
-            mainnet: {
+            prod: {
               programId: "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis",
               idl: require("./mainnet/idl/gateway.json")
             },
-            testnet: {
+            dev: {
               programId: "94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d",
               idl: require("./testnet/idl/gateway.json")
             }

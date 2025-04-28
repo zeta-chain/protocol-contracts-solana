@@ -58,9 +58,15 @@ To run the tests
 $ anchor test
 ```
 
-To generate Go code for program's IDL
+To generate Go bindings for program's IDL
+Development environments : Localnet
 ```bash
-$ make generate
+$ make generate-dev
+```
+
+Production environments : Mainnet,Testnet
+```bash
+$ make generate-prod
 ```
 
 # Authentication and Authorization

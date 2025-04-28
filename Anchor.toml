@@ -27,6 +27,7 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-build-gateway-dev = "cargo build-sbf --features dev --manifest-path programs/gateway/Cargo.toml"
-build-gateway = "cargo build-sbf --manifest-path programs/gateway/Cargo.toml"
+build-gateway-dev = "anchor build --program-name gateway -- --features dev"
+build-gateway = "anchor build --program-name gateway"
 build-upgrade-dev = "cargo build-sbf --features dev --manifest-path programs/examples/gateway_upgrade/Cargo.toml"
+build-examples = "anchor build --program-name connected && anchor build --program-name connected_spl"

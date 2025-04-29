@@ -1,5 +1,7 @@
 use crate::{
-    contexts::{Initialize, Unwhitelist, UpdateAuthority, UpdatePaused, UpdateTss, Whitelist},
+    contexts::{
+        Initialize, ResetNonce, Unwhitelist, UpdateAuthority, UpdatePaused, UpdateTss, Whitelist,
+    },
     state::InstructionId,
     utils::{
         recover_and_verify_eth_address, validate_message_hash, verify_and_update_nonce,
@@ -159,6 +161,17 @@ pub fn unwhitelist_spl_mint(
         ctx.accounts.whitelist_entry.key(),
         ctx.accounts.authority.key()
     );
+
+    Ok(())
+}
+
+// Resets the PDA authority. Caller is authority stored in PDA.
+pub fn reset_nonce(ctx: Context<ResetNonce>, new_nonce: u64) -> Result<()> {
+    verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
+    let pda = &mut ctx.accounts.pda;
+    pda.nonce = new_nonce;
+
+    msg!("PDA nonce reset: new nonce = {}", new_nonce);
 
     Ok(())
 }

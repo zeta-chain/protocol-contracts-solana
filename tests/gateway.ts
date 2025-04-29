@@ -2003,6 +2003,14 @@ describe("Gateway", () => {
     }
   });
 
+  it("Reset nonce", async () => {
+    await gatewayProgram.methods.resetNonce(new anchor.BN(1000)).rpc();
+    const pdaAccountDataAfter = await gatewayProgram.account.pda.fetch(
+      pdaAccount
+    );
+    expect(pdaAccountDataAfter.nonce.toNumber()).to.equal(1000);
+  });
+
   const newAuthority = anchor.web3.Keypair.generate();
   it("Update authority", async () => {
     await gatewayProgram.methods.updateAuthority(newAuthority.publicKey).rpc();
@@ -2011,6 +2019,16 @@ describe("Gateway", () => {
       await gatewayProgram.methods
         .updateTss(Array.from(new Uint8Array(20)))
         .rpc();
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("SignerIsNotAuthority");
+    }
+  });
+
+  it("Reset nonce fails if wrong authority", async () => {
+    try {
+      await gatewayProgram.methods.resetNonce(new anchor.BN(1000)).rpc();
       throw new Error("Expected error not thrown");
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);

@@ -441,6 +441,24 @@ pub mod gateway {
         Ok(())
     }
 
+    /// Resets the PDA nonce. Caller is authority stored in PDA.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `new_nonce` - The new nonce.
+    pub fn reset_nonce(ctx: Context<ResetNonce>, new_nonce: u64) -> Result<()> {
+        let pda = &mut ctx.accounts.pda;
+        require!(
+            ctx.accounts.signer.key() == pda.authority,
+            Errors::SignerIsNotAuthority
+        );
+        pda.nonce = new_nonce;
+
+        msg!("PDA nonce reset: new nonce = {}", new_nonce);
+
+        Ok(())
+    }
+
     /// Whitelists a new SPL token. Caller is TSS.
     ///
     /// # Arguments
@@ -1159,6 +1177,18 @@ pub struct UpdateTss<'info> {
 /// Instruction context for updating the PDA authority.
 #[derive(Accounts)]
 pub struct UpdateAuthority<'info> {
+    /// The account of the signer performing the update.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+}
+
+/// Instruction context for resetting the PDA nonce.
+#[derive(Accounts)]
+pub struct ResetNonce<'info> {
     /// The account of the signer performing the update.
     #[account(mut)]
     pub signer: Signer<'info>,

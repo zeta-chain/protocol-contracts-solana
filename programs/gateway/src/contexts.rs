@@ -237,6 +237,18 @@ pub struct UpdateAuthority<'info> {
     pub pda: Account<'info, Pda>,
 }
 
+/// Instruction context for resetting the PDA nonce.
+#[derive(Accounts)]
+pub struct ResetNonce<'info> {
+    /// The account of the signer performing the update.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+}
+
 /// Instruction context for pausing or unpausing deposits.
 #[derive(Accounts)]
 pub struct UpdatePaused<'info> {

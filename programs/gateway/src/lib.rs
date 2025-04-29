@@ -223,6 +223,15 @@ pub mod gateway {
         instructions::admin::update_authority(ctx, new_authority_address)
     }
 
+    /// Resets the PDA nonce. Caller is authority stored in PDA.
+    ///
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `new_nonce` - The new nonce.
+    pub fn reset_nonce(ctx: Context<ResetNonce>, new_nonce: u64) -> Result<()> {
+        instructions::admin::reset_nonce(ctx, new_nonce)
+    }
+
     /// Whitelists a new SPL token. Caller is TSS.
     /// # Arguments
     /// * `ctx` - The instruction context.

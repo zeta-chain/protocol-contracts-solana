@@ -535,13 +535,33 @@ describe("Gateway", () => {
     }
   });
 
+  it("Deposit through connected program", async () => {
+    const balanceBefore = await conn.getBalance(pdaAccount);
+    await connectedProgram.methods
+      .triggerDeposit(
+        new anchor.BN(1_000_000_000),
+        Array.from(address),
+        revertOptions
+      )
+      .accounts({
+        gatewayPda: pdaAccount,
+        gatewayProgram: gatewayProgram.programId,
+      })
+      .rpc();
+
+    const balanceAfter = await conn.getBalance(pdaAccount);
+    // amount + deposit fee
+    expect(balanceAfter - balanceBefore).to.eq(1_000_000_000 + 2_000_000);
+  });
+
   it("Deposit and withdraw 0.5 SOL from Gateway with ECDSA signature", async () => {
+    const balanceBefore = await conn.getBalance(pdaAccount);
     await gatewayProgram.methods
       .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
-    let bal1 = await conn.getBalance(pdaAccount);
+    let balanceAfter = await conn.getBalance(pdaAccount);
     // amount + deposit fee
-    expect(bal1).to.be.gte(1_000_000_000 + 2_000_000);
+    expect(balanceAfter - balanceBefore).to.eq(1_000_000_000 + 2_000_000);
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
     const amount = new anchor.BN(500000000);
@@ -578,7 +598,7 @@ describe("Gateway", () => {
       })
       .rpc();
     let bal2 = await conn.getBalance(pdaAccount);
-    expect(bal2).to.be.eq(bal1 - 500_000_000);
+    expect(bal2).to.be.eq(balanceAfter - 500_000_000);
     let bal3 = await conn.getBalance(to);
     expect(bal3).to.be.gte(500_000_000);
   });

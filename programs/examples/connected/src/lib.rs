@@ -84,6 +84,28 @@ pub mod connected {
 
         Ok(())
     }
+
+    pub fn trigger_deposit(
+        ctx: Context<TriggerDeposit>,
+        amount: u64,
+        receiver: [u8; 20],
+        revert_options: Option<gateway::RevertOptions>,
+    ) -> Result<()> {
+        let gateway_program = ctx.accounts.gateway_program.to_account_info();
+
+        let cpi_accounts = gateway::cpi::accounts::Deposit {
+            signer: ctx.accounts.signer.to_account_info(),
+            pda: ctx.accounts.gateway_pda.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+        };
+
+        let cpi_program = gateway_program;
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+        gateway::cpi::deposit(cpi_ctx, amount, receiver, revert_options)?;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -118,6 +140,21 @@ pub struct OnRevert<'info> {
 
     /// CHECK: This is test program.
     pub gateway_pda: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct TriggerDeposit<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(mut)]
+    /// CHECK: Validated by the gateway program via seeds
+    pub gateway_pda: UncheckedAccount<'info>,
+
+    /// CHECK: Only used for CPI
+    pub gateway_program: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }

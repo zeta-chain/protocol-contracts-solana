@@ -6,7 +6,8 @@
   "description": "Package contains IDL and shared object files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
   "files": [
     "prod",
-    "dev"
+    "dev",
+    "index.js"
   ],
   "scripts": {
     "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",

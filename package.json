@@ -5,9 +5,8 @@
   "version": "0.0.0-set-on-publish",
   "description": "Package contains IDL and shared object files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
   "files": [
-    "mainnet",
-    "testnet",
-    "index.js"
+    "prod",
+    "dev"
   ],
   "scripts": {
     "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",

@@ -1,12 +1,12 @@
 {
-  "name": "@zetachain/gateway",
+  "name": "@zetachain/protocol-contracts-solana",
   "private": false,
   "license": "MIT",
   "version": "0.0.0-set-on-publish",
   "description": "Package contains IDL and shared object files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
   "files": [
-    "mainnet",
-    "testnet",
+    "prod",
+    "dev",
     "index.js"
   ],
   "scripts": {

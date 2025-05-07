@@ -3110,6 +3110,7 @@ describe("Gateway", () => {
     await gatewayProgram.methods.updateTss(Array.from(newTss)).rpc();
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     expect(pdaAccountData.tssAddress).to.be.deep.eq(Array.from(newTss));
+    expect(pdaAccountData.nonce.toNumber()).to.eq(0);
 
     // only the authority stored in PDA can update the TSS address; the following should fail
     try {

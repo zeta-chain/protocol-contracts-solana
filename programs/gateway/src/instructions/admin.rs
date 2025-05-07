@@ -36,10 +36,12 @@ pub fn update_tss(ctx: Context<UpdateTss>, tss_address: [u8; 20]) -> Result<()> 
     verify_authority(&ctx.accounts.signer.key(), &ctx.accounts.pda)?;
     let pda = &mut ctx.accounts.pda;
     pda.tss_address = tss_address;
+    pda.nonce = 0;
 
     msg!(
-        "TSS address updated: new TSS address = {:?}, PDA authority = {}",
+        "TSS address updated: new TSS address = {:?}, new nonce = {}, PDA authority = {}",
         tss_address,
+        pda.nonce,
         ctx.accounts.signer.key()
     );
 

@@ -10,6 +10,7 @@ name = "gateway"
 
 [features]
 default = []
+upgrade = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []

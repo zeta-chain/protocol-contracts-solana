@@ -396,11 +396,4 @@ pub mod gateway {
             nonce,
         )
     }
-
-    /// Returns true to indicate program has been upgraded
-    pub fn upgraded(_ctx: Context<Upgrade>) -> Result<bool> {
-        msg!("Program has been upgraded!");
-        Ok(true)
-    }
-
 }

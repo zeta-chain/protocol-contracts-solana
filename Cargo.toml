@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "programs/gateway",
-    "programs/examples/gateway_upgrade",
     "programs/examples/connected",
     "programs/examples/connectedSPL"
 ]

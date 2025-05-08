@@ -405,4 +405,13 @@ pub mod gateway {
             nonce,
         )
     }
+
+    // Use the feature flag to conditionally compile the upgrade test function
+    // This is used for localnet testing only and should not be included in the production build
+    #[cfg(feature = "upgrade-test")]
+    /// Returns true to indicate program has been upgraded
+    pub fn upgraded(_ctx: Context<Upgrade>) -> Result<bool> {
+        msg!("Program has been upgraded!");
+        Ok(true)
+    }
 }

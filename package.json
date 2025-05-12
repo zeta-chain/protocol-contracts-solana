@@ -1,19 +1,22 @@
 {
-  "name": "@zetachain/gateway",
+  "name": "@zetachain/protocol-contracts-solana",
   "private": false,
   "license": "MIT",
   "version": "0.0.0-set-on-publish",
-  "description": "Package contains IDL files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
+  "description": "Package contains IDL and shared object files for the Solana Gateway program, enabling cross-chain functionality with ZetaChain",
   "files": [
-    "idl"
+    "prod",
+    "dev",
+    "index.js"
   ],
   "scripts": {
     "fmt:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "fmt": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "rust:fmt": "./scripts/fmt.sh"
+    "rust:fmt": "./scripts/fmt.sh",
+    "anchor-test": "anchor test"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.30.0",
+    "@coral-xyz/anchor": "^0.31.1",
     "@solana/spl-memo": "^0.2.5",
     "@solana/spl-token": "^0.4.6",
     "elliptic": "^6.6.1",

@@ -16,23 +16,46 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Node.js, Solana CLI, and Anchor
-        uses: metadaoproject/setup-anchor@v2
+        uses: heyAyushh/setup-anchor@v4.93
         with:
-          anchor-version: '0.30.0'
-          solana-cli-version: '1.18.15'
-          node-version: '21.0.0'
+          use-avm: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "21"
+          node-version: "22.14.0"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build
-        run: anchor build
+      - name: Build Prod
+        run: |
+          anchor run build-gateway
+          mkdir -p prod/lib
+          mkdir -p prod/idl
+          cp target/deploy/gateway.so prod/lib/
+          cp target/idl/gateway.json prod/idl/gateway.json
 
-      - name: Prepare IDL Files
-        run: mv target/idl ./
+      - name: Build Dev
+        run: |
+          anchor run build-gateway-dev
+          mkdir -p dev/lib
+          mkdir -p dev/idl
+          cp target/deploy/gateway.so dev/lib/
+          cp target/idl/gateway.json dev/idl/gateway.json
+
+      - name: Create index.js
+        run: |
+          cat > index.js << EOF
+           module.exports = {
+            prod: {
+              programId: "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis",
+              idl: require("./mainnet/idl/gateway.json")
+            },
+            dev: {
+              programId: "94U5AHQMKkV5txNJ17QPXWoh474PheGou6cNP2FEuL1d",
+              idl: require("./testnet/idl/gateway.json")
+            }
+          };
+          EOF
 
       - name: Determine NPM Tag
         id: determine-npm-tag

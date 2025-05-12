@@ -1,22 +1,20 @@
 [package]
-name = "gateway"
+name = "connectedSPL"
 version = "0.1.0"
-description = "ZetaChain Gateway program on Solana"
+description = "Test program used for testing withdraw and call SPL feature"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "gateway"
+name = "connected_spl"
 
 [features]
 default = []
-upgrade-test = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
-dev = []
 
 [dependencies]
 anchor-lang = { version = "=0.31.1" }

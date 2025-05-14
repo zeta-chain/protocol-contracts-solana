@@ -47,9 +47,9 @@ enum InstructionId {
 }
 
 #[cfg(feature = "dev")]
-declare_id!("GYzAQz8geSGV37zuyRBLRTK9PReCGx1SF8cEG9ctnjMx");
+declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 #[cfg(not(feature = "dev"))]
-declare_id!("GYzAQz8geSGV37zuyRBLRTK9PReCGx1SF8cEG9ctnjMx");
+declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]

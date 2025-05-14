@@ -10,6 +10,7 @@ import { bufferToHex } from "ethereumjs-util";
 import { getAccount } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import Squads, { DEFAULT_MULTISIG_PROGRAM_ID } from "@sqds/sdk";
+import bs58 from "bs58";
 
 const programId = new web3.PublicKey(
   "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
@@ -28,6 +29,7 @@ const programId = new web3.PublicKey(
   console.log("payer address:", wallet.publicKey.toBase58());
   const gatewayProgram = anchor.workspace.Gateway as Program<Gateway>;
   console.log("program ", gatewayProgram.programId.toString());
+  let gatewayAuthority;
   try {
     const seeds = [Buffer.from("meta", "utf-8")];
     const [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -36,12 +38,13 @@ const programId = new web3.PublicKey(
     );
     console.log("pdaAccount:", pdaAccount.toBase58());
     const ainfo = await gatewayProgram.account.pda.fetch(pdaAccount);
-    console.log(`pda account data: nonce ${ainfo.nonce}`);
+    console.log(`  nonce ${ainfo.nonce}`);
     const hexAddr = bufferToHex(Buffer.from(ainfo.tssAddress));
-    console.log(`pda account data: tss address ${hexAddr}`);
-    console.log(`authority: ${ainfo.authority.toBase58()}`);
-    console.log(`depositPaused: ${ainfo.depositPaused}`);
-    console.log(`chain_id: ${ainfo.chainId}`);
+    console.log(`  tss address ${hexAddr}`);
+    console.log(`  authority: ${ainfo.authority.toBase58()}`);
+    gatewayAuthority = ainfo.authority;
+    console.log(`  depositPaused: ${ainfo.depositPaused}`);
+    console.log(`  chain_id: ${ainfo.chainId}`);
   } catch (e) {
     console.log("exception", e);
   }
@@ -49,32 +52,46 @@ const programId = new web3.PublicKey(
   {
     console.log("Squads v3 multisig info");
     const multisigPK = new PublicKey(
-      "5tM6ytRSy2wXFg6bFK4xZXpHRCyjduNHqSxYSPQqqzGd"
+      "DFKVGha8bEyeNev2S1P7sZVrbzegmzDRMUDasShSUwQ7"
     );
     const squads = Squads.devnet(provider.wallet);
     console.log("program id", DEFAULT_MULTISIG_PROGRAM_ID.toString());
     const ms = await squads.getMultisig(multisigPK);
     console.log("ms", ms.publicKey.toString());
-    console.log("ms authorityIndex", ms.authorityIndex);
-    console.log("ms transactionIndex", ms.transactionIndex);
+    console.log("  authorityIndex", ms.authorityIndex);
+    console.log("  transactionIndex", ms.transactionIndex);
     const authorityPDA = squads.getAuthorityPDA(ms.publicKey, 1);
-    console.log("authorityPDA", authorityPDA.toString());
+    console.log("  authorityPDA", authorityPDA.toString());
+    if (authorityPDA.toString() == gatewayAuthority.toString()) {
+      console.log("Squads authority matches the Gateway PDA stored authority");
+      console.log("Proceeds to build a tx that unpauses Gateway");
+    } else {
+      console.log(
+        "Error: Squads authority mismatches the Gateway PDA stored authority "
+      );
+      return;
+    }
     try {
-      const updateAuthorityInst = await gatewayProgram.methods
-        .updateAuthority(wallet.publicKey)
+      const setDepositPaused = await gatewayProgram.methods
+        .setDepositPaused(false)
         .accounts({
           signer: authorityPDA,
         })
         .instruction();
-      console.log("updateAuthorityInst", updateAuthorityInst);
-      const msTx = await squads.createTransaction(multisigPK, 1);
-      console.log("create tx: ", msTx.publicKey);
-      const ixRes = await squads.addInstruction(
-        msTx.publicKey,
-        updateAuthorityInst
-      );
-      console.log("addInstruction result", ixRes);
-      await squads.activateTransaction(msTx.publicKey);
+      // console.log("setDepositPaused", setDepositPaused);
+      console.log("setDepositPaused in Base58: copy to Squads build TX UI");
+      console.log("  data:", bs58.encode(setDepositPaused.data));
+      console.log("  keys:", setDepositPaused.keys);
+      // The following cannot succeed unless the wallet is part of the multisig.
+
+      // const msTx = await squads.createTransaction(multisigPK, 1);
+      // console.log("create tx: ", msTx.publicKey);
+      // const ixRes = await squads.addInstruction(
+      //   msTx.publicKey,
+      //   setDepositPaused
+      // );
+      // console.log("addInstruction result", ixRes);
+      // await squads.activateTransaction(msTx.publicKey);
     } catch (e) {
       console.log("exception:", e);
     }

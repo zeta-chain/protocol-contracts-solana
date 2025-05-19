@@ -18,19 +18,28 @@ const keyPair = ec.keyFromPrivate(
   "5b81cdf52ba0766983acf8dd0072904733d92afe4dd3499e83e879b43ccb73e8"
 );
 
-const usdcDecimals = 6;
-const chain_id = 111111;
-const chain_id_bn = new anchor.BN(chain_id);
-const maxPayloadSize = 745;
+const publicKeyBuffer = Buffer.from(
+  keyPair.getPublic(false, "hex").slice(2),
+  "hex"
+); // Uncompressed form of public key, remove the '04' prefix
+
+const addressBuffer = keccak256(publicKeyBuffer); // Skip the first byte (format indicator)
+const address = addressBuffer.slice(-20);
+const tssAddress = Array.from(address);
 
 // generic revertOptions
 const revertOptions = {
   revertAddress: anchor.web3.Keypair.generate().publicKey,
-  abortAddress: anchor.web3.Keypair.generate().publicKey,
+  abortAddress: tssAddress, // using tss address for simplicity, used just on protocol side
   callOnRevert: false,
   revertMessage: Buffer.from("", "utf-8"),
   onRevertGasLimit: new anchor.BN(0),
 };
+
+const usdcDecimals = 6;
+const chain_id = 111111;
+const chain_id_bn = new anchor.BN(chain_id);
+const maxPayloadSize = 745;
 
 async function mintSPLToken(
   conn: anchor.web3.Connection,
@@ -162,15 +171,6 @@ describe("Gateway", () => {
 
   let wallet_ata: anchor.web3.PublicKey;
   let pdaAccount: anchor.web3.PublicKey;
-
-  const publicKeyBuffer = Buffer.from(
-    keyPair.getPublic(false, "hex").slice(2),
-    "hex"
-  ); // Uncompressed form of public key, remove the '04' prefix
-
-  const addressBuffer = keccak256(publicKeyBuffer); // Skip the first byte (format indicator)
-  const address = addressBuffer.slice(-20);
-  const tssAddress = Array.from(address);
 
   let seeds = [Buffer.from("meta", "utf-8")];
   [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(

@@ -83,7 +83,7 @@ impl CallableInstruction {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
 pub struct RevertOptions {
     pub revert_address: Pubkey,
-    pub abort_address: Pubkey,
+    pub abort_address: [u8; 20],
     pub call_on_revert: bool,
     pub revert_message: Vec<u8>,
     pub on_revert_gas_limit: u64,

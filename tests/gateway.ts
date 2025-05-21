@@ -417,7 +417,7 @@ describe("Gateway", () => {
     expect(bal1 - bal0).to.be.eq(2_000_000n);
   });
 
-  it("Deposit 1_000_000 fake spl to Gateway", async () => {
+  it("Deposit 1_000_000 fake spl to Gateway fails", async () => {
     let fake_pda_ata = await getOrCreateAssociatedTokenAccount(
       conn,
       wallet,
@@ -446,6 +446,7 @@ describe("Gateway", () => {
           mintAccount: mint.publicKey,
         })
         .rpc();
+      throw new Error("Expected error not thrown");
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("ConstraintRaw.");

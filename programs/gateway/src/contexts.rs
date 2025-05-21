@@ -94,7 +94,7 @@ pub struct DepositSplToken<'info> {
     pub token_program: Program<'info, Token>,
 
     /// The source token account owned by the signer.
-    #[account(mut)]
+    #[account(mut, constraint = from.mint == mint_account.key())]
     pub from: Account<'info, TokenAccount>,
 
     /// The destination token account owned by the PDA.

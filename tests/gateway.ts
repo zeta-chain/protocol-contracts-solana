@@ -211,6 +211,28 @@ describe("Gateway", () => {
 
     // create a fake USDC token account
     await mintSPLToken(conn, wallet, mint_fake);
+
+    // 2. create token account to receive mint
+    let fakeMintTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint_fake.publicKey,
+      wallet.publicKey
+    );
+    // 3. mint some tokens
+    const mintFakeToTransaction = new anchor.web3.Transaction().add(
+      spl.createMintToInstruction(
+        mint_fake.publicKey,
+        fakeMintTokenAccount.address,
+        wallet.publicKey,
+        10_000_000
+      )
+    );
+    await anchor.web3.sendAndConfirmTransaction(
+      anchor.getProvider().connection,
+      mintFakeToTransaction,
+      [wallet]
+    );
   });
 
   it("Whitelist USDC SPL token", async () => {
@@ -369,6 +391,38 @@ describe("Gateway", () => {
     acct = await spl.getAccount(conn, pda_ata.address);
     bal1 = acct.amount;
     expect(bal1 - bal0).to.be.eq(2_000_000n);
+  });
+
+  it("Deposit 1_000_000 fake spl to Gateway fails", async () => {
+    let fake_pda_ata = await getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint_fake.publicKey,
+      pdaAccount,
+      true
+    );
+
+    let fake_tokenAccount = await getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint_fake.publicKey,
+      wallet.publicKey,
+      true
+    );
+    try {
+      await gatewayProgram.methods
+        .depositSplToken(new anchor.BN(1_000_000), Array.from(address))
+        .accounts({
+          from: fake_tokenAccount.address,
+          to: fake_pda_ata.address,
+          mintAccount: mint.publicKey,
+        })
+        .rpc();
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("ConstraintRaw.");
+    }
   });
 
   it("Deposit non-whitelisted SPL tokens should fail", async () => {

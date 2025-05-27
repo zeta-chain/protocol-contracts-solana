@@ -42,6 +42,7 @@ pub mod gateway {
     /// * `recovery_id` - The recovery ID for signature verification.
     /// * `message_hash` - Message hash for signature verification.
     /// * `nonce` - The current nonce value.
+    /// * `failure_reason` - The reason for the failure of original outbound.
     pub fn increment_nonce(
         ctx: Context<IncrementNonce>,
         amount: u64,
@@ -49,6 +50,7 @@ pub mod gateway {
         recovery_id: u8,
         message_hash: [u8; 32],
         nonce: u64,
+        failure_reason: String,
     ) -> Result<()> {
         instructions::execute::increment_nonce(
             ctx,
@@ -57,6 +59,7 @@ pub mod gateway {
             recovery_id,
             message_hash,
             nonce,
+            failure_reason,
         )
     }
 

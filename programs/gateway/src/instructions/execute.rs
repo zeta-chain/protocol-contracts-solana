@@ -15,6 +15,7 @@ pub fn increment_nonce(
     recovery_id: u8,
     message_hash: [u8; 32],
     nonce: u64,
+    failure_reason: String,
 ) -> Result<()> {
     let pda = &mut ctx.accounts.pda;
 
@@ -29,6 +30,8 @@ pub fn increment_nonce(
         &signature,
         recovery_id,
     )?;
+
+    msg!("Failure reason: {}", failure_reason);
 
     Ok(())
 }

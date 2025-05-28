@@ -15,6 +15,9 @@ The PDA account address (derived from seeds `b"rent-payer")
 Am1aA3XQciu3vMG6E9yLa2Y9TcTf2XB3D3akLtjVzu3L
 ```
 
+**Important Note**: The keypair in this repository is public and is used only
+for development purposes. It should not be used on testnet or mainnet
+environments.
 
 # Introduction
 

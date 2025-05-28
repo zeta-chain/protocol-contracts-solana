@@ -1,3 +1,5 @@
+# Solana Protocol Contracts
+
 **Note**: Mainnet-beta, testnet, devnet gateway program address:
 
 ```
@@ -52,7 +54,7 @@ $ sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.0/install)"
 To show the installed versions of the tools
 
 ```bash
-$ olana --version
+$ solana --version
 solana-cli 2.1.0
 
 $ rustc --version
@@ -120,14 +122,14 @@ program to provide this verification service via CPI; see [proposal
 48](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0048-native-program-for-secp256r1-sigverify.md)
 which might be more cost efficient.
 
-In the instruction, the ECDSA signed message_hash must commit to the `nonce`,
+In the instruction, the ECDSA signed message*hash must commit to the `nonce`,
 `amount`, and `to` address. See the check in these instructions like:
 https://github.com/zeta-chain/protocol-contracts-solana/blob/01eeb9733a00b6e972de0578b0e07ebc5837ec54/programs/protocol-contracts-solana/src/lib.rs#L110-L114
 The commitment of `nonce` in the signature prevents replay of the TSS ECDSA
 signed message. Also (to be added in
 https://github.com/zeta-chain/protocol-contracts-solana/issues/6) a chain id of
 Solana should be added to the commitment of the message hash, so that the
-signature cannot be replayed on _other blockchains_ that potentially uses
+signature cannot be replayed on \_other blockchains* that potentially uses
 similar authentication (say in TON).
 
 # Relevant Account and Addresses

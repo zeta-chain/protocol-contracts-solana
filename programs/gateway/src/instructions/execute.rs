@@ -42,6 +42,7 @@ fn handle_sol_common(
     recovery_id: u8,
     message_hash: [u8; 32],
     nonce: u64,
+    sender: Vec<u8>,
     instruction_id: InstructionId,
     instruction_data: Vec<u8>,
 ) -> Result<()> {
@@ -53,7 +54,11 @@ fn handle_sol_common(
         instruction_id,
         nonce,
         amount,
-        &[&ctx.accounts.destination_program.key().to_bytes(), &data],
+        &[
+            &ctx.accounts.destination_program.key().to_bytes(),
+            &sender,
+            &data,
+        ],
         &message_hash,
         &signature,
         recovery_id,
@@ -110,6 +115,7 @@ pub fn handle_sol(
         recovery_id,
         message_hash,
         nonce,
+        sender.to_vec(),
         InstructionId::ExecuteSol,
         instruction_data,
     )
@@ -141,6 +147,7 @@ pub fn handle_sol_revert(
         recovery_id,
         message_hash,
         nonce,
+        sender.to_bytes().to_vec(),
         InstructionId::ExecuteSolRevert,
         instruction_data,
     )
@@ -156,6 +163,7 @@ fn handle_spl_token_common(
     recovery_id: u8,
     message_hash: [u8; 32],
     nonce: u64,
+    sender: Vec<u8>,
     instruction_id: InstructionId,
     instruction_data: Vec<u8>,
 ) -> Result<()> {
@@ -170,6 +178,7 @@ fn handle_spl_token_common(
         &[
             &ctx.accounts.mint_account.key().to_bytes(),
             &ctx.accounts.destination_program_pda_ata.key().to_bytes(),
+            &sender,
             &data,
         ],
         &message_hash,
@@ -259,6 +268,7 @@ pub fn handle_spl_token(
         recovery_id,
         message_hash,
         nonce,
+        sender.to_vec(),
         InstructionId::ExecuteSplToken,
         instruction_data,
     )
@@ -292,6 +302,7 @@ pub fn handle_spl_token_revert(
         recovery_id,
         message_hash,
         nonce,
+        sender.to_bytes().to_vec(),
         InstructionId::ExecuteSplTokenRevert,
         instruction_data,
     )

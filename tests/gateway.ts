@@ -823,6 +823,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -921,6 +922,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -993,6 +995,7 @@ describe("Gateway", () => {
       nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1067,6 +1070,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1140,6 +1144,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1209,6 +1214,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      random_account.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1295,6 +1301,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      random_account.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1365,6 +1372,7 @@ describe("Gateway", () => {
       nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      random_account.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1437,6 +1445,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      random_account.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1508,6 +1517,7 @@ describe("Gateway", () => {
       nonce.toArrayLike(Buffer, "be", 8),
       amount.toArrayLike(Buffer, "be", 8),
       connectedProgram.programId.toBuffer(),
+      random_account.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1599,6 +1609,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1724,6 +1735,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1839,6 +1851,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -1956,6 +1969,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -2073,6 +2087,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -2182,6 +2197,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      randomWallet.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -2301,6 +2317,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      randomWallet.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -2399,6 +2416,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      randomWallet.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -2498,6 +2516,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      randomWallet.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);
@@ -2597,6 +2616,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       destinationPdaAta.address.toBuffer(),
+      randomWallet.publicKey.toBuffer(),
       data,
     ]);
     const message_hash = keccak256(buffer);

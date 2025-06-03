@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{sysvar, sysvar::instructions::get_instruction_relative};
 use std::mem::size_of;
 
 declare_id!("4xEw862A2SEwMjofPkUyd4NEekmVJKJsdHkK3UkAtDrc");
@@ -18,6 +19,26 @@ pub mod connected {
         sender: [u8; 20],
         data: Vec<u8>,
     ) -> Result<()> {
+        // NOTE: this is an illustration how connected programs can check if caller is gateway
+        // it is up to connected programs to configure sysvar account in remaining_accounts
+        // same approach can be used on on_revert and SPL connected programs
+        let current_ix = get_instruction_relative(
+            0,
+            &ctx.accounts.instruction_sysvar_account.to_account_info(),
+        )
+        .unwrap();
+
+        msg!(
+            "on_call invoked by: {}, gateway is {}",
+            current_ix.program_id,
+            gateway::ID
+        );
+
+        require!(
+            current_ix.program_id == gateway::ID,
+            ErrorCode::InvalidCaller
+        );
+
         let pda = &mut ctx.accounts.pda;
 
         // Store the sender's public key
@@ -131,6 +152,10 @@ pub struct OnCall<'info> {
     pub random_wallet: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
+
+    /// CHECK: This is test program.
+    #[account(address = sysvar::instructions::id())]
+    instruction_sysvar_account: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -174,4 +199,7 @@ pub enum ErrorCode {
 
     #[msg("Revert message detected. Transaction execution halted.")]
     RevertMessage,
+
+    #[msg("Caller is not the gateway program.")]
+    InvalidCaller,
 }

@@ -870,6 +870,11 @@ describe("Gateway", () => {
           isSigner: false,
           isWritable: false,
         },
+        {
+          pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+          isSigner: false,
+          isWritable: false,
+        },
       ])
       .rpc();
 
@@ -962,6 +967,11 @@ describe("Gateway", () => {
             isSigner: false,
             isWritable: false,
           },
+          {
+            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+            isSigner: false,
+            isWritable: false,
+          },
         ])
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
@@ -1032,6 +1042,11 @@ describe("Gateway", () => {
           { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
           {
             pubkey: anchor.web3.SystemProgram.programId,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
             isSigner: false,
             isWritable: false,
           },
@@ -1110,6 +1125,11 @@ describe("Gateway", () => {
             isSigner: false,
             isWritable: false,
           },
+          {
+            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+            isSigner: false,
+            isWritable: false,
+          },
         ])
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
@@ -1182,6 +1202,11 @@ describe("Gateway", () => {
           { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
           {
             pubkey: anchor.web3.SystemProgram.programId,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
             isSigner: false,
             isWritable: false,
           },

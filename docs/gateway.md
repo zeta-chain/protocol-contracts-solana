@@ -30,6 +30,19 @@ pub struct Gateway;
 
 ###### Trait Implementations
 
+- **Freeze**
+- **Send**
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
 - **From**
   - ```rust
     fn from(t: T) -> T { /* ... */ }
@@ -41,45 +54,45 @@ pub struct Gateway;
     fn vzip(self: Self) -> V { /* ... */ }
     ```
 
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **Sync**
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **Clone**
-  - ```rust
-    fn clone(self: &Self) -> Gateway { /* ... */ }
-    ```
-
-- **Unpin**
-- **Same**
-- **CloneToUninit**
-  - ```rust
-    unsafe fn clone_to_uninit(self: &Self, dst: *mut u8) { /* ... */ }
-    ```
-
-- **Freeze**
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **RefUnwindSafe**
 - **BorrowMut**
   - ```rust
     fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
-- **TryFrom**
+- **Unpin**
+- **Any**
   - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    ```
+
+- **RefUnwindSafe**
+- **Sync**
+- **UnwindSafe**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **Same**
+- **Clone**
+  - ```rust
+    fn clone(self: &Self) -> Gateway { /* ... */ }
+    ```
+
+- **CloneToUninit**
+  - ```rust
+    unsafe fn clone_to_uninit(self: &Self, dst: *mut u8) { /* ... */ }
+    ```
+
+- **IntoEither**
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **Id**
+  - ```rust
+    fn id() -> Pubkey { /* ... */ }
     ```
 
 - **ToOwned**
@@ -91,19 +104,6 @@ pub struct Gateway;
     fn clone_into(self: &Self, target: &mut T) { /* ... */ }
     ```
 
-- **IntoEither**
-- **Id**
-  - ```rust
-    fn id() -> Pubkey { /* ... */ }
-    ```
-
-- **Send**
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **UnwindSafe**
 ## Module `gateway`
 
 ```rust
@@ -457,14 +457,40 @@ pub struct Initialize {
 
 ###### Trait Implementations
 
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **InstructionData**
+- **Freeze**
+- **UnwindSafe**
+- **RefUnwindSafe**
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **Sync**
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
 - **BorshSerialize**
   - ```rust
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
 - **Any**
@@ -472,58 +498,32 @@ pub struct Initialize {
     fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
-- **TryInto**
+- **IntoEither**
+- **BorshDeserialize**
   - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **InstructionData**
+- **Discriminator**
 - **BorrowMut**
   - ```rust
     fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
-- **UnwindSafe**
-- **Unpin**
-- **VZip**
+- **Same**
+- **Owner**
   - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
+    fn owner() -> Pubkey { /* ... */ }
     ```
 
-- **Discriminator**
-- **Sync**
+- **Unpin**
 - **From**
   - ```rust
     fn from(t: T) -> T { /* ... */ }
     ```
     Returns the argument unchanged.
 
-- **Same**
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
-    ```
-
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **IntoEither**
-- **Freeze**
 - **Send**
-- **RefUnwindSafe**
 #### Struct `IncrementNonce`
 
 Instruction.
@@ -552,9 +552,20 @@ pub struct IncrementNonce {
 
 ###### Trait Implementations
 
-- **InstructionData**
-- **IntoEither**
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
 - **Same**
+- **Send**
+- **Unpin**
+- **RefUnwindSafe**
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
 - **Freeze**
 - **From**
   - ```rust
@@ -562,9 +573,10 @@ pub struct IncrementNonce {
     ```
     Returns the argument unchanged.
 
-- **BorrowMut**
+- **IntoEither**
+- **BorshSerialize**
   - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
 - **TryInto**
@@ -572,51 +584,39 @@ pub struct IncrementNonce {
     fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
     ```
 
+- **Discriminator**
 - **Any**
   - ```rust
     fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
 - **UnwindSafe**
-- **RefUnwindSafe**
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **Sync**
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **Unpin**
 - **TryFrom**
   - ```rust
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
     ```
 
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **Discriminator**
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **Send**
+- **Sync**
 - **Into**
   - ```rust
     fn into(self: Self) -> U { /* ... */ }
     ```
     Calls `U::from(self)`.
 
-- **BorshSerialize**
+- **VZip**
   - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **InstructionData**
+- **BorshDeserialize**
+  - ```rust
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
     ```
 
 #### Struct `Execute`
@@ -651,28 +651,26 @@ pub struct Execute {
 
 ###### Trait Implementations
 
-- **Same**
-- **RefUnwindSafe**
-- **InstructionData**
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **Freeze**
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
 - **Owner**
   - ```rust
     fn owner() -> Pubkey { /* ... */ }
     ```
 
-- **BorshDeserialize**
+- **IntoEither**
+- **Same**
+- **TryFrom**
   - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
 - **BorshSerialize**
@@ -680,44 +678,46 @@ pub struct Execute {
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **Sync**
-- **IntoEither**
-- **Unpin**
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
-    ```
-
 - **Discriminator**
-- **Send**
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **UnwindSafe**
+- **RefUnwindSafe**
+- **Freeze**
 - **From**
   - ```rust
     fn from(t: T) -> T { /* ... */ }
     ```
     Returns the argument unchanged.
 
+- **Unpin**
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
+- **UnwindSafe**
+- **Sync**
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **BorshDeserialize**
+  - ```rust
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **Send**
+- **InstructionData**
 #### Struct `ExecuteRevert`
 
 Instruction.
@@ -750,54 +750,10 @@ pub struct ExecuteRevert {
 
 ###### Trait Implementations
 
-- **RefUnwindSafe**
-- **InstructionData**
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
-    ```
-
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **Sync**
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
 - **Same**
 - **BorshSerialize**
   - ```rust
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **Freeze**
-- **Unpin**
-- **Send**
-- **Discriminator**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
 - **BorshDeserialize**
@@ -805,18 +761,62 @@ pub struct ExecuteRevert {
     fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **UnwindSafe**
-- **BorrowMut**
+- **From**
   - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
-- **IntoEither**
+- **Sync**
+- **InstructionData**
+- **UnwindSafe**
 - **Borrow**
   - ```rust
     fn borrow(self: &Self) -> &T { /* ... */ }
     ```
 
+- **Freeze**
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **Discriminator**
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **Unpin**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **RefUnwindSafe**
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    ```
+
+- **IntoEither**
+- **Send**
 #### Struct `ExecuteSplToken`
 
 Instruction.
@@ -851,16 +851,35 @@ pub struct ExecuteSplToken {
 
 ###### Trait Implementations
 
-- **Borrow**
+- **TryInto**
   - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
     ```
 
 - **Same**
-- **RefUnwindSafe**
+- **Send**
+- **Sync**
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
 - **VZip**
   - ```rust
     fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **IntoEither**
+- **Unpin**
+- **Freeze**
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
 - **Into**
@@ -869,34 +888,17 @@ pub struct ExecuteSplToken {
     ```
     Calls `U::from(self)`.
 
+- **InstructionData**
+- **RefUnwindSafe**
 - **BorshDeserialize**
   - ```rust
     fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **BorrowMut**
+- **UnwindSafe**
+- **Borrow**
   - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **IntoEither**
-- **InstructionData**
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **Sync**
-- **Send**
-- **Unpin**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    fn borrow(self: &Self) -> &T { /* ... */ }
     ```
 
 - **BorshSerialize**
@@ -904,14 +906,12 @@ pub struct ExecuteSplToken {
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **Freeze**
-- **Any**
+- **Discriminator**
+- **Owner**
   - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    fn owner() -> Pubkey { /* ... */ }
     ```
 
-- **Discriminator**
-- **UnwindSafe**
 - **From**
   - ```rust
     fn from(t: T) -> T { /* ... */ }
@@ -952,8 +952,62 @@ pub struct ExecuteSplTokenRevert {
 
 ###### Trait Implementations
 
-- **Discriminator**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **BorshSerialize**
+  - ```rust
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **BorshDeserialize**
+  - ```rust
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **UnwindSafe**
+- **RefUnwindSafe**
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
 - **Unpin**
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **Same**
+- **Discriminator**
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    ```
+
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
 - **Into**
   - ```rust
     fn into(self: Self) -> U { /* ... */ }
@@ -962,63 +1016,9 @@ pub struct ExecuteSplTokenRevert {
 
 - **InstructionData**
 - **Freeze**
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **Sync**
-- **RefUnwindSafe**
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
 - **IntoEither**
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **BorshSerialize**
-  - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **Same**
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
-    ```
-
 - **Send**
-- **UnwindSafe**
+- **Sync**
 #### Struct `SetDepositPaused`
 
 Instruction.
@@ -1039,65 +1039,24 @@ pub struct SetDepositPaused {
 
 ###### Trait Implementations
 
-- **IntoEither**
-- **Unpin**
-- **TryFrom**
+- **BorshSerialize**
   - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **InstructionData**
 - **Send**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
+- **Freeze**
+- **Unpin**
 - **Into**
   - ```rust
     fn into(self: Self) -> U { /* ... */ }
     ```
     Calls `U::from(self)`.
 
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
 - **UnwindSafe**
 - **Any**
   - ```rust
     fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **Sync**
-- **Same**
-- **BorshSerialize**
-  - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **RefUnwindSafe**
-- **Freeze**
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
 - **BorshDeserialize**
@@ -1106,6 +1065,47 @@ pub struct SetDepositPaused {
     ```
 
 - **Discriminator**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **Same**
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **Sync**
+- **IntoEither**
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **InstructionData**
+- **RefUnwindSafe**
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
 #### Struct `UpdateTss`
 
 Instruction.
@@ -1126,50 +1126,22 @@ pub struct UpdateTss {
 
 ###### Trait Implementations
 
-- **RefUnwindSafe**
-- **Borrow**
+- **Same**
+- **InstructionData**
+- **Unpin**
+- **TryInto**
   - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
     ```
 
+- **Discriminator**
+- **Freeze**
 - **Into**
   - ```rust
     fn into(self: Self) -> U { /* ... */ }
     ```
     Calls `U::from(self)`.
 
-- **IntoEither**
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **Discriminator**
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **Unpin**
-- **Same**
-- **UnwindSafe**
-- **BorshSerialize**
-  - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **InstructionData**
-- **Freeze**
 - **TryFrom**
   - ```rust
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
@@ -1180,19 +1152,47 @@ pub struct UpdateTss {
     fn vzip(self: Self) -> V { /* ... */ }
     ```
 
+- **Send**
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
 - **Owner**
   - ```rust
     fn owner() -> Pubkey { /* ... */ }
     ```
 
-- **Send**
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    ```
+
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **Sync**
+- **IntoEither**
 - **From**
   - ```rust
     fn from(t: T) -> T { /* ... */ }
     ```
     Returns the argument unchanged.
 
-- **Sync**
+- **BorshSerialize**
+  - ```rust
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **UnwindSafe**
+- **RefUnwindSafe**
+- **BorshDeserialize**
+  - ```rust
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
 #### Struct `UpdateAuthority`
 
 Instruction.
@@ -1213,30 +1213,12 @@ pub struct UpdateAuthority {
 
 ###### Trait Implementations
 
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
-    ```
-
 - **Send**
+- **UnwindSafe**
+- **RefUnwindSafe**
 - **Borrow**
   - ```rust
     fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
 - **Any**
@@ -1244,42 +1226,60 @@ pub struct UpdateAuthority {
     fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
-- **RefUnwindSafe**
-- **InstructionData**
-- **Same**
-- **From**
+- **VZip**
   - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
-- **UnwindSafe**
+- **Sync**
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
 - **Into**
   - ```rust
     fn into(self: Self) -> U { /* ... */ }
     ```
     Calls `U::from(self)`.
 
-- **BorshSerialize**
-  - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **IntoEither**
-- **Unpin**
+- **Same**
 - **Freeze**
+- **Unpin**
 - **BorrowMut**
   - ```rust
     fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
-- **Sync**
+- **IntoEither**
 - **Discriminator**
+- **BorshDeserialize**
+  - ```rust
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **InstructionData**
+- **BorshSerialize**
+  - ```rust
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
 #### Struct `ResetNonce`
 
 Instruction.
@@ -1300,11 +1300,24 @@ pub struct ResetNonce {
 
 ###### Trait Implementations
 
-- **Send**
-- **Sync**
+- **Same**
 - **Borrow**
   - ```rust
     fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **IntoEither**
+- **Freeze**
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **UnwindSafe**
+- **RefUnwindSafe**
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
 - **BorshDeserialize**
@@ -1312,21 +1325,11 @@ pub struct ResetNonce {
     fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **Discriminator**
 - **InstructionData**
-- **Owner**
+- **Sync**
+- **BorrowMut**
   - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
 - **TryFrom**
@@ -1334,30 +1337,10 @@ pub struct ResetNonce {
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
     ```
 
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **UnwindSafe**
-- **RefUnwindSafe**
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **Same**
-- **Freeze**
 - **Unpin**
-- **BorshSerialize**
+- **VZip**
   - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
 - **From**
@@ -1366,7 +1349,24 @@ pub struct ResetNonce {
     ```
     Returns the argument unchanged.
 
-- **IntoEither**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **Send**
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
+- **BorshSerialize**
+  - ```rust
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **Discriminator**
 #### Struct `WhitelistSplMint`
 
 Instruction.
@@ -1393,43 +1393,40 @@ pub struct WhitelistSplMint {
 
 ###### Trait Implementations
 
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **UnwindSafe**
 - **Discriminator**
-- **Sync**
-- **Unpin**
-- **RefUnwindSafe**
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **IntoEither**
-- **Same**
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
 - **BorshDeserialize**
   - ```rust
     fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
+- **Same**
+- **RefUnwindSafe**
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **Send**
+- **InstructionData**
 - **BorrowMut**
   - ```rust
     fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
-- **InstructionData**
-- **Send**
-- **BorshSerialize**
+- **VZip**
   - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
 - **Any**
@@ -1437,15 +1434,9 @@ pub struct WhitelistSplMint {
     fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
-- **Into**
+- **BorshSerialize**
   - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
 - **Owner**
@@ -1453,13 +1444,22 @@ pub struct WhitelistSplMint {
     fn owner() -> Pubkey { /* ... */ }
     ```
 
-- **UnwindSafe**
 - **Freeze**
-- **TryInto**
+- **Unpin**
+- **IntoEither**
+- **Into**
   - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    fn into(self: Self) -> U { /* ... */ }
     ```
+    Calls `U::from(self)`.
 
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
+- **Sync**
 #### Struct `UnwhitelistSplMint`
 
 Instruction.
@@ -1491,30 +1491,59 @@ pub struct UnwhitelistSplMint {
     fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
-- **Same**
 - **TryFrom**
   - ```rust
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
     ```
 
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
 - **Send**
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    ```
+
+- **Unpin**
+- **Same**
+- **Discriminator**
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **IntoEither**
+- **Freeze**
+- **Sync**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **InstructionData**
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
 - **From**
   - ```rust
     fn from(t: T) -> T { /* ... */ }
     ```
     Returns the argument unchanged.
 
-- **IntoEither**
-- **RefUnwindSafe**
-- **UnwindSafe**
-- **TryInto**
+- **BorshSerialize**
   - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
 - **BorshDeserialize**
@@ -1522,37 +1551,8 @@ pub struct UnwhitelistSplMint {
     fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **Freeze**
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **Unpin**
-- **BorshSerialize**
-  - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **Discriminator**
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **Sync**
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **InstructionData**
+- **RefUnwindSafe**
+- **UnwindSafe**
 #### Struct `Deposit`
 
 Instruction.
@@ -1577,19 +1577,15 @@ pub struct Deposit {
 
 ###### Trait Implementations
 
-- **Freeze**
-- **UnwindSafe**
-- **From**
+- **Into**
   - ```rust
-    fn from(t: T) -> T { /* ... */ }
+    fn into(self: Self) -> U { /* ... */ }
     ```
-    Returns the argument unchanged.
+    Calls `U::from(self)`.
 
-- **Discriminator**
-- **Sync**
-- **BorrowMut**
+- **BorshSerialize**
   - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
 - **Owner**
@@ -1597,14 +1593,11 @@ pub struct Deposit {
     fn owner() -> Pubkey { /* ... */ }
     ```
 
-- **BorshSerialize**
+- **RefUnwindSafe**
+- **Unpin**
+- **BorshDeserialize**
   - ```rust
-    fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
 - **VZip**
@@ -1612,29 +1605,22 @@ pub struct Deposit {
     fn vzip(self: Self) -> V { /* ... */ }
     ```
 
-- **Send**
-- **IntoEither**
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
 - **Borrow**
   - ```rust
     fn borrow(self: &Self) -> &T { /* ... */ }
     ```
 
-- **Unpin**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
+- **Discriminator**
 - **InstructionData**
-- **Into**
+- **Freeze**
+- **BorrowMut**
   - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
 - **Any**
@@ -1642,8 +1628,22 @@ pub struct Deposit {
     fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
+- **UnwindSafe**
+- **Sync**
+- **Send**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **IntoEither**
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
 - **Same**
-- **RefUnwindSafe**
 #### Struct `DepositAndCall`
 
 Instruction.
@@ -1670,34 +1670,17 @@ pub struct DepositAndCall {
 
 ###### Trait Implementations
 
-- **Same**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **RefUnwindSafe**
 - **From**
   - ```rust
     fn from(t: T) -> T { /* ... */ }
     ```
     Returns the argument unchanged.
 
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
+- **Sync**
 - **UnwindSafe**
-- **Owner**
+- **BorrowMut**
   - ```rust
-    fn owner() -> Pubkey { /* ... */ }
-    ```
-
-- **Freeze**
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
 - **Into**
@@ -1705,21 +1688,6 @@ pub struct DepositAndCall {
     fn into(self: Self) -> U { /* ... */ }
     ```
     Calls `U::from(self)`.
-
-- **InstructionData**
-- **Sync**
-- **Send**
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **Unpin**
-- **IntoEither**
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
 
 - **BorshDeserialize**
   - ```rust
@@ -1731,10 +1699,42 @@ pub struct DepositAndCall {
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
     ```
 
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    ```
+
 - **Discriminator**
+- **Freeze**
+- **Same**
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **IntoEither**
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
 - **BorshSerialize**
   - ```rust
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **InstructionData**
+- **RefUnwindSafe**
+- **Send**
+- **Unpin**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
     ```
 
 #### Struct `DepositSplToken`
@@ -1761,47 +1761,46 @@ pub struct DepositSplToken {
 
 ###### Trait Implementations
 
-- **Any**
+- **Borrow**
   - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    fn borrow(self: &Self) -> &T { /* ... */ }
     ```
 
-- **Send**
-- **Sync**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **Freeze**
 - **BorshDeserialize**
   - ```rust
     fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
-- **InstructionData**
-- **UnwindSafe**
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **RefUnwindSafe**
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **Unpin**
 - **BorshSerialize**
   - ```rust
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
+- **Sync**
+- **Discriminator**
+- **Freeze**
+- **IntoEither**
 - **Owner**
   - ```rust
     fn owner() -> Pubkey { /* ... */ }
     ```
+
+- **RefUnwindSafe**
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
 
 - **From**
   - ```rust
@@ -1809,25 +1808,26 @@ pub struct DepositSplToken {
     ```
     Returns the argument unchanged.
 
-- **Borrow**
+- **Same**
+- **VZip**
   - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
+    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
+- **Send**
+- **InstructionData**
 - **TryFrom**
   - ```rust
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
     ```
 
-- **IntoEither**
-- **Discriminator**
-- **Into**
+- **Any**
   - ```rust
-    fn into(self: Self) -> U { /* ... */ }
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
-    Calls `U::from(self)`.
 
-- **Same**
+- **UnwindSafe**
+- **Unpin**
 #### Struct `DepositSplTokenAndCall`
 
 Instruction.
@@ -1854,24 +1854,52 @@ pub struct DepositSplTokenAndCall {
 
 ###### Trait Implementations
 
+- **Freeze**
+- **Discriminator**
+- **Sync**
 - **Unpin**
-- **UnwindSafe**
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
 - **RefUnwindSafe**
-- **Same**
-- **IntoEither**
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
 - **BorshSerialize**
   - ```rust
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
+- **UnwindSafe**
 - **BorshDeserialize**
   - ```rust
     fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **InstructionData**
 - **Owner**
   - ```rust
     fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
 - **Send**
@@ -1881,44 +1909,16 @@ pub struct DepositSplTokenAndCall {
     ```
     Calls `U::from(self)`.
 
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
-    ```
-
-- **InstructionData**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **Discriminator**
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **Sync**
-- **Freeze**
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
+- **IntoEither**
 - **BorrowMut**
   - ```rust
     fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
+- **Same**
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
     ```
 
 #### Struct `Call`
@@ -1945,22 +1945,59 @@ pub struct Call {
 
 ###### Trait Implementations
 
-- **Unpin**
-- **Owner**
+- **BorshDeserialize**
   - ```rust
-    fn owner() -> Pubkey { /* ... */ }
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
     ```
 
+- **Freeze**
 - **Any**
   - ```rust
     fn type_id(self: &Self) -> TypeId { /* ... */ }
     ```
 
-- **UnwindSafe**
+- **Send**
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
+- **TryFrom**
+  - ```rust
+    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
+    ```
+
 - **Sync**
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **IntoEither**
 - **BorshSerialize**
   - ```rust
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **Discriminator**
+- **InstructionData**
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **Same**
+- **Unpin**
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
     ```
 
 - **BorrowMut**
@@ -1968,50 +2005,13 @@ pub struct Call {
     fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
 
-- **Discriminator**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
+- **RefUnwindSafe**
 - **Borrow**
   - ```rust
     fn borrow(self: &Self) -> &T { /* ... */ }
     ```
 
-- **Send**
-- **RefUnwindSafe**
-- **Same**
-- **Freeze**
-- **TryFrom**
-  - ```rust
-    fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
-    ```
-
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
-    ```
-
-- **IntoEither**
-- **InstructionData**
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
+- **UnwindSafe**
 #### Struct `Withdraw`
 
 Instruction.
@@ -2040,56 +2040,30 @@ pub struct Withdraw {
 
 ###### Trait Implementations
 
-- **Sync**
-- **Any**
-  - ```rust
-    fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **RefUnwindSafe**
 - **Into**
   - ```rust
     fn into(self: Self) -> U { /* ... */ }
     ```
     Calls `U::from(self)`.
 
-- **VZip**
+- **Same**
+- **Unpin**
+- **Send**
+- **TryInto**
   - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
     ```
 
+- **UnwindSafe**
+- **Any**
+  - ```rust
+    fn type_id(self: &Self) -> TypeId { /* ... */ }
+    ```
+
+- **IntoEither**
 - **BorshSerialize**
   - ```rust
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
-- **IntoEither**
-- **Unpin**
-- **Freeze**
-- **Owner**
-  - ```rust
-    fn owner() -> Pubkey { /* ... */ }
     ```
 
 - **TryFrom**
@@ -2097,15 +2071,41 @@ pub struct Withdraw {
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
     ```
 
-- **Discriminator**
-- **InstructionData**
-- **Send**
-- **Same**
-- **UnwindSafe**
-- **TryInto**
+- **BorrowMut**
   - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
     ```
+
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **InstructionData**
+- **Owner**
+  - ```rust
+    fn owner() -> Pubkey { /* ... */ }
+    ```
+
+- **Freeze**
+- **Sync**
+- **RefUnwindSafe**
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **BorshDeserialize**
+  - ```rust
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **Discriminator**
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
 
 #### Struct `WithdrawSplToken`
 
@@ -2137,55 +2137,9 @@ pub struct WithdrawSplToken {
 
 ###### Trait Implementations
 
-- **Unpin**
-- **Send**
-- **RefUnwindSafe**
-- **From**
-  - ```rust
-    fn from(t: T) -> T { /* ... */ }
-    ```
-    Returns the argument unchanged.
-
 - **Any**
   - ```rust
     fn type_id(self: &Self) -> TypeId { /* ... */ }
-    ```
-
-- **Same**
-- **BorrowMut**
-  - ```rust
-    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
-    ```
-
-- **UnwindSafe**
-- **Discriminator**
-- **Into**
-  - ```rust
-    fn into(self: Self) -> U { /* ... */ }
-    ```
-    Calls `U::from(self)`.
-
-- **Sync**
-- **TryInto**
-  - ```rust
-    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
-    ```
-
-- **BorshDeserialize**
-  - ```rust
-    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
-    ```
-
-- **InstructionData**
-- **Borrow**
-  - ```rust
-    fn borrow(self: &Self) -> &T { /* ... */ }
-    ```
-
-- **Freeze**
-- **VZip**
-  - ```rust
-    fn vzip(self: Self) -> V { /* ... */ }
     ```
 
 - **IntoEither**
@@ -2194,11 +2148,57 @@ pub struct WithdrawSplToken {
     fn serialize<W: borsh::maybestd::io::Write>(self: &Self, writer: &mut W) -> ::core::result::Result<(), borsh::maybestd::io::Error> { /* ... */ }
     ```
 
+- **Unpin**
+- **From**
+  - ```rust
+    fn from(t: T) -> T { /* ... */ }
+    ```
+    Returns the argument unchanged.
+
+- **Borrow**
+  - ```rust
+    fn borrow(self: &Self) -> &T { /* ... */ }
+    ```
+
+- **Discriminator**
+- **InstructionData**
 - **Owner**
   - ```rust
     fn owner() -> Pubkey { /* ... */ }
     ```
 
+- **VZip**
+  - ```rust
+    fn vzip(self: Self) -> V { /* ... */ }
+    ```
+
+- **Send**
+- **RefUnwindSafe**
+- **Same**
+- **Freeze**
+- **BorshDeserialize**
+  - ```rust
+    fn deserialize_reader<R: borsh::maybestd::io::Read>(reader: &mut R) -> ::core::result::Result<Self, borsh::maybestd::io::Error> { /* ... */ }
+    ```
+
+- **Into**
+  - ```rust
+    fn into(self: Self) -> U { /* ... */ }
+    ```
+    Calls `U::from(self)`.
+
+- **Sync**
+- **BorrowMut**
+  - ```rust
+    fn borrow_mut(self: &mut Self) -> &mut T { /* ... */ }
+    ```
+
+- **TryInto**
+  - ```rust
+    fn try_into(self: Self) -> Result<U, <U as TryFrom<T>>::Error> { /* ... */ }
+    ```
+
+- **UnwindSafe**
 - **TryFrom**
   - ```rust
     fn try_from(value: U) -> Result<T, <T as TryFrom<U>>::Error> { /* ... */ }
@@ -2216,16 +2216,10 @@ pub mod accounts { /* ... */ }
 
 ### Re-exports
 
-#### Re-export `crate::__client_accounts_execute_spl_token::*`
+#### Re-export `crate::__client_accounts_deposit_spl_token::*`
 
 ```rust
-pub use crate::__client_accounts_execute_spl_token::*;
-```
-
-#### Re-export `crate::__client_accounts_withdraw_spl_token::*`
-
-```rust
-pub use crate::__client_accounts_withdraw_spl_token::*;
+pub use crate::__client_accounts_deposit_spl_token::*;
 ```
 
 #### Re-export `crate::__client_accounts_call::*`
@@ -2240,46 +2234,10 @@ pub use crate::__client_accounts_call::*;
 pub use crate::__client_accounts_initialize::*;
 ```
 
-#### Re-export `crate::__client_accounts_update_tss::*`
-
-```rust
-pub use crate::__client_accounts_update_tss::*;
-```
-
-#### Re-export `crate::__client_accounts_deposit_spl_token::*`
-
-```rust
-pub use crate::__client_accounts_deposit_spl_token::*;
-```
-
-#### Re-export `crate::__client_accounts_unwhitelist::*`
-
-```rust
-pub use crate::__client_accounts_unwhitelist::*;
-```
-
 #### Re-export `crate::__client_accounts_whitelist::*`
 
 ```rust
 pub use crate::__client_accounts_whitelist::*;
-```
-
-#### Re-export `crate::__client_accounts_deposit::*`
-
-```rust
-pub use crate::__client_accounts_deposit::*;
-```
-
-#### Re-export `crate::__client_accounts_execute::*`
-
-```rust
-pub use crate::__client_accounts_execute::*;
-```
-
-#### Re-export `crate::__client_accounts_update_paused::*`
-
-```rust
-pub use crate::__client_accounts_update_paused::*;
 ```
 
 #### Re-export `crate::__client_accounts_update_authority::*`
@@ -2288,10 +2246,52 @@ pub use crate::__client_accounts_update_paused::*;
 pub use crate::__client_accounts_update_authority::*;
 ```
 
+#### Re-export `crate::__client_accounts_unwhitelist::*`
+
+```rust
+pub use crate::__client_accounts_unwhitelist::*;
+```
+
+#### Re-export `crate::__client_accounts_execute::*`
+
+```rust
+pub use crate::__client_accounts_execute::*;
+```
+
+#### Re-export `crate::__client_accounts_withdraw_spl_token::*`
+
+```rust
+pub use crate::__client_accounts_withdraw_spl_token::*;
+```
+
 #### Re-export `crate::__client_accounts_withdraw::*`
 
 ```rust
 pub use crate::__client_accounts_withdraw::*;
+```
+
+#### Re-export `crate::__client_accounts_update_tss::*`
+
+```rust
+pub use crate::__client_accounts_update_tss::*;
+```
+
+#### Re-export `crate::__client_accounts_deposit::*`
+
+```rust
+pub use crate::__client_accounts_deposit::*;
+```
+
+#### Re-export `crate::__client_accounts_update_paused::*`
+
+```rust
+pub use crate::__client_accounts_update_paused::*;
+```
+
+#### Re-export `crate::__client_accounts_execute_spl_token::*`
+
+```rust
+pub use crate::__client_accounts_execute_spl_token::*;
 ```
 
 #### Re-export `crate::__client_accounts_increment_nonce::*`

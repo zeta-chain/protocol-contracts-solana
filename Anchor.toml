@@ -4,9 +4,9 @@ solana_version = "2.1.0"
 
 [workspace]
 members = [
-  "programs/gateway",
-  "programs/examples/connected",
-  "programs/examples/connectedSPL"
+    "programs/gateway",
+    "programs/examples/connected",
+    "programs/examples/connectedSPL",
 ]
 
 [features]
@@ -31,3 +31,5 @@ build-gateway-dev = "anchor build --program-name gateway -- --features dev"
 build-gateway = "anchor build --program-name gateway"
 build-gateway-dev-upgrade-test = "anchor build --program-name gateway -- --features dev --features upgrade-test && mv target/deploy/gateway.so target/deploy/gateway_upgrade.so"
 build-examples = "anchor build --program-name connected && anchor build --program-name connected_spl"
+test2 = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/ops_transfer_authority_devnet.ts"
+test_transfer_authority_mainnet = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/ops_transfer_authority_mainnet.ts"

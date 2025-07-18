@@ -21,9 +21,6 @@ gateway = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
 [registry]
 url = "https://api.apr.dev"
 
-[provider]
-cluster = "Localnet"
-wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
@@ -31,3 +28,5 @@ build-gateway-dev = "anchor build --program-name gateway -- --features dev"
 build-gateway = "anchor build --program-name gateway"
 build-gateway-dev-upgrade-test = "anchor build --program-name gateway -- --features dev --features upgrade-test && mv target/deploy/gateway.so target/deploy/gateway_upgrade.so"
 build-examples = "anchor build --program-name connected && anchor build --program-name connected_spl"
+
+initialize = "npx ts-node scripts/initialize.ts"

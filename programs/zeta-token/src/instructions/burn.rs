@@ -1,12 +1,11 @@
-use crate::{contexts::Burn, errors::ZetaTokenErrors, state::ZetaTokenPda};
+use crate::{contexts::BurnZeta, errors::ZetaTokenErrors};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{burn, Burn};
 
 /// Burn ZETA tokens from an account.
-pub fn burn_tokens(ctx: Context<Burn>, amount: u64) -> Result<()> {
+pub fn burn_tokens(ctx: Context<BurnZeta>, amount: u64) -> Result<()> {
     let zeta_token_pda = &mut ctx.accounts.zeta_token_pda;
 
-    // Check amount is valid.
     require!(amount > 0, ZetaTokenErrors::InvalidAmount);
 
     // Burn tokens from account
@@ -20,7 +19,6 @@ pub fn burn_tokens(ctx: Context<Burn>, amount: u64) -> Result<()> {
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
     burn(cpi_ctx, amount)?;
 
-    // Update total supply.
     zeta_token_pda.total_supply -= amount;
 
     msg!(

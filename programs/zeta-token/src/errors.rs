@@ -2,19 +2,19 @@ use anchor_lang::prelude::*;
 
 /// Errors that can occur during execution.
 #[error_code]
-pub enum Errors {
-    #[msg("InvalidAddress")]
+pub enum ZetaTokenErrors {
+    #[msg("Invalid address provided.")]
     InvalidAddress,
-    #[msg("Unauthorized")]
+
+    #[msg("Caller is not authorized.")]
     Unauthorized,
-    #[msg("CallerIsNotConnector")]
+
+    #[msg("Caller is not the connector.")]
     CallerIsNotConnector,
-    #[msg("CallerIsNotConnector")]
-    CallerIsNotConnector,
-    #[msg("CallerIsNotTssUpdater")]
-    CallerIsNotTssUpdater,
-    #[msg("MaxSupplyExceeded")]
+
+    #[msg("Max supply would be exceeded.")]
     MaxSupplyExceeded,
-    #[msg("InvalidAmount")]
+
+    #[msg("Amount must be greater than 0.")]
     InvalidAmount,
 }

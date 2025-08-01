@@ -1,12 +1,12 @@
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{Mint as TokenMint, Token, TokenAccount};
 use std::mem::size_of;
 
-/// Instruction context for intializing the ZETA token program.
+/// Context for initializing the ZETA token program.
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-    /// The account of the signer initializing the program.
+    /// The signer initializing the program.
     #[account(mut)]
     pub signer: Signer<'info>,
 
@@ -30,7 +30,7 @@ pub struct Initialize<'info> {
         seeds = [b"zeta-mint"],
         bump
     )]
-    pub zeta_mint: Account<'info, Mint>,
+    pub zeta_mint: Account<'info, TokenMint>,
 
     /// The system program.
     pub system_program: Program<'info, System>,
@@ -38,13 +38,13 @@ pub struct Initialize<'info> {
     /// The token program.
     pub token_program: Program<'info, Token>,
 
-    /// The rent sysvar
+    /// The rent sysvar.
     pub rent: Sysvar<'info, Rent>,
 }
 
-/// Instruction context for minting ZETA tokens.
+/// Context for minting ZETA tokens.
 #[derive(Accounts)]
-pub struct Mint<'info> {
+pub struct MintZeta<'info> {
     /// ZETA token PDA.
     #[account(
         mut,
@@ -53,33 +53,33 @@ pub struct Mint<'info> {
     )]
     pub zeta_token_pda: Account<'info, ZetaTokenPda>,
 
-    /// ZETA token mint account.
+    /// The ZETA token mint.
     #[account(
         mut,
         seeds = [b"zeta-mint"],
         bump,
-        constraint = zeta_mint.key() == zeta_token_pda.mint_authority
+        constraint = zeta_mint.key() == zeta_token_pda.connector_authority
     )]
-    pub zeta_mint: Account<'info, Mint>,
+    pub zeta_mint: Account<'info, TokenMint>,
 
     /// The recipient's token account.
     #[account(mut)]
-    pub recipient_ata: Account<'info, TokenAccount>,
+    pub recipient_token_account: Account<'info, TokenAccount>,
 
-    /// The token program.
+    /// The token program
     pub token_program: Program<'info, Token>,
 
     /// The mint authority (ZetaConnector).
     #[account(
-        constraint = mint_authority.key() == zeta_token_pda.mint_authority
+        constraint = mint_authority.key() == zeta_token_pda.connector_authority 
         @ crate::errors::ZetaTokenErrors::CallerIsNotConnector
     )]
     pub mint_authority: Signer<'info>,
 }
 
-/// Instruction context for burning ZETA tokens.
+/// Context for burning ZETA tokens.
 #[derive(Accounts)]
-pub struct Burn<'info> {
+pub struct BurnZeta<'info> {
     /// ZETA token PDA.
     #[account(
         mut,
@@ -88,16 +88,17 @@ pub struct Burn<'info> {
     )]
     pub zeta_token_pda: Account<'info, ZetaTokenPda>,
 
-    /// ZETA token mint account.
+    /// The ZETA token mint.
     #[account(
         mut,
         seeds = [b"zeta-mint"],
         bump,
-        constraint = zeta_mint.key() == zeta_token_pda.mint_authority
+        constraint = zeta_mint.key() == zeta_token_pda.connector_authority
     )]
-    pub zeta_mint: Account<'info, Mint>,
+    pub zeta_mint: Account<'info, TokenMint>,
 
     /// The token account to burn from.
+    #[account(mut)]
     pub token_account: Account<'info, TokenAccount>,
 
     /// The token program.
@@ -105,15 +106,15 @@ pub struct Burn<'info> {
 
     /// The burn authority (ZetaConnector).
     #[account(
-        constraint = burn_authority.key() == zeta_token_pda.burn_authority
+        constraint = burn_authority.key() == zeta_token_pda.connector_authority 
         @ crate::errors::ZetaTokenErrors::CallerIsNotConnector
     )]
     pub burn_authority: Signer<'info>,
 }
 
-/// Instruction context for updating TSS address.
+/// Context for updating TSS address.
 #[derive(Accounts)]
-pub struct UpdateTSSAddress<'info> {
+pub struct UpdateTssAddress<'info> {
     /// ZETA token PDA.
     #[account(
         mut,
@@ -124,8 +125,7 @@ pub struct UpdateTSSAddress<'info> {
 
     /// The updater (must be TSS updater or current TSS).
     #[account(
-        constraint = updater.key() == zeta_token_pda.tss_address_updater ||
-        updater.key() == Pubkey::new_from_array(zeta_token_pda.tss_address)
+        constraint = updater.key() == zeta_token_pda.tss_address_updater
     )]
-    pub updater: Signer<'info>.
+    pub updater: Signer<'info>,
 }

@@ -5,8 +5,9 @@ solana_version = "2.1.0"
 [workspace]
 members = [
   "programs/gateway",
+  "programs/zeta-token",
   "programs/examples/connected",
-  "programs/examples/connectedSPL"
+  "programs/examples/connectedSPL",
 ]
 
 [features]
@@ -17,6 +18,7 @@ skip-lint = false
 connected = "4xEw862A2SEwMjofPkUyd4NEekmVJKJsdHkK3UkAtDrc"
 connected_spl = "8iUjRRhUCn8BjrvsWPfj8mguTe9L81ES4oAUApiF8JFC"
 gateway = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
+zeta_token = "EMNgcw2sH5wRKMqf9St4Rz1LEqvpZYCsTcE3hdgGsPD6"
 
 [registry]
 url = "https://api.apr.dev"

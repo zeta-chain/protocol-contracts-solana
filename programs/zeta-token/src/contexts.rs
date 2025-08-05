@@ -25,12 +25,15 @@ pub struct Initialize<'info> {
         init,
         payer = signer,
         mint::decimals = 18,
-        mint::authority = zeta_token_pda,
+        mint::authority = connector_authority,
         mint::freeze_authority = zeta_token_pda,
         seeds = [b"zeta-mint"],
         bump
     )]
     pub zeta_mint: Account<'info, TokenMint>,
+
+    /// The connector authority (ZetaConnector).
+    pub connector_authority: Signer<'info>,
 
     /// The system program.
     pub system_program: Program<'info, System>,
@@ -58,7 +61,7 @@ pub struct MintZeta<'info> {
         mut,
         seeds = [b"zeta-mint"],
         bump,
-        constraint = zeta_mint.key() == zeta_token_pda.connector_authority
+        constraint = zeta_mint.mint_authority.unwrap() == zeta_token_pda.connector_authority
     )]
     pub zeta_mint: Account<'info, TokenMint>,
 
@@ -93,7 +96,7 @@ pub struct BurnZeta<'info> {
         mut,
         seeds = [b"zeta-mint"],
         bump,
-        constraint = zeta_mint.key() == zeta_token_pda.connector_authority
+        constraint = zeta_mint.mint_authority.unwrap() == zeta_token_pda.connector_authority
     )]
     pub zeta_mint: Account<'info, TokenMint>,
 

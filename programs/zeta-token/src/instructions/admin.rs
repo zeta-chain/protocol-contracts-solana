@@ -8,10 +8,9 @@ pub fn initialize(
     tss_address_updater: Pubkey,
     max_supply: u64,
 ) -> Result<()> {
-    let pda_key = ctx.accounts.zeta_token_pda.key();
     let zeta_token_pda = &mut ctx.accounts.zeta_token_pda;
 
-    zeta_token_pda.connector_authority = pda_key;
+    zeta_token_pda.connector_authority = ctx.accounts.connector_authority.key();
     zeta_token_pda.tss_address = tss_address;
     zeta_token_pda.tss_address_updater = tss_address_updater;
     zeta_token_pda.max_supply = max_supply;

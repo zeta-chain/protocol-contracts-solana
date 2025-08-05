@@ -11,10 +11,7 @@ pub use instructions::*;
 pub use state::*;
 
 // Define the program ID
-#[cfg(feature = "dev")]
 declare_id!("EMNgcw2sH5wRKMqf9St4Rz1LEqvpZYCsTcE3hdgGsPD6");
-#[cfg(not(feature = "dev"))]
-declare_id!("ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis");
 
 #[program]
 pub mod zeta_token {

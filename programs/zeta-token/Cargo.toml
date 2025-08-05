@@ -1,0 +1,26 @@
+[package]
+name = "zeta-token"
+version = "0.1.0"
+description = "ZETA token program on Solana"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "zeta_token"
+
+[features]
+default = []
+upgrade-test = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+dev = []
+
+[dependencies]
+anchor-lang = { version = "=0.31.1" }
+anchor-spl = { version = "=0.31.1" }
+spl-associated-token-account = { version = "6.0.0", features = [
+    "no-entrypoint",
+] }

@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "programs/gateway",
+    "programs/zeta-token",
     "programs/examples/connected",
-    "programs/examples/connectedSPL"
+    "programs/examples/connectedSPL",
 ]
 resolver = "2"
 

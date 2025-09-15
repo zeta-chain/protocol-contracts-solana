@@ -2,19 +2,13 @@
 anchor_version = "0.31.1"
 solana_version = "2.1.0"
 
-[workspace]
-members = [
-  "programs/gateway",
-  "programs/examples/connected",
-  "programs/examples/connectedSPL"
-]
-
 [features]
 resolution = true
 skip-lint = false
 
 [programs.localnet]
 connected = "4xEw862A2SEwMjofPkUyd4NEekmVJKJsdHkK3UkAtDrc"
+connected_alt = "CKUn75XW5LQFRPZLScBuzdp2JaActxZQX4kZY1B9NryL"
 connected_spl = "8iUjRRhUCn8BjrvsWPfj8mguTe9L81ES4oAUApiF8JFC"
 gateway = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
 
@@ -22,12 +16,15 @@ gateway = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
+[workspace]
+members = ["programs/gateway", "programs/examples/connected", "programs/examples/connectedSPL", "programs/examples/connectedALT"]
+
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-build-gateway-dev = "anchor build --program-name gateway -- --features dev"
+build-examples = "anchor build --program-name connected && anchor build --program-name connected_spl && anchor build --program-name connected_alt"
 build-gateway = "anchor build --program-name gateway"
+build-gateway-dev = "anchor build --program-name gateway -- --features dev"
 build-gateway-dev-upgrade-test = "anchor build --program-name gateway -- --features dev --features upgrade-test && mv target/deploy/gateway.so target/deploy/gateway_upgrade.so"
-build-examples = "anchor build --program-name connected && anchor build --program-name connected_spl"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

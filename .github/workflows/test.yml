@@ -12,9 +12,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Anchor
-        uses: heyAyushh/setup-anchor@v4.93
-        with:
-          use-avm: true
+        uses: metadaoproject/setup-anchor@v3.3
 
       - name: Display Versions
         run: |

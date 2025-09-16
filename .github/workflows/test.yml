@@ -12,9 +12,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Anchor
-        uses: metadaoproject/setup-anchor@v3.3
+        uses: heyAyushh/setup-anchor@v4.93
         with:
-          solana-cli-version: '2.1.0'
+          use-avm: true
 
       - name: Display Versions
         run: |

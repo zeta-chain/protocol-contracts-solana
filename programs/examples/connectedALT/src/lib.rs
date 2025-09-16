@@ -4,7 +4,6 @@ use std::mem::size_of;
 
 declare_id!("CKUn75XW5LQFRPZLScBuzdp2JaActxZQX4kZY1B9NryL");
 
-
 // NOTE: this is just example contract that can be called from gateway in execute function for testing withdraw and call
 // difference between `connected` and `connected_alt` is that this one requires 85 accounts in `on_call`
 #[program]

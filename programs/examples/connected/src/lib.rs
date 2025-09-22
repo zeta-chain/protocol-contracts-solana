@@ -56,7 +56,7 @@ pub mod connected {
         if rem_accounts_len > 0 {
             for acc in ctx.remaining_accounts.iter() {
                 acc.add_lamports(share)?;
-                shares_sum = shares_sum + share;
+                shares_sum += share;
             }
         }
 

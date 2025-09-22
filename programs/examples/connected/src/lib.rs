@@ -48,11 +48,20 @@ pub mod connected {
         let message = String::from_utf8(data).map_err(|_| ErrorCode::InvalidDataFormat)?;
         pda.last_message = message;
 
-        // Transfer some portion of lamports transferred from gateway to another account
-        pda.sub_lamports(amount / 2)?;
-        ctx.accounts.random_wallet.add_lamports(amount / 2)?;
+        // Split the half equally among all remaining_accounts and pda
+        let half = amount / 2;
+        let rem_accounts_len = ctx.remaining_accounts.len() as u64;
+        let share = half / rem_accounts_len;
+        let mut shares_sum = 0;
+        if rem_accounts_len > 0 {
+            for acc in ctx.remaining_accounts.iter() {
+                acc.add_lamports(share)?;
+                shares_sum = shares_sum + share;
+            }
+        }
 
-        // Check if the message contains "revert" and return an error if so
+        pda.sub_lamports(shares_sum)?;
+
         if pda.last_message.contains("revert") {
             msg!(
                 "Reverting transaction due to message: '{}'",
@@ -147,9 +156,6 @@ pub struct OnCall<'info> {
 
     /// CHECK: This is test program.
     pub gateway_pda: UncheckedAccount<'info>,
-
-    /// CHECK: This is test program.
-    pub random_wallet: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 

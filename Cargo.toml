@@ -2,8 +2,7 @@
 members = [
     "programs/gateway",
     "programs/examples/connected",
-    "programs/examples/connectedSPL",
-    "programs/examples/connectedALT"
+    "programs/examples/connectedSPL"
 ]
 resolver = "2"
 

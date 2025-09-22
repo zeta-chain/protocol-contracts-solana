@@ -8,7 +8,6 @@ skip-lint = false
 
 [programs.localnet]
 connected = "4xEw862A2SEwMjofPkUyd4NEekmVJKJsdHkK3UkAtDrc"
-connected_alt = "CKUn75XW5LQFRPZLScBuzdp2JaActxZQX4kZY1B9NryL"
 connected_spl = "8iUjRRhUCn8BjrvsWPfj8mguTe9L81ES4oAUApiF8JFC"
 gateway = "ZETAjseVjuFsxdRxo6MmTCvqFwb3ZHUx56Co3vCmGis"
 
@@ -20,10 +19,10 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [workspace]
-members = ["programs/gateway", "programs/examples/connected", "programs/examples/connectedSPL", "programs/examples/connectedALT"]
+members = ["programs/gateway", "programs/examples/connected", "programs/examples/connectedSPL"]
 
 [scripts]
-build-examples = "anchor build --program-name connected && anchor build --program-name connected_spl && anchor build --program-name connected_alt"
+build-examples = "anchor build --program-name connected && anchor build --program-name connected_spl"
 build-gateway = "anchor build --program-name gateway"
 build-gateway-dev = "anchor build --program-name gateway -- --features dev"
 build-gateway-dev-upgrade-test = "anchor build --program-name gateway -- --features dev --features upgrade-test && mv target/deploy/gateway.so target/deploy/gateway_upgrade.so"

@@ -11,6 +11,11 @@ import { Connected } from "../target/types/connected";
 import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
 import { ConnectedSpl } from "../target/types/connected_spl";
 import { ComputeBudgetProgram } from "@solana/web3.js";
+import {
+  AddressLookupTableProgram,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
 
 const ec = new EC("secp256k1");
 // read private key from hex dump
@@ -864,7 +869,6 @@ describe("Gateway", () => {
         // accounts coming from withdraw and call msg
         { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
         { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
         {
           pubkey: anchor.web3.SystemProgram.programId,
           isSigner: false,
@@ -875,6 +879,7 @@ describe("Gateway", () => {
           isSigner: false,
           isWritable: false,
         },
+        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
       ])
       .rpc();
 
@@ -900,6 +905,294 @@ describe("Gateway", () => {
     expect(randomWalletBalanceBefore + amount.toNumber() / 2).to.eq(
       randomWalletBalanceAfter
     );
+  });
+
+  it("Calls execute and onCall (ALT)", async () => {
+    const provider = anchor.AnchorProvider.env();
+    const conn = provider.connection;
+    const wallet = provider.wallet as anchor.Wallet;
+
+    await gatewayProgram.methods
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
+      .rpc();
+
+    const lastMessageData = "execute_sol_ALT";
+    const data = Buffer.from(lastMessageData, "utf-8");
+
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("connected", "utf-8")],
+      connectedProgram.programId
+    );
+
+    const amount = new anchor.BN(500_000_000);
+
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x05]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      connectedProgram.programId.toBuffer(),
+      Buffer.from(Array.from(address)),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    const connectedPdaBalanceBefore = await conn.getBalance(
+      connectedPdaAccount
+    );
+
+    // Generate 75 random wallets for testing account limits
+    // 75 seems to be around limit with simple connected program, because of CU not accounts number
+    // since gateway is also doing some checks and preparation
+    const randomWallets = Array.from({ length: 75 }, () =>
+      anchor.web3.Keypair.generate()
+    );
+
+    const executeIx = await gatewayProgram.methods
+      .execute(
+        amount,
+        Array.from(address),
+        data,
+        Array.from(signatureBuffer),
+        Number(recoveryParam),
+        Array.from(message_hash),
+        nonce
+      )
+      .accountsPartial({
+        signer: wallet.publicKey,
+        pda: pdaAccount,
+        destinationProgram: connectedProgram.programId,
+        destinationProgramPda: connectedPdaAccount,
+      })
+      .remainingAccounts([
+        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+        { pubkey: pdaAccount, isSigner: false, isWritable: false },
+        {
+          pubkey: anchor.web3.SystemProgram.programId,
+          isSigner: false,
+          isWritable: false,
+        },
+        {
+          pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+          isSigner: false,
+          isWritable: false,
+        },
+        // Add all random wallets
+        ...randomWallets.map((wallet) => ({
+          pubkey: wallet.publicKey,
+          isSigner: false,
+          isWritable: true,
+        })),
+      ])
+      .instruction();
+
+    const currentSlot = await conn.getSlot("finalized");
+    const [createLutIx, lookupTableAddress] =
+      AddressLookupTableProgram.createLookupTable({
+        authority: wallet.publicKey,
+        payer: wallet.publicKey,
+        recentSlot: currentSlot,
+      });
+
+    // extending alt in couple of steps because of tx size over limit
+    const extendLutIx = AddressLookupTableProgram.extendLookupTable({
+      payer: wallet.publicKey,
+      authority: wallet.publicKey,
+      lookupTable: lookupTableAddress,
+      addresses: [
+        pdaAccount,
+        connectedPdaAccount,
+        anchor.web3.SystemProgram.programId,
+        anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        // Add first 25 random wallets
+        ...randomWallets.slice(0, 25).map((wallet) => wallet.publicKey),
+      ],
+    });
+
+    await anchor.web3.sendAndConfirmTransaction(
+      conn,
+      new anchor.web3.Transaction().add(createLutIx, extendLutIx),
+      [wallet.payer]
+    );
+
+    // Wait a bit for LUT activation
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const extendLutIx2 = AddressLookupTableProgram.extendLookupTable({
+      payer: wallet.publicKey,
+      authority: wallet.publicKey,
+      lookupTable: lookupTableAddress,
+      addresses: [
+        // Add next 25 random wallets (indices 25-50)
+        ...randomWallets.slice(25, 50).map((wallet) => wallet.publicKey),
+      ],
+    });
+
+    await anchor.web3.sendAndConfirmTransaction(
+      conn,
+      new anchor.web3.Transaction().add(extendLutIx2),
+      [wallet.payer]
+    );
+
+    // Wait a bit for LUT activation
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const extendLutIx3 = AddressLookupTableProgram.extendLookupTable({
+      payer: wallet.publicKey,
+      authority: wallet.publicKey,
+      lookupTable: lookupTableAddress,
+      addresses: [
+        // Add remaining random wallets
+        ...randomWallets.slice(50, 75).map((wallet) => wallet.publicKey),
+      ],
+    });
+
+    await anchor.web3.sendAndConfirmTransaction(
+      conn,
+      new anchor.web3.Transaction().add(extendLutIx3),
+      [wallet.payer]
+    );
+
+    // Wait a bit for LUT activation
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const { value: lutAccount } = await conn.getAddressLookupTable(
+      lookupTableAddress
+    );
+    if (!lutAccount) throw new Error("Failed to fetch LUT");
+
+    // size is 568 bytes
+    const latestBh = await conn.getLatestBlockhash();
+    const v0Message = new TransactionMessage({
+      payerKey: wallet.publicKey,
+      recentBlockhash: latestBh.blockhash,
+      instructions: [executeIx],
+    }).compileToV0Message([lutAccount]);
+
+    const vtx = new VersionedTransaction(v0Message);
+    vtx.sign([wallet.payer]);
+
+    const sig = await conn.sendTransaction(vtx);
+    await conn.confirmTransaction({ signature: sig, ...latestBh }, "confirmed");
+
+    const connectedPdaAfter = await connectedProgram.account.pda.fetch(
+      connectedPdaAccount
+    );
+
+    expect(connectedPdaAfter.lastMessage).to.eq(lastMessageData);
+    expect(Array.from(connectedPdaAfter.lastSender)).to.deep.eq(
+      Array.from(address)
+    );
+
+    const share = Math.floor(amount.toNumber() / 2 / randomWallets.length);
+    let sharesSum = 0;
+    for (let randomWallet of randomWallets) {
+      const randomWalletBalanceAfter = await conn.getBalance(
+        randomWallet.publicKey
+      );
+      expect(randomWalletBalanceAfter).to.eq(share);
+      sharesSum += share;
+    }
+
+    const expectedPdaBalanceIncrease = amount.toNumber() - sharesSum;
+    const connectedPdaBalanceAfter = await conn.getBalance(connectedPdaAccount);
+    expect(connectedPdaBalanceBefore + expectedPdaBalanceIncrease).to.eq(
+      connectedPdaBalanceAfter
+    );
+  });
+
+  it("Calls execute and onCall (ALT) fails if no ALT is used", async () => {
+    await gatewayProgram.methods
+      .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
+      .rpc();
+
+    const lastMessageData = "execute_sol_ALT";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedProgram.programId
+    );
+    const amount = new anchor.BN(500000000);
+
+    // signature
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const nonce = pdaAccountData.nonce;
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x05]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      connectedProgram.programId.toBuffer(),
+      Buffer.from(Array.from(address)),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const signature = keyPair.sign(message_hash, "hex");
+    const { r, s, recoveryParam } = signature;
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    // Generate 30 random wallets for testing account limits
+    const randomWallets = Array.from({ length: 30 }, () =>
+      anchor.web3.Keypair.generate()
+    );
+
+    try {
+      // call the `execute` function in the gateway program
+      await await gatewayProgram.methods
+        .execute(
+          amount,
+          Array.from(address),
+          data,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          Array.from(message_hash),
+          nonce
+        )
+        .accountsPartial({
+          signer: wallet.publicKey,
+          pda: pdaAccount,
+          destinationProgram: connectedProgram.programId,
+          destinationProgramPda: connectedPdaAccount,
+        })
+        .remainingAccounts([
+          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+          { pubkey: pdaAccount, isSigner: false, isWritable: false },
+          {
+            pubkey: anchor.web3.SystemProgram.programId,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+            isSigner: false,
+            isWritable: false,
+          },
+          // Add all 30 random wallets
+          ...randomWallets.map((wallet) => ({
+            pubkey: wallet.publicKey,
+            isSigner: false,
+            isWritable: true,
+          })),
+        ])
+        .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+    } catch (err) {
+      expect(err.message).to.contains("Transaction too large");
+    }
   });
 
   it("Calls execute and onCall reverts if connected program reverts", async () => {
@@ -961,7 +1254,6 @@ describe("Gateway", () => {
           // accounts coming from withdraw and call msg
           { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
           {
             pubkey: anchor.web3.SystemProgram.programId,
             isSigner: false,
@@ -972,6 +1264,7 @@ describe("Gateway", () => {
             isSigner: false,
             isWritable: false,
           },
+          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
         ])
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
@@ -1039,7 +1332,6 @@ describe("Gateway", () => {
           // accounts coming from withdraw and call msg
           { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
           {
             pubkey: anchor.web3.SystemProgram.programId,
             isSigner: false,
@@ -1050,6 +1342,7 @@ describe("Gateway", () => {
             isSigner: false,
             isWritable: false,
           },
+          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
         ])
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
@@ -1119,7 +1412,6 @@ describe("Gateway", () => {
           // accounts coming from withdraw and call msg
           { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
           {
             pubkey: anchor.web3.SystemProgram.programId,
             isSigner: false,
@@ -1130,6 +1422,7 @@ describe("Gateway", () => {
             isSigner: false,
             isWritable: false,
           },
+          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
         ])
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
@@ -1199,7 +1492,6 @@ describe("Gateway", () => {
           { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
           { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
           {
             pubkey: anchor.web3.SystemProgram.programId,
             isSigner: false,
@@ -1210,6 +1502,7 @@ describe("Gateway", () => {
             isSigner: false,
             isWritable: false,
           },
+          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
         ])
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown

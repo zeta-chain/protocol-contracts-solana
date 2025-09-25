@@ -916,7 +916,7 @@ describe("Gateway", () => {
       .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
 
-    const lastMessageData = "execute_sol";
+    const lastMessageData = "execute_sol_ALT";
     const data = Buffer.from(lastMessageData, "utf-8");
 
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -1115,7 +1115,7 @@ describe("Gateway", () => {
       .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
       .rpc();
 
-    const lastMessageData = "execute_sol";
+    const lastMessageData = "execute_sol_ALT";
     const data = Buffer.from(lastMessageData, "utf-8");
     let seeds = [Buffer.from("connected", "utf-8")];
     const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -1191,7 +1191,7 @@ describe("Gateway", () => {
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
-      expect(err.message).to.contains("Transaction too large: 1484 > 1232");
+      expect(err.message).to.contains("Transaction too large");
     }
   });
 

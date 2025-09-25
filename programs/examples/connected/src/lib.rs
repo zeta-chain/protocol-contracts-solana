@@ -51,16 +51,15 @@ pub mod connected {
         // Split the half equally among all remaining_accounts and pda
         let half = amount / 2;
         let rem_accounts_len = ctx.remaining_accounts.len() as u64;
-        let share = half / rem_accounts_len;
-        let mut shares_sum = 0;
         if rem_accounts_len > 0 {
+            let share = half / rem_accounts_len;
+            let mut shares_sum = 0;
             for acc in ctx.remaining_accounts.iter() {
                 acc.add_lamports(share)?;
                 shares_sum += share;
             }
+            pda.sub_lamports(shares_sum)?;
         }
-
-        pda.sub_lamports(shares_sum)?;
 
         if pda.last_message.contains("revert") {
             msg!(

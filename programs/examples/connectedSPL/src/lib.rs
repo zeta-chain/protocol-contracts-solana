@@ -13,8 +13,8 @@ pub mod connected_spl {
         Ok(())
     }
 
-    pub fn on_call(
-        ctx: Context<OnCall>,
+    pub fn on_call<'info>(
+        ctx: Context<'_, '_, '_, 'info, OnCall<'info>>,
         amount: u64,
         sender: [u8; 20],
         data: Vec<u8>,
@@ -28,22 +28,29 @@ pub mod connected_spl {
         let message = String::from_utf8(data).map_err(|_| ErrorCode::InvalidDataFormat)?;
         pda.last_message = message;
 
-        // Transfer some portion of tokens transferred from gateway to another account
+        // Transfer some portion of tokens transferred from gateway to remaining accounts
         let token = &ctx.accounts.token_program;
         let signer_seeds: &[&[&[u8]]] = &[&[b"connected", &[ctx.bumps.pda]]];
 
-        let xfer_ctx = CpiContext::new_with_signer(
-            token.to_account_info(),
-            anchor_spl::token::TransferChecked {
-                from: ctx.accounts.pda_ata.to_account_info(),
-                mint: ctx.accounts.mint_account.to_account_info(),
-                to: ctx.accounts.random_wallet_ata.to_account_info(),
-                authority: pda.to_account_info(),
-            },
-            signer_seeds,
-        );
-
-        transfer_checked(xfer_ctx, amount / 2, 6)?;
+        // Split the half equally among all remaining_accounts
+        let half = amount / 2;
+        let rem_accounts_len = ctx.remaining_accounts.len() as u64;
+        if rem_accounts_len > 0 {
+            let share = half / rem_accounts_len;
+            for acc in ctx.remaining_accounts.iter() {
+                let xfer_ctx = CpiContext::new_with_signer(
+                    token.to_account_info(),
+                    anchor_spl::token::TransferChecked {
+                        from: ctx.accounts.pda_ata.to_account_info(),
+                        mint: ctx.accounts.mint_account.to_account_info(),
+                        to: acc.to_account_info(),
+                        authority: pda.to_account_info(),
+                    },
+                    signer_seeds,
+                );
+                transfer_checked(xfer_ctx, share, 6)?;
+            }
+        }
 
         // Check if the message contains "revert" and return an error if so
         if pda.last_message.contains("revert") {
@@ -123,13 +130,6 @@ pub struct OnCall<'info> {
 
     /// CHECK: This is test program.
     pub gateway_pda: UncheckedAccount<'info>,
-
-    /// CHECK: This is test program.
-    pub random_wallet: UncheckedAccount<'info>,
-
-    /// CHECK: This is test program.
-    #[account(mut)]
-    pub random_wallet_ata: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
 

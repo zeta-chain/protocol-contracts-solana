@@ -1973,8 +1973,6 @@ describe("Gateway", () => {
         },
         { pubkey: mint.publicKey, isSigner: false, isWritable: false },
         { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: false },
-        { pubkey: randomWalletAta.address, isSigner: false, isWritable: true },
         {
           pubkey: spl.TOKEN_PROGRAM_ID,
           isSigner: false,
@@ -1985,6 +1983,7 @@ describe("Gateway", () => {
           isSigner: false,
           isWritable: false,
         },
+        { pubkey: randomWalletAta.address, isSigner: false, isWritable: true },
       ])
       .rpc();
 
@@ -2010,6 +2009,352 @@ describe("Gateway", () => {
 
     expect(destinationPdaAtaAcc.amount).to.be.eq(250000n);
     expect(randomWalletAtaAcc.amount).to.be.eq(250000n);
+  });
+
+  it("Calls execute spl token and onCall (ALT)", async () => {
+    const lastMessageData = "execute_spl_ALT";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedSPLProgram.programId
+    );
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      connectedPdaAccount,
+      true
+    );
+
+    const destinationPdaAtaAccBefore = await spl.getAccount(
+      conn,
+      destinationPdaAta.address
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x06]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    // Generate 45 random wallets for testing account limits with SPL tokens
+    const randomWallets = Array.from({ length: 45 }, () =>
+      anchor.web3.Keypair.generate()
+    );
+
+    // Create ATAs for all random wallets
+    const randomWalletAtas = [];
+    for (const randomWallet of randomWallets) {
+      const ata = await spl.getOrCreateAssociatedTokenAccount(
+        conn,
+        wallet,
+        mint.publicKey,
+        randomWallet.publicKey,
+        true
+      );
+      randomWalletAtas.push(ata);
+    }
+
+    const executeIx = await gatewayProgram.methods
+      .executeSplToken(
+        usdcDecimals,
+        amount,
+        Array.from(address),
+        data,
+        Array.from(signatureBuffer),
+        Number(recoveryParam),
+        Array.from(message_hash),
+        nonce
+      )
+      .accountsPartial({
+        // mandatory predefined accounts
+        signer: wallet.publicKey,
+        pda: pdaAccount,
+        pdaAta: pda_ata,
+        mintAccount: mint.publicKey,
+        destinationProgram: connectedSPLProgram.programId,
+        destinationProgramPda: connectedPdaAccount,
+        destinationProgramPdaAta: destinationPdaAta.address,
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .remainingAccounts([
+        // accounts coming from withdraw and call msg
+        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+        {
+          pubkey: destinationPdaAta.address,
+          isSigner: false,
+          isWritable: true,
+        },
+        { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+        { pubkey: pdaAccount, isSigner: false, isWritable: false },
+        {
+          pubkey: spl.TOKEN_PROGRAM_ID,
+          isSigner: false,
+          isWritable: false,
+        },
+        {
+          pubkey: SYSTEM_PROGRAM_ID,
+          isSigner: false,
+          isWritable: false,
+        },
+        // Add all random wallet ATAs
+        ...randomWalletAtas.map((ata) => ({
+          pubkey: ata.address,
+          isSigner: false,
+          isWritable: true,
+        })),
+      ])
+      .instruction();
+
+    const currentSlot = await conn.getSlot("finalized");
+    const [createLutIx, lookupTableAddress] =
+      AddressLookupTableProgram.createLookupTable({
+        authority: wallet.publicKey,
+        payer: wallet.publicKey,
+        recentSlot: currentSlot,
+      });
+
+    // extending alt in couple of steps because of tx size over limit
+    const extendLutIx = AddressLookupTableProgram.extendLookupTable({
+      payer: wallet.publicKey,
+      authority: wallet.publicKey,
+      lookupTable: lookupTableAddress,
+      addresses: [
+        connectedPdaAccount,
+        destinationPdaAta.address,
+        mint.publicKey,
+        pdaAccount,
+        spl.TOKEN_PROGRAM_ID,
+        SYSTEM_PROGRAM_ID,
+        // Add first 15 random wallet ATAs
+        ...randomWalletAtas.slice(0, 15).map((ata) => ata.address),
+      ],
+    });
+
+    await anchor.web3.sendAndConfirmTransaction(
+      conn,
+      new anchor.web3.Transaction().add(createLutIx, extendLutIx),
+      [wallet]
+    );
+
+    // Wait a bit for LUT activation
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const extendLutIx2 = AddressLookupTableProgram.extendLookupTable({
+      payer: wallet.publicKey,
+      authority: wallet.publicKey,
+      lookupTable: lookupTableAddress,
+      addresses: [
+        // Add remaining random wallet ATAs
+        ...randomWalletAtas.slice(15, 45).map((ata) => ata.address),
+      ],
+    });
+
+    await anchor.web3.sendAndConfirmTransaction(
+      conn,
+      new anchor.web3.Transaction().add(extendLutIx2),
+      [wallet]
+    );
+
+    // Wait a bit for LUT activation
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const { value: lutAccount } = await conn.getAddressLookupTable(
+      lookupTableAddress
+    );
+    if (!lutAccount) throw new Error("Failed to fetch LUT");
+
+    const computeBudgetIx =
+      anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+        units: 1_000_000,
+      });
+
+    const latestBh = await conn.getLatestBlockhash();
+    const v0Message = new TransactionMessage({
+      payerKey: wallet.publicKey,
+      recentBlockhash: latestBh.blockhash,
+      instructions: [computeBudgetIx, executeIx],
+    }).compileToV0Message([lutAccount]);
+
+    const vtx = new VersionedTransaction(v0Message);
+    vtx.sign([wallet]);
+
+    const sig = await conn.sendTransaction(vtx);
+    await conn.confirmTransaction({ signature: sig, ...latestBh }, "confirmed");
+
+    const connectedPdaAfter = await connectedSPLProgram.account.pda.fetch(
+      connectedPdaAccount
+    );
+
+    // check connected pda state was updated
+    expect(connectedPdaAfter.lastMessage).to.be.eq(lastMessageData);
+    expect(Array.from(connectedPdaAfter.lastSender)).to.be.deep.eq(
+      Array.from(address)
+    );
+
+    // check amount was split between destination pda and all random wallet atas
+    const destinationPdaAtaAcc = await spl.getAccount(
+      conn,
+      destinationPdaAta.address
+    );
+
+    const share = Math.floor(amount.toNumber() / 2 / randomWalletAtas.length);
+    let totalShares = 0n;
+    for (const ata of randomWalletAtas) {
+      const randomWalletAtaAcc = await spl.getAccount(conn, ata.address);
+      expect(randomWalletAtaAcc.amount).to.be.eq(BigInt(share));
+      totalShares += randomWalletAtaAcc.amount;
+    }
+
+    const expectedDestinationAmount = BigInt(amount.toNumber()) - totalShares;
+    expect(Number(destinationPdaAtaAcc.amount)).to.be.eq(
+      Number(destinationPdaAtaAccBefore.amount) +
+        Number(expectedDestinationAmount)
+    );
+  });
+
+  it("Calls execute spl token and onCall (ALT) fails if no ALT is used", async () => {
+    const lastMessageData = "execute_spl_ALT";
+    const data = Buffer.from(lastMessageData, "utf-8");
+    let seeds = [Buffer.from("connected", "utf-8")];
+    const [connectedPdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      connectedSPLProgram.programId
+    );
+    let pda_ata = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    let destinationPdaAta = await spl.getOrCreateAssociatedTokenAccount(
+      conn,
+      wallet,
+      mint.publicKey,
+      connectedPdaAccount,
+      true
+    );
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x06]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
+      data,
+    ]);
+    const message_hash = keccak256(buffer);
+    const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
+
+    // Generate 45 random wallets for testing account limits with SPL tokens
+    const randomWallets = Array.from({ length: 45 }, () =>
+      anchor.web3.Keypair.generate()
+    );
+
+    // Create ATAs for all random wallets
+    const randomWalletAtas = [];
+    for (const randomWallet of randomWallets) {
+      const ata = await spl.getOrCreateAssociatedTokenAccount(
+        conn,
+        wallet,
+        mint.publicKey,
+        randomWallet.publicKey,
+        true
+      );
+      randomWalletAtas.push(ata);
+    }
+
+    try {
+      await gatewayProgram.methods
+        .executeSplToken(
+          usdcDecimals,
+          amount,
+          Array.from(address),
+          data,
+          Array.from(signatureBuffer),
+          Number(recoveryParam),
+          Array.from(message_hash),
+          nonce
+        )
+        .accountsPartial({
+          // mandatory predefined accounts
+          signer: wallet.publicKey,
+          pda: pdaAccount,
+          pdaAta: pda_ata,
+          mintAccount: mint.publicKey,
+          destinationProgram: connectedSPLProgram.programId,
+          destinationProgramPda: connectedPdaAccount,
+          destinationProgramPdaAta: destinationPdaAta.address,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          // accounts coming from withdraw and call msg
+          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+          {
+            pubkey: destinationPdaAta.address,
+            isSigner: false,
+            isWritable: true,
+          },
+          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+          { pubkey: pdaAccount, isSigner: false, isWritable: false },
+          {
+            pubkey: spl.TOKEN_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          {
+            pubkey: SYSTEM_PROGRAM_ID,
+            isSigner: false,
+            isWritable: false,
+          },
+          // Add all random wallet ATAs
+          ...randomWalletAtas.map((ata) => ({
+            pubkey: ata.address,
+            isSigner: false,
+            isWritable: true,
+          })),
+        ])
+        .rpc();
+      throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
+    } catch (err) {
+      expect(err.message).to.contains("Transaction too large");
+    }
   });
 
   it("Calls execute spl token and onCall reverts if connected program reverts", async () => {
@@ -2101,16 +2446,6 @@ describe("Gateway", () => {
           { pubkey: mint.publicKey, isSigner: false, isWritable: false },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
           {
-            pubkey: randomWallet.publicKey,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          {
             pubkey: spl.TOKEN_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
@@ -2119,6 +2454,11 @@ describe("Gateway", () => {
             pubkey: SYSTEM_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
+          },
+          {
+            pubkey: randomWalletAta.address,
+            isSigner: false,
+            isWritable: true,
           },
         ])
         .rpc();
@@ -2218,16 +2558,6 @@ describe("Gateway", () => {
           { pubkey: mint.publicKey, isSigner: false, isWritable: false },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
           {
-            pubkey: randomWallet.publicKey,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          {
             pubkey: spl.TOKEN_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
@@ -2236,6 +2566,11 @@ describe("Gateway", () => {
             pubkey: SYSTEM_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
+          },
+          {
+            pubkey: randomWalletAta.address,
+            isSigner: false,
+            isWritable: true,
           },
         ])
         .rpc();
@@ -2335,16 +2670,6 @@ describe("Gateway", () => {
           { pubkey: mint.publicKey, isSigner: false, isWritable: false },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
           {
-            pubkey: randomWallet.publicKey,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          {
             pubkey: spl.TOKEN_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
@@ -2353,6 +2678,11 @@ describe("Gateway", () => {
             pubkey: SYSTEM_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
+          },
+          {
+            pubkey: randomWalletAta.address,
+            isSigner: false,
+            isWritable: true,
           },
         ])
         .rpc();
@@ -2453,16 +2783,6 @@ describe("Gateway", () => {
           { pubkey: mint.publicKey, isSigner: false, isWritable: false },
           { pubkey: pdaAccount, isSigner: false, isWritable: false },
           {
-            pubkey: randomWallet.publicKey,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          {
             pubkey: spl.TOKEN_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
@@ -2471,6 +2791,11 @@ describe("Gateway", () => {
             pubkey: SYSTEM_PROGRAM_ID,
             isSigner: false,
             isWritable: false,
+          },
+          {
+            pubkey: randomWalletAta.address,
+            isSigner: false,
+            isWritable: true,
           },
         ])
         .rpc();

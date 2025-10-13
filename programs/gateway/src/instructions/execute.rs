@@ -29,6 +29,7 @@ pub fn increment_nonce(
         &message_hash,
         &signature,
         recovery_id,
+        None, // No remaining accounts for increment nonce
     )?;
 
     msg!("Failure reason: {}", failure_reason);
@@ -65,6 +66,7 @@ fn handle_sol_common(
         &message_hash,
         &signature,
         recovery_id,
+        Some(ctx.remaining_accounts),
     )?;
 
     let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;
@@ -187,6 +189,7 @@ fn handle_spl_token_common(
         &message_hash,
         &signature,
         recovery_id,
+        Some(ctx.remaining_accounts),
     )?;
 
     let account_metas = prepare_account_metas(ctx.remaining_accounts, &ctx.accounts.signer, pda)?;

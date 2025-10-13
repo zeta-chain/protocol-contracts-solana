@@ -29,6 +29,7 @@ pub fn handle_sol(
         &message_hash,
         &signature,
         recovery_id,
+        None, // No remaining accounts for withdraw
     )?;
 
     // 2. Transfer SOL
@@ -67,10 +68,12 @@ pub fn handle_spl(
         &[
             &ctx.accounts.mint_account.key().to_bytes(),
             &ctx.accounts.recipient_ata.key().to_bytes(),
+            &[decimals],
         ],
         &message_hash,
         &signature,
         recovery_id,
+        None, // No remaining accounts for withdraw SPL token
     )?;
 
     // 2. Verify token accounts

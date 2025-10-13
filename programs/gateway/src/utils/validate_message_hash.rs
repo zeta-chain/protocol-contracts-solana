@@ -6,7 +6,7 @@ use crate::errors::Errors;
 use crate::state::InstructionId;
 
 /// Creates and validates a message hash for cross-chain instruction verification
-/// with optional amount inclusion
+/// with optional amount inclusion and optional remaining accounts
 pub fn validate_message_hash(
     instruction_id: InstructionId,
     chain_id: u64,
@@ -14,6 +14,7 @@ pub fn validate_message_hash(
     amount: Option<u64>, // Make amount optional
     additional_data: &[&[u8]],
     message_hash: &[u8; 32],
+    remaining_accounts: Option<&[AccountInfo]>,
 ) -> Result<()> {
     let mut concatenated_buffer = Vec::new();
 
@@ -29,6 +30,13 @@ pub fn validate_message_hash(
 
     for data in additional_data {
         concatenated_buffer.extend_from_slice(data);
+    }
+
+    // Include remaining accounts in the hash if provided
+    if let Some(accounts) = remaining_accounts {
+        for account in accounts {
+            concatenated_buffer.extend_from_slice(&account.key().to_bytes());
+        }
     }
 
     let computed_hash = hash(&concatenated_buffer[..]).to_bytes();

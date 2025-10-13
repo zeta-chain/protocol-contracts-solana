@@ -102,8 +102,12 @@ pub fn whitelist_spl_mint(
             pda.chain_id,
             nonce,
             None, // Skip amount in hash calculation
-            &[&whitelist_candidate.key().to_bytes()],
+            &[
+                &whitelist_candidate.key().to_bytes(),
+                &ctx.accounts.whitelist_entry.key().to_bytes(),
+            ],
             &message_hash,
+            None, // No remaining accounts for admin operations
         )?;
 
         // Verify TSS signature
@@ -146,8 +150,12 @@ pub fn unwhitelist_spl_mint(
             pda.chain_id,
             nonce,
             None, // Skip amount in hash calculation
-            &[&whitelist_candidate.key().to_bytes()],
+            &[
+                &whitelist_candidate.key().to_bytes(),
+                &ctx.accounts.whitelist_entry.key().to_bytes(),
+            ],
             &message_hash,
+            None, // No remaining accounts for admin operations
         )?;
 
         // Verify TSS signature

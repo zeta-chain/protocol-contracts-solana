@@ -135,6 +135,7 @@ async function withdrawSplToken(
     amount.toArrayLike(Buffer, "be", 8),
     mint.publicKey.toBuffer(),
     to.toBuffer(),
+    Buffer.from([decimals]),
   ]);
   const message_hash = keccak256(buffer);
   const signature = keyPair.sign(message_hash, "hex");
@@ -821,6 +822,24 @@ describe("Gateway", () => {
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
+
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x05]),
@@ -830,6 +849,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -865,22 +886,7 @@ describe("Gateway", () => {
         destinationProgram: connectedProgram.programId,
         destinationProgramPda: connectedPdaAccount,
       })
-      .remainingAccounts([
-        // accounts coming from withdraw and call msg
-        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-        { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        {
-          pubkey: anchor.web3.SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-          isSigner: false,
-          isWritable: false,
-        },
-        { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
-      ])
+      .remainingAccounts(remainingAccounts)
       .rpc();
 
     const connectedPdaAfter = await connectedProgram.account.pda.fetch(
@@ -929,6 +935,32 @@ describe("Gateway", () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
+    // Generate 75 random wallets for testing account limits
+    const randomWallets = Array.from({ length: 75 }, () =>
+      anchor.web3.Keypair.generate()
+    );
+
+    const remainingAccounts = [
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        isSigner: false,
+        isWritable: false,
+      },
+      // Add all random wallets
+      ...randomWallets.map((wallet) => ({
+        pubkey: wallet.publicKey,
+        isSigner: false,
+        isWritable: true,
+      })),
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x05]),
@@ -938,6 +970,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
@@ -948,13 +982,6 @@ describe("Gateway", () => {
 
     const connectedPdaBalanceBefore = await conn.getBalance(
       connectedPdaAccount
-    );
-
-    // Generate 75 random wallets for testing account limits
-    // 75 seems to be around limit with simple connected program, because of CU not accounts number
-    // since gateway is also doing some checks and preparation
-    const randomWallets = Array.from({ length: 75 }, () =>
-      anchor.web3.Keypair.generate()
     );
 
     const executeIx = await gatewayProgram.methods
@@ -973,26 +1000,7 @@ describe("Gateway", () => {
         destinationProgram: connectedProgram.programId,
         destinationProgramPda: connectedPdaAccount,
       })
-      .remainingAccounts([
-        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-        { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        {
-          pubkey: anchor.web3.SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-          isSigner: false,
-          isWritable: false,
-        },
-        // Add all random wallets
-        ...randomWallets.map((wallet) => ({
-          pubkey: wallet.publicKey,
-          isSigner: false,
-          isWritable: true,
-        })),
-      ])
+      .remainingAccounts(remainingAccounts)
       .instruction();
 
     const currentSlot = await conn.getSlot("finalized");
@@ -1124,6 +1132,33 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Generate 30 random wallets for testing account limits
+    const randomWallets = Array.from({ length: 30 }, () =>
+      anchor.web3.Keypair.generate()
+    );
+
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        isSigner: false,
+        isWritable: false,
+      },
+      // Add all 30 random wallets
+      ...randomWallets.map((wallet) => ({
+        pubkey: wallet.publicKey,
+        isSigner: false,
+        isWritable: true,
+      })),
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1136,6 +1171,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1144,11 +1181,6 @@ describe("Gateway", () => {
       r.toArrayLike(Buffer, "be", 32),
       s.toArrayLike(Buffer, "be", 32),
     ]);
-
-    // Generate 30 random wallets for testing account limits
-    const randomWallets = Array.from({ length: 30 }, () =>
-      anchor.web3.Keypair.generate()
-    );
 
     try {
       // call the `execute` function in the gateway program
@@ -1168,26 +1200,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-            isSigner: false,
-            isWritable: false,
-          },
-          // Add all 30 random wallets
-          ...randomWallets.map((wallet) => ({
-            pubkey: wallet.publicKey,
-            isSigner: false,
-            isWritable: true,
-          })),
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1210,6 +1223,24 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1222,6 +1253,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1250,22 +1283,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-            isSigner: false,
-            isWritable: false,
-          },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1288,6 +1306,24 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1300,6 +1336,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1328,22 +1366,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-            isSigner: false,
-            isWritable: false,
-          },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1368,6 +1391,24 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1380,6 +1421,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = key.sign(message_hash, "hex");
@@ -1408,22 +1451,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-            isSigner: false,
-            isWritable: false,
-          },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1447,6 +1475,25 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1459,6 +1506,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1487,23 +1536,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-            isSigner: false,
-            isWritable: false,
-          },
-          { pubkey: randomWallet.publicKey, isSigner: false, isWritable: true },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1522,6 +1555,18 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1534,6 +1579,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       random_account.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1566,16 +1613,7 @@ describe("Gateway", () => {
         destinationProgram: connectedProgram.programId,
         destinationProgramPda: connectedPdaAccount,
       })
-      .remainingAccounts([
-        // accounts coming from withdraw and call msg
-        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-        { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        {
-          pubkey: anchor.web3.SystemProgram.programId,
-          isSigner: false,
-          isWritable: false,
-        },
-      ])
+      .remainingAccounts(remainingAccounts)
       .rpc();
 
     const connectedPdaAfter = await connectedProgram.account.pda.fetch(
@@ -1609,6 +1647,18 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1621,6 +1671,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       random_account.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1680,6 +1732,17 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1692,6 +1755,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       random_account.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1720,16 +1785,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1753,6 +1809,18 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1765,6 +1833,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       random_account.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = key.sign(message_hash, "hex");
@@ -1793,16 +1863,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1825,6 +1886,18 @@ describe("Gateway", () => {
     );
     const amount = new anchor.BN(500000000);
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: anchor.web3.SystemProgram.programId,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
     // signature
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
@@ -1837,6 +1910,8 @@ describe("Gateway", () => {
       connectedProgram.programId.toBuffer(),
       random_account.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1865,17 +1940,7 @@ describe("Gateway", () => {
           destinationProgram: connectedProgram.programId,
           destinationProgramPda: connectedPdaAccount,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: anchor.web3.SystemProgram.programId,
-            isSigner: false,
-            isWritable: false,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -1919,6 +1984,30 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      { pubkey: randomWalletAta.address, isSigner: false, isWritable: true },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x06]),
@@ -1929,6 +2018,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -1963,28 +2054,7 @@ describe("Gateway", () => {
         associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       })
-      .remainingAccounts([
-        // accounts coming from withdraw and call msg
-        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-        {
-          pubkey: destinationPdaAta.address,
-          isSigner: false,
-          isWritable: true,
-        },
-        { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-        { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        {
-          pubkey: spl.TOKEN_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: SYSTEM_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-        { pubkey: randomWalletAta.address, isSigner: false, isWritable: true },
-      ])
+      .remainingAccounts(remainingAccounts)
       .rpc();
 
     const connectedPdaAfter = await connectedSPLProgram.account.pda.fetch(
@@ -2041,24 +2111,6 @@ describe("Gateway", () => {
       destinationPdaAta.address
     );
 
-    const buffer = Buffer.concat([
-      Buffer.from("ZETACHAIN", "utf-8"),
-      Buffer.from([0x06]),
-      chain_id_bn.toArrayLike(Buffer, "be", 8),
-      nonce.toArrayLike(Buffer, "be", 8),
-      amount.toArrayLike(Buffer, "be", 8),
-      mint.publicKey.toBuffer(),
-      destinationPdaAta.address.toBuffer(),
-      Buffer.from(Array.from(address)),
-      data,
-    ]);
-    const message_hash = keccak256(buffer);
-    const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
-    const signatureBuffer = Buffer.concat([
-      r.toArrayLike(Buffer, "be", 32),
-      s.toArrayLike(Buffer, "be", 32),
-    ]);
-
     // Generate 45 random wallets for testing account limits with SPL tokens
     const randomWallets = Array.from({ length: 45 }, () =>
       anchor.web3.Keypair.generate()
@@ -2076,6 +2128,55 @@ describe("Gateway", () => {
       );
       randomWalletAtas.push(ata);
     }
+
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      // Add all random wallet ATAs
+      ...randomWalletAtas.map((ata) => ({
+        pubkey: ata.address,
+        isSigner: false,
+        isWritable: true,
+      })),
+    ];
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x06]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
+      data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
+    ]);
+    const message_hash = keccak256(buffer);
+    const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
 
     const executeIx = await gatewayProgram.methods
       .executeSplToken(
@@ -2101,33 +2202,7 @@ describe("Gateway", () => {
         associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       })
-      .remainingAccounts([
-        // accounts coming from withdraw and call msg
-        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-        {
-          pubkey: destinationPdaAta.address,
-          isSigner: false,
-          isWritable: true,
-        },
-        { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-        { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        {
-          pubkey: spl.TOKEN_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: SYSTEM_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-        // Add all random wallet ATAs
-        ...randomWalletAtas.map((ata) => ({
-          pubkey: ata.address,
-          isSigner: false,
-          isWritable: true,
-        })),
-      ])
+      .remainingAccounts(remainingAccounts)
       .instruction();
 
     const currentSlot = await conn.getSlot("finalized");
@@ -2262,24 +2337,6 @@ describe("Gateway", () => {
       true
     );
 
-    const buffer = Buffer.concat([
-      Buffer.from("ZETACHAIN", "utf-8"),
-      Buffer.from([0x06]),
-      chain_id_bn.toArrayLike(Buffer, "be", 8),
-      nonce.toArrayLike(Buffer, "be", 8),
-      amount.toArrayLike(Buffer, "be", 8),
-      mint.publicKey.toBuffer(),
-      destinationPdaAta.address.toBuffer(),
-      Buffer.from(Array.from(address)),
-      data,
-    ]);
-    const message_hash = keccak256(buffer);
-    const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
-    const signatureBuffer = Buffer.concat([
-      r.toArrayLike(Buffer, "be", 32),
-      s.toArrayLike(Buffer, "be", 32),
-    ]);
-
     // Generate 45 random wallets for testing account limits with SPL tokens
     const randomWallets = Array.from({ length: 45 }, () =>
       anchor.web3.Keypair.generate()
@@ -2297,6 +2354,55 @@ describe("Gateway", () => {
       );
       randomWalletAtas.push(ata);
     }
+
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      // Add all random wallet ATAs
+      ...randomWalletAtas.map((ata) => ({
+        pubkey: ata.address,
+        isSigner: false,
+        isWritable: true,
+      })),
+    ];
+
+    const buffer = Buffer.concat([
+      Buffer.from("ZETACHAIN", "utf-8"),
+      Buffer.from([0x06]),
+      chain_id_bn.toArrayLike(Buffer, "be", 8),
+      nonce.toArrayLike(Buffer, "be", 8),
+      amount.toArrayLike(Buffer, "be", 8),
+      mint.publicKey.toBuffer(),
+      destinationPdaAta.address.toBuffer(),
+      Buffer.from(Array.from(address)),
+      data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
+    ]);
+    const message_hash = keccak256(buffer);
+    const { r, s, recoveryParam } = keyPair.sign(message_hash, "hex");
+    const signatureBuffer = Buffer.concat([
+      r.toArrayLike(Buffer, "be", 32),
+      s.toArrayLike(Buffer, "be", 32),
+    ]);
 
     try {
       await gatewayProgram.methods
@@ -2323,33 +2429,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          // Add all random wallet ATAs
-          ...randomWalletAtas.map((ata) => ({
-            pubkey: ata.address,
-            isSigner: false,
-            isWritable: true,
-          })),
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -2390,6 +2470,34 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: randomWalletAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x06]),
@@ -2400,6 +2508,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -2435,32 +2545,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -2501,6 +2586,35 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: randomWalletAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x06]),
@@ -2511,6 +2625,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -2546,33 +2662,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -2614,6 +2704,34 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: randomWalletAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x06]),
@@ -2624,6 +2742,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -2659,32 +2779,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -2727,6 +2822,34 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from withdraw and call msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: randomWalletAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x06]),
@@ -2737,6 +2860,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       Buffer.from(Array.from(address)),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = key.sign(message_hash, "hex");
@@ -2772,32 +2897,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from withdraw and call msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: randomWalletAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -2832,6 +2932,29 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from revert msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x09]),
@@ -2842,6 +2965,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       randomWallet.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -2882,27 +3007,7 @@ describe("Gateway", () => {
         associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         systemProgram: SYSTEM_PROGRAM_ID,
       })
-      .remainingAccounts([
-        // accounts coming from revert msg
-        { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-        {
-          pubkey: destinationPdaAta.address,
-          isSigner: false,
-          isWritable: true,
-        },
-        { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-        { pubkey: pdaAccount, isSigner: false, isWritable: false },
-        {
-          pubkey: spl.TOKEN_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-        {
-          pubkey: SYSTEM_PROGRAM_ID,
-          isSigner: false,
-          isWritable: false,
-        },
-      ])
+      .remainingAccounts(remainingAccounts)
       .rpc();
 
     const connectedPdaAfter = await connectedSPLProgram.account.pda.fetch(
@@ -2952,6 +3057,29 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from revert msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x09]),
@@ -2962,6 +3090,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       randomWallet.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -2997,27 +3127,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from revert msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -3051,6 +3161,30 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from revert msg
+      { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x09]),
@@ -3061,6 +3195,8 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       randomWallet.publicKey.toBuffer(),
       data,
+      // Add remaining accounts to hash
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -3096,28 +3232,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from revert msg
-          { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -3151,6 +3266,29 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from revert msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x09]),
@@ -3161,6 +3299,7 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       randomWallet.publicKey.toBuffer(),
       data,
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -3196,27 +3335,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from revert msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -3251,6 +3370,29 @@ describe("Gateway", () => {
       true
     );
 
+    // Create remaining accounts array for hash calculation
+    const remainingAccounts = [
+      // accounts coming from revert msg
+      { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
+      {
+        pubkey: destinationPdaAta.address,
+        isSigner: false,
+        isWritable: true,
+      },
+      { pubkey: mint.publicKey, isSigner: false, isWritable: false },
+      { pubkey: pdaAccount, isSigner: false, isWritable: false },
+      {
+        pubkey: spl.TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: SYSTEM_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+    ];
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x09]),
@@ -3261,6 +3403,7 @@ describe("Gateway", () => {
       destinationPdaAta.address.toBuffer(),
       randomWallet.publicKey.toBuffer(),
       data,
+      ...remainingAccounts.map((account) => account.pubkey.toBuffer()),
     ]);
     const message_hash = keccak256(buffer);
     const signature = key.sign(message_hash, "hex");
@@ -3296,27 +3439,7 @@ describe("Gateway", () => {
           associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SYSTEM_PROGRAM_ID,
         })
-        .remainingAccounts([
-          // accounts coming from revert msg
-          { pubkey: connectedPdaAccount, isSigner: false, isWritable: true },
-          {
-            pubkey: destinationPdaAta.address,
-            isSigner: false,
-            isWritable: true,
-          },
-          { pubkey: mint.publicKey, isSigner: false, isWritable: false },
-          { pubkey: pdaAccount, isSigner: false, isWritable: false },
-          {
-            pubkey: spl.TOKEN_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-          {
-            pubkey: SYSTEM_PROGRAM_ID,
-            isSigner: false,
-            isWritable: false,
-          },
-        ])
+        .remainingAccounts(remainingAccounts)
         .rpc();
       throw new Error("Expected error not thrown"); // This line will make the test fail if no error is thrown
     } catch (err) {
@@ -3473,6 +3596,7 @@ describe("Gateway", () => {
       amount.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
       to.toBuffer(),
+      Buffer.from([usdcDecimals]),
     ]);
     const message_hash = keccak256(buffer);
     const signature = key.sign(message_hash, "hex");
@@ -3661,12 +3785,20 @@ describe("Gateway", () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
+    // Calculate whitelist entry address
+    let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
+    let [whitelistEntryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      gatewayProgram.programId
+    );
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x04]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
+      whitelistEntryAddress.toBuffer(), // Include whitelist entry in hash
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -3701,12 +3833,19 @@ describe("Gateway", () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
+    let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
+    let [whitelistEntryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      gatewayProgram.programId
+    );
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x03]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
+      whitelistEntryAddress.toBuffer(), // Include whitelist entry in hash
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -3734,12 +3873,19 @@ describe("Gateway", () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
+    let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
+    let [whitelistEntryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      gatewayProgram.programId
+    );
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x03]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.subn(1).toArrayLike(Buffer, "be", 8), // wrong nonce
       mint.publicKey.toBuffer(),
+      whitelistEntryAddress.toBuffer(),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");
@@ -3773,12 +3919,19 @@ describe("Gateway", () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
+    let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
+    let [whitelistEntryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      gatewayProgram.programId
+    );
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x04]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
+      whitelistEntryAddress.toBuffer(),
     ]);
     const message_hash = keccak256(buffer);
     const signature = key.sign(message_hash, "hex");
@@ -3811,12 +3964,19 @@ describe("Gateway", () => {
     const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
     const nonce = pdaAccountData.nonce;
 
+    let seeds = [Buffer.from("whitelist", "utf-8"), mint.publicKey.toBuffer()];
+    let [whitelistEntryAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+      seeds,
+      gatewayProgram.programId
+    );
+
     const buffer = Buffer.concat([
       Buffer.from("ZETACHAIN", "utf-8"),
       Buffer.from([0x03]),
       chain_id_bn.toArrayLike(Buffer, "be", 8),
       nonce.toArrayLike(Buffer, "be", 8),
       mint.publicKey.toBuffer(),
+      whitelistEntryAddress.toBuffer(),
     ]);
     const message_hash = keccak256(buffer);
     const signature = keyPair.sign(message_hash, "hex");

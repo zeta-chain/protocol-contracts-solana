@@ -16,6 +16,7 @@ pub fn validate_message(
     message_hash: &[u8; 32],
     signature: &[u8; 64],
     recovery_id: u8,
+    remaining_accounts: Option<&[AccountInfo]>,
 ) -> Result<()> {
     verify_and_update_nonce(pda, nonce)?;
 
@@ -26,6 +27,7 @@ pub fn validate_message(
         Some(amount),
         additional_data,
         message_hash,
+        remaining_accounts,
     )?;
 
     recover_and_verify_eth_address(pda, message_hash, recovery_id, signature)?;

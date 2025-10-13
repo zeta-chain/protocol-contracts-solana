@@ -3381,7 +3381,7 @@ describe("Gateway", () => {
     );
     await anchor.web3.sendAndConfirmTransaction(conn, maliciousTx, [wallet]);
 
-    // atempt withdrawal — should fail
+    // attempt withdrawal — should fail
     const pdaAta = await spl.getAssociatedTokenAddress(
       mint.publicKey,
       pdaAccount,

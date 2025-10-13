@@ -7,7 +7,7 @@ use crate::{
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
 use anchor_spl::token::transfer_checked;
-use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
+use spl_associated_token_account::instruction::create_associated_token_account;
 
 // Withdraws SOL. Caller is TSS.
 pub fn handle_sol(
@@ -109,7 +109,7 @@ pub fn handle_spl(
 
         let bal_before = ctx.accounts.signer.lamports();
         invoke(
-            &create_associated_token_account_idempotent(
+            &create_associated_token_account(
                 ctx.accounts.signer.to_account_info().key,
                 ctx.accounts.recipient.to_account_info().key,
                 ctx.accounts.mint_account.to_account_info().key,

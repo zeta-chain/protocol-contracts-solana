@@ -23,4 +23,6 @@ pub enum Errors {
     EmptyReceiver,
     #[msg("InvalidInstructionData")]
     InvalidInstructionData,
+    #[msg("InvalidAtaOwner")]
+    InvalidAtaOwner,
 }

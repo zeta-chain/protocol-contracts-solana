@@ -1,5 +1,6 @@
 use crate::{
     contexts::{Withdraw, WithdrawSPLToken},
+    errors::Errors,
     state::InstructionId,
     utils::{validate_message, verify_ata_match, DEFAULT_GAS_COST},
 };
@@ -89,13 +90,19 @@ pub fn handle_spl(
         &ctx.accounts.recipient_ata.key(),
     )?;
 
+    // Check if account is either empty owned by system program or owner is token program
+    let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();
+    require!(
+        *recipient_ata_account.owner == anchor_spl::token::ID
+            || (*recipient_ata_account.owner == anchor_lang::system_program::ID
+                && recipient_ata_account.lamports() == 0),
+        Errors::InvalidAtaOwner
+    );
+
     // 3. Create recipient ATA if needed and calculate costs
     let mut cost_ata_create: u64 = 0;
-    let recipient_ata_account = ctx.accounts.recipient_ata.to_account_info();
 
-    if recipient_ata_account.lamports() == 0
-        || *recipient_ata_account.owner == ctx.accounts.system_program.key()
-    {
+    if recipient_ata_account.lamports() == 0 {
         // ATA needs to be created
         msg!(
             "Creating associated token account {:?} for recipient {:?}...",

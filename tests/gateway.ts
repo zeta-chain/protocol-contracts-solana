@@ -3484,6 +3484,54 @@ describe("Gateway", () => {
     expect(rentPayerPdaBal0 - rentPayerPdaBal1).to.be.eq(to_ata_bal + 5000); // rentPayer pays rent
   });
 
+  it("Withdrawal when a system account exists at the ATA address fails", async () => {
+    // new ata
+    const recipient = anchor.web3.Keypair.generate();
+    const maliciousAta = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      recipient.publicKey,
+      false
+    );
+
+    // create system owned account using ata address
+    const lamports = await conn.getMinimumBalanceForRentExemption(8);
+    const maliciousTx = new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: maliciousAta,
+        lamports,
+      })
+    );
+    await anchor.web3.sendAndConfirmTransaction(conn, maliciousTx, [wallet]);
+
+    // attempt withdrawal — should fail
+    const pdaAta = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const pdaAccountData = await gatewayProgram.account.pda.fetch(pdaAccount);
+    const amount = new anchor.BN(500_000);
+    const nonce = pdaAccountData.nonce;
+
+    try {
+      await withdrawSplToken(
+        mint,
+        usdcDecimals,
+        amount,
+        nonce,
+        pdaAta,
+        maliciousAta,
+        recipient.publicKey,
+        gatewayProgram
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("InvalidAtaOwner");
+    }
+  });
+
   it("Withdraw SPL token with wrong nonce should fail", async () => {
     let pda_ata = await spl.getAssociatedTokenAddress(
       mint.publicKey,

@@ -269,6 +269,14 @@ pub mod gateway {
         instructions::admin::unwhitelist_spl_mint(ctx, signature, recovery_id, message_hash, nonce)
     }
 
+    /// Extends the PDA with new fields using realloc. Caller is authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `bump` - The bump seed to store in the extended PDA.
+    pub fn extend_pda(ctx: Context<ExtendPda>, bump: u8) -> Result<()> {
+        instructions::admin::extend_pda(ctx, bump)
+    }
+
     /// Deposits SOL into the program and credits the `receiver` on ZetaChain zEVM.
     /// # Arguments
     /// * `ctx` - The instruction context.

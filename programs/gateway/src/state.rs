@@ -15,6 +15,26 @@ pub struct Pda {
     pub deposit_paused: bool,
 }
 
+/// Extended PDA account with additional fields for future-proofing.
+/// This version includes a bump field and can be extended with more fields.
+#[account]
+pub struct ExtendedPda {
+    /// The nonce to ensure each signature can only be used once.
+    pub nonce: u64,
+    /// The Ethereum TSS address (20 bytes).
+    pub tss_address: [u8; 20],
+    /// The authority controlling the PDA.
+    pub authority: Pubkey,
+    /// The chain ID associated with the PDA.
+    pub chain_id: u64,
+    /// Flag to indicate whether deposits are paused.
+    pub deposit_paused: bool,
+    /// The bump seed used to derive the PDA.
+    pub bump: u8,
+    /// Version field to track PDA structure version.
+    pub version: u8,
+}
+
 /// Whitelist entry account for whitelisted SPL tokens.
 #[account]
 pub struct WhitelistEntry {}

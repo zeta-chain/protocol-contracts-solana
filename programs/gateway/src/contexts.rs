@@ -1,3 +1,4 @@
+use crate::errors::Errors;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
@@ -286,6 +287,26 @@ pub struct Whitelist<'info> {
     pub whitelist_candidate: Account<'info, Mint>,
 
     /// The system program.
+    pub system_program: Program<'info, System>,
+}
+
+/// Instruction context for extending the PDA with new fields using realloc.
+#[derive(Accounts)]
+pub struct ExtendPda<'info> {
+    /// The account of the authority performing the operation.
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    /// Gateway PDA to be extended.
+    #[account(
+        mut,
+        seeds = [b"meta"],
+        bump,
+        constraint = authority.key() == pda.authority @ Errors::SignerIsNotAuthority
+    )]
+    pub pda: Account<'info, Pda>,
+
+    /// The system program for realloc operations.
     pub system_program: Program<'info, System>,
 }
 

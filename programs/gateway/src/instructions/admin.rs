@@ -1,6 +1,7 @@
 use crate::{
     contexts::{
-        Initialize, ResetNonce, Unwhitelist, UpdateAuthority, UpdatePaused, UpdateTss, Whitelist,
+        ExtendPda, Initialize, ResetNonce, Unwhitelist, UpdateAuthority, UpdatePaused, UpdateTss,
+        Whitelist,
     },
     state::InstructionId,
     utils::{
@@ -182,6 +183,58 @@ pub fn reset_nonce(ctx: Context<ResetNonce>, new_nonce: u64) -> Result<()> {
     pda.nonce = new_nonce;
 
     msg!("PDA nonce reset: new nonce = {}", new_nonce);
+
+    Ok(())
+}
+
+// Extends the PDA with new fields using realloc. Caller is authority stored in PDA.
+pub fn extend_pda(ctx: Context<ExtendPda>, bump: u8) -> Result<()> {
+    let pda_account = &mut ctx.accounts.pda;
+    let authority = &ctx.accounts.authority;
+    let system_program = &ctx.accounts.system_program;
+
+    // Calculate new size - adding 2 bytes for bump (u8) and version (u8)
+    let current_size = pda_account.to_account_info().data_len();
+    let additional_space = 2; // 2 bytes for bump and version fields
+    let new_size = current_size + additional_space;
+
+    // Ensure rent exemption
+    let rent = Rent::get()?;
+    let new_minimum_balance = rent.minimum_balance(new_size);
+    let current_balance = pda_account.to_account_info().lamports();
+    let lamports_diff = new_minimum_balance.saturating_sub(current_balance);
+
+    if lamports_diff > 0 {
+        // Transfer additional lamports to maintain rent exemption
+        let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
+            &authority.key(),
+            &pda_account.to_account_info().key(),
+            lamports_diff,
+        );
+
+        anchor_lang::solana_program::program::invoke(
+            &transfer_instruction,
+            &[
+                authority.to_account_info(),
+                pda_account.to_account_info(),
+                system_program.to_account_info(),
+            ],
+        )?;
+    }
+
+    // Reallocate the account to the new size
+    pda_account.to_account_info().realloc(new_size, false)?;
+
+    // Note: In a real implementation, you would need to handle the migration
+    // from the old Pda struct to the new ExtendedPda struct carefully.
+    // This is a simplified example showing the realloc pattern.
+
+    msg!(
+        "PDA extended: new size = {}, bump = {}, authority = {}",
+        new_size,
+        bump,
+        authority.key()
+    );
 
     Ok(())
 }

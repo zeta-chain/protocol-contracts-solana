@@ -215,6 +215,14 @@ pub mod gateway {
         instructions::admin::update_tss(ctx, tss_address)
     }
 
+    /// Migrates existing PDA to new format by reallocating account space.
+    /// This is a one-time migration that can be called after program upgrade.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    pub fn migrate_pda(ctx: Context<MigratePda>) -> Result<()> {
+        instructions::admin::migrate_pda(ctx)
+    }
+
     /// Updates the PDA authority. Caller is authority stored in PDA.
     /// # Arguments
     /// * `ctx` - The instruction context.
@@ -224,6 +232,34 @@ pub mod gateway {
         new_authority_address: Pubkey,
     ) -> Result<()> {
         instructions::admin::update_authority(ctx, new_authority_address)
+    }
+
+    /// Nominates a new authority (step 1 of 2-step transfer).
+    /// Caller is current authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `new_authority_address` - The new authority's public key to nominate.
+    pub fn nominate_authority(
+        ctx: Context<UpdateAuthority>,
+        new_authority_address: Pubkey,
+    ) -> Result<()> {
+        instructions::admin::nominate_authority(ctx, new_authority_address)
+    }
+
+    /// Accepts authority nomination (step 2 of 2-step transfer).
+    /// Caller is the nominated authority.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        instructions::admin::accept_authority(ctx)
+    }
+
+    /// Cancels authority nomination (optional safety feature).
+    /// Caller is current authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    pub fn cancel_authority_nomination(ctx: Context<UpdateAuthority>) -> Result<()> {
+        instructions::admin::cancel_authority_nomination(ctx)
     }
 
     /// Resets the PDA nonce. Caller is authority stored in PDA.

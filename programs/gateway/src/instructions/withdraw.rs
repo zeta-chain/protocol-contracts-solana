@@ -145,7 +145,7 @@ pub fn handle_spl(
 
     // 4. Transfer tokens
     let token = &ctx.accounts.token_program;
-    let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[ctx.bumps.pda]]];
+    let signer_seeds: &[&[&[u8]]] = &[&[b"meta", &[pda.bump]]];
 
     let xfer_ctx = CpiContext::new_with_signer(
         token.to_account_info(),

@@ -25,4 +25,8 @@ pub enum Errors {
     InvalidInstructionData,
     #[msg("InvalidAtaOwner")]
     InvalidAtaOwner,
+    #[msg("NoNominatedAuthority")]
+    NoNominatedAuthority,
+    #[msg("InvalidAuthority")]
+    InvalidAuthority,
 }

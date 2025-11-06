@@ -2,7 +2,6 @@ use crate::{
     contexts::{Call, Deposit, DepositSplToken},
     errors::Errors,
     state::RevertOptions,
-    utils::verify_payload_size,
 };
 
 use anchor_lang::prelude::*;
@@ -18,8 +17,6 @@ pub fn handle_sol(
     revert_options: Option<RevertOptions>,
     deposit_fee: u64,
 ) -> Result<()> {
-    verify_payload_size(None, &revert_options)?;
-
     let pda = &mut ctx.accounts.pda;
     require!(!pda.deposit_paused, Errors::DepositPaused);
     require!(receiver != [0u8; 20], Errors::EmptyReceiver);
@@ -55,8 +52,6 @@ pub fn handle_sol_with_call(
     revert_options: Option<RevertOptions>,
     deposit_fee: u64,
 ) -> Result<()> {
-    verify_payload_size(Some(&message), &revert_options)?;
-
     handle_sol(ctx, amount, receiver, revert_options, deposit_fee)?;
 
     msg!("Deposit and call executed with message = {:?}", message);
@@ -72,7 +67,6 @@ pub fn handle_spl(
     revert_options: Option<RevertOptions>,
     deposit_fee: u64,
 ) -> Result<()> {
-    verify_payload_size(None, &revert_options)?;
     let token = &ctx.accounts.token_program;
     let from = &ctx.accounts.from;
 
@@ -127,8 +121,6 @@ pub fn handle_spl_with_call(
     revert_options: Option<RevertOptions>,
     deposit_fee: u64,
 ) -> Result<()> {
-    verify_payload_size(Some(&message), &revert_options)?;
-
     handle_spl(ctx, amount, receiver, revert_options, deposit_fee)?;
 
     msg!("Deposit SPL and call executed with message = {:?}", message);
@@ -144,7 +136,6 @@ pub fn handle_call(
     revert_options: Option<RevertOptions>,
 ) -> Result<()> {
     require!(receiver != [0u8; 20], Errors::EmptyReceiver);
-    verify_payload_size(Some(&message), &revert_options)?;
 
     msg!(
         "Call executed: receiver = {:?}, message = {:?}, revert options = {:?}",

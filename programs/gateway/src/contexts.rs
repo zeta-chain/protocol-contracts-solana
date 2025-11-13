@@ -12,7 +12,7 @@ pub struct Initialize<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(init, payer = signer, space = size_of::<Pda>() + 8, seeds = [b"meta"], bump)]
+    #[account(init, payer = signer, space = 8 + size_of::<Pda>(), seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
     /// The system program.
@@ -27,7 +27,7 @@ pub struct Execute<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The destination program.
@@ -53,7 +53,7 @@ pub struct IncrementNonce<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 }
 
@@ -65,7 +65,7 @@ pub struct Deposit<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The system program.
@@ -80,7 +80,7 @@ pub struct DepositSplToken<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The whitelist entry account for the SPL token.
@@ -121,7 +121,7 @@ pub struct Withdraw<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The recipient account for the withdrawn SOL.
@@ -138,7 +138,7 @@ pub struct WithdrawSPLToken<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The associated token account for the Gateway PDA.
@@ -174,7 +174,7 @@ pub struct ExecuteSPLToken<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The associated token account for the Gateway PDA.
@@ -221,7 +221,7 @@ pub struct UpdateTss<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 }
 
@@ -233,7 +233,7 @@ pub struct UpdateAuthority<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 }
 
@@ -245,7 +245,7 @@ pub struct ResetNonce<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 }
 
@@ -257,7 +257,7 @@ pub struct UpdatePaused<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 }
 
@@ -269,7 +269,7 @@ pub struct Whitelist<'info> {
     pub authority: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The whitelist entry account being initialized.
@@ -297,7 +297,7 @@ pub struct Unwhitelist<'info> {
     pub authority: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
     pub pda: Account<'info, Pda>,
 
     /// The whitelist entry account being closed.
@@ -318,4 +318,38 @@ pub struct Unwhitelist<'info> {
 pub struct Upgrade<'info> {
     /// The account of the signer checking the upgrade
     pub signer: Signer<'info>,
+}
+
+/// Instruction context for migrating PDA to new format.
+#[derive(Accounts)]
+pub struct MigratePda<'info> {
+    /// The account paying for the migration.
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    /// Gateway PDA to be migrated.
+    #[account(
+        mut,
+        seeds = [b"meta"],
+        bump,
+        realloc = 8 + size_of::<Pda>(),
+        realloc::payer = payer,
+        realloc::zero = false,
+    )]
+    pub pda: Account<'info, Pda>,
+
+    /// The system program.
+    pub system_program: Program<'info, System>,
+}
+
+/// Instruction context for accepting authority nomination.
+#[derive(Accounts)]
+pub struct AcceptAuthority<'info> {
+    /// The nominated authority accepting the transfer.
+    #[account(mut)]
+    pub new_authority: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump = pda.bump)]
+    pub pda: Account<'info, Pda>,
 }

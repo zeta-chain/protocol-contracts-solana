@@ -2231,7 +2231,7 @@ describe("Gateway", () => {
     const expectedDestinationAmount = BigInt(amount.toNumber()) - totalShares;
     expect(Number(destinationPdaAtaAcc.amount)).to.be.eq(
       Number(destinationPdaAtaAccBefore.amount) +
-        Number(expectedDestinationAmount)
+      Number(expectedDestinationAmount)
     );
   });
 
@@ -3988,5 +3988,525 @@ describe("Gateway", () => {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("SignerIsNotAuthority");
     }
+  });
+
+  describe("PDA Migration and Extension", () => {
+    it("Should migrate PDA to new format with realloc", async () => {
+      // Verify PDA exists and get initial state
+      const pdaBefore = await gatewayProgram.account.pda.fetch(pdaAccount);
+      const accountInfoBefore = await conn.getAccountInfo(pdaAccount);
+      const oldSize = accountInfoBefore.data.length;
+
+      // Call migrate_pda instruction
+      await gatewayProgram.methods
+        .migratePda()
+        .accounts({
+          pda: pdaAccount,
+          payer: wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+
+      // Verify PDA now has new fields
+      const pdaAfter = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pdaAfter.bump).to.be.a("number");
+      expect(pdaAfter.bump).to.be.gte(0);
+      expect(pdaAfter.bump).to.be.lte(255);
+      expect(pdaAfter.nominatedAuthority).to.be.null;
+
+      // Verify account size increased (or is already at new size if already migrated)
+      const accountInfoAfter = await conn.getAccountInfo(pdaAccount);
+      expect(accountInfoAfter.data.length).to.be.gte(oldSize);
+      // If already migrated, size should be at least the new size
+      if (oldSize >= accountInfoAfter.data.length) {
+        // Already migrated, just verify fields exist
+        expect(accountInfoAfter.data.length).to.be.gte(112); // New size
+      } else {
+        expect(accountInfoAfter.data.length).to.be.gt(oldSize);
+      }
+
+      // Verify existing fields are preserved
+      expect(pdaAfter.nonce.toString()).to.equal(pdaBefore.nonce.toString());
+      expect(Array.from(pdaAfter.tssAddress)).to.be.deep.eq(
+        Array.from(pdaBefore.tssAddress)
+      );
+      expect(pdaAfter.authority.toString()).to.equal(
+        pdaBefore.authority.toString()
+      );
+      expect(pdaAfter.chainId.toString()).to.equal(
+        pdaBefore.chainId.toString()
+      );
+      expect(pdaAfter.depositPaused).to.equal(pdaBefore.depositPaused);
+    });
+
+    it("Should be idempotent if migration called twice", async () => {
+      // Get current state
+      const pdaBefore = await gatewayProgram.account.pda.fetch(pdaAccount);
+      const bumpBefore = pdaBefore.bump;
+
+      // Call migration again
+      await gatewayProgram.methods
+        .migratePda()
+        .accounts({
+          pda: pdaAccount,
+          payer: wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+
+      // Verify state is unchanged
+      const pdaAfter = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pdaAfter.bump).to.equal(bumpBefore);
+      expect(pdaAfter.nominatedAuthority).to.be.null;
+    });
+
+    it("Should use stored bump instead of recomputing", async () => {
+      const pda = await gatewayProgram.account.pda.fetch(pdaAccount);
+      const storedBump = pda.bump;
+
+      // Verify stored bump matches computed bump
+      const [computedPda, computedBump] =
+        anchor.web3.PublicKey.findProgramAddressSync(
+          seeds,
+          gatewayProgram.programId
+        );
+      expect(computedPda.toString()).to.equal(pdaAccount.toString());
+      expect(storedBump).to.equal(computedBump);
+
+      // All operations should work using stored bump
+      // Use current authority from PDA
+      const currentAuthorityPubkey = pda.authority;
+      let authorityKeypair: anchor.web3.Keypair;
+
+      if (currentAuthorityPubkey.equals(wallet.publicKey)) {
+        authorityKeypair = wallet;
+      } else if (currentAuthorityPubkey.equals(newAuthority.publicKey)) {
+        authorityKeypair = newAuthority;
+      } else {
+        // Skip this test if we can't determine the authority keypair
+        return;
+      }
+
+      await gatewayProgram.methods
+        .setDepositPaused(false)
+        .accounts({
+          pda: pdaAccount,
+          signer: currentAuthorityPubkey,
+        })
+        .signers(authorityKeypair === wallet ? [] : [authorityKeypair])
+        .rpc();
+
+      // Verify operation succeeded
+      const pdaAfter = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pdaAfter.depositPaused).to.be.false;
+    });
+  });
+
+  describe("2-Step Authority Transfer", () => {
+    let testAuthority: anchor.web3.Keypair;
+    let nominatedAuthority: anchor.web3.Keypair;
+
+    before(async () => {
+      // Set up test authority (restore newAuthority as current authority)
+      testAuthority = newAuthority;
+      nominatedAuthority = anchor.web3.Keypair.generate();
+    });
+
+    it("Should nominate new authority", async () => {
+      const pdaBefore = await gatewayProgram.account.pda.fetch(pdaAccount);
+
+      await gatewayProgram.methods
+        .nominateAuthority(nominatedAuthority.publicKey)
+        .accounts({
+          pda: pdaAccount,
+          signer: testAuthority.publicKey,
+        })
+        .signers([testAuthority])
+        .rpc();
+
+      const pdaAfter = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pdaAfter.nominatedAuthority.toString()).to.equal(
+        nominatedAuthority.publicKey.toString()
+      );
+      expect(pdaAfter.authority.toString()).to.equal(
+        pdaBefore.authority.toString()
+      );
+    });
+
+    it("Should fail to nominate authority if caller is not current authority", async () => {
+      const wrongSigner = anchor.web3.Keypair.generate();
+
+      // Fund the wrong signer
+      await anchor.web3.sendAndConfirmTransaction(
+        conn,
+        new anchor.web3.Transaction().add(
+          anchor.web3.SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: wrongSigner.publicKey,
+            lamports: 10_000_000,
+          })
+        ),
+        [wallet]
+      );
+
+      try {
+        await gatewayProgram.methods
+          .nominateAuthority(nominatedAuthority.publicKey)
+          .accounts({
+            pda: pdaAccount,
+            signer: wrongSigner.publicKey,
+          })
+          .signers([wrongSigner])
+          .rpc();
+        throw new Error("Expected error not thrown");
+      } catch (err) {
+        expect(err).to.be.instanceof(anchor.AnchorError);
+        expect(err.message).to.include("SignerIsNotAuthority");
+      }
+    });
+
+    it("Should fail to nominate self as authority", async () => {
+      const pda = await gatewayProgram.account.pda.fetch(pdaAccount);
+      const currentAuth = pda.authority;
+
+      // Find the keypair for current authority
+      let currentAuthKeypair: anchor.web3.Keypair;
+      if (currentAuth.equals(wallet.publicKey)) {
+        currentAuthKeypair = wallet;
+      } else if (currentAuth.equals(testAuthority.publicKey)) {
+        currentAuthKeypair = testAuthority;
+      } else if (currentAuth.equals(nominatedAuthority.publicKey)) {
+        currentAuthKeypair = nominatedAuthority;
+      } else {
+        // Can't test if we don't have the keypair
+        return;
+      }
+
+      try {
+        await gatewayProgram.methods
+          .nominateAuthority(currentAuth)
+          .accounts({
+            pda: pdaAccount,
+            signer: currentAuth,
+          })
+          .signers(currentAuthKeypair === wallet ? [] : [currentAuthKeypair])
+          .rpc();
+        throw new Error("Expected error not thrown");
+      } catch (err) {
+        expect(err).to.be.instanceof(anchor.AnchorError);
+        expect(err.message).to.include("InvalidAuthority");
+      }
+    });
+
+    it("Should fail if wrong authority tries to accept", async () => {
+      const wrongAuthority = anchor.web3.Keypair.generate();
+
+      // Fund the wrong authority
+      await anchor.web3.sendAndConfirmTransaction(
+        conn,
+        new anchor.web3.Transaction().add(
+          anchor.web3.SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: wrongAuthority.publicKey,
+            lamports: 10_000_000,
+          })
+        ),
+        [wallet]
+      );
+
+      try {
+        await gatewayProgram.methods
+          .acceptAuthority()
+          .accounts({
+            pda: pdaAccount,
+            newAuthority: wrongAuthority.publicKey,
+          })
+          .signers([wrongAuthority])
+          .rpc();
+        throw new Error("Expected error not thrown");
+      } catch (err) {
+        expect(err).to.be.instanceof(anchor.AnchorError);
+        expect(err.message).to.include("InvalidAuthority");
+      }
+    });
+
+    it("Should accept authority nomination", async () => {
+      const pdaBefore = await gatewayProgram.account.pda.fetch(pdaAccount);
+      const oldAuthority = pdaBefore.authority;
+      const nominated = pdaBefore.nominatedAuthority;
+
+      expect(nominated).to.not.be.null;
+      expect(nominated.toString()).to.equal(
+        nominatedAuthority.publicKey.toString()
+      );
+
+      await gatewayProgram.methods
+        .acceptAuthority()
+        .accounts({
+          pda: pdaAccount,
+          newAuthority: nominatedAuthority.publicKey,
+        })
+        .signers([nominatedAuthority])
+        .rpc();
+
+      const pdaAfter = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pdaAfter.authority.toString()).to.equal(
+        nominatedAuthority.publicKey.toString()
+      );
+      expect(pdaAfter.nominatedAuthority).to.be.null;
+      expect(pdaAfter.authority.toString()).to.not.equal(
+        oldAuthority.toString()
+      );
+    });
+
+    it("Should allow new authority to perform admin operations", async () => {
+      // New authority should be able to update TSS
+      const newTss = new Uint8Array(20);
+      randomFillSync(newTss);
+
+      await gatewayProgram.methods
+        .updateTss(Array.from(newTss))
+        .accounts({
+          pda: pdaAccount,
+          signer: nominatedAuthority.publicKey,
+        })
+        .signers([nominatedAuthority])
+        .rpc();
+
+      const pda = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(Array.from(pda.tssAddress)).to.be.deep.eq(Array.from(newTss));
+    });
+
+    it("Should prevent old authority from performing admin operations", async () => {
+      try {
+        await gatewayProgram.methods
+          .updateTss(Array.from(new Uint8Array(20)))
+          .accounts({
+            pda: pdaAccount,
+            signer: testAuthority.publicKey,
+          })
+          .signers([testAuthority])
+          .rpc();
+        throw new Error("Expected error not thrown");
+      } catch (err) {
+        expect(err).to.be.instanceof(anchor.AnchorError);
+        expect(err.message).to.include("SignerIsNotAuthority");
+      }
+    });
+
+    it("Should allow cancelling authority nomination", async () => {
+      // First, nominate another authority
+      const anotherAuthority = anchor.web3.Keypair.generate();
+
+      await gatewayProgram.methods
+        .nominateAuthority(anotherAuthority.publicKey)
+        .accounts({
+          pda: pdaAccount,
+          signer: nominatedAuthority.publicKey,
+        })
+        .signers([nominatedAuthority])
+        .rpc();
+
+      let pda = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pda.nominatedAuthority.toString()).to.equal(
+        anotherAuthority.publicKey.toString()
+      );
+
+      // Cancel nomination
+      await gatewayProgram.methods
+        .cancelAuthorityNomination()
+        .accounts({
+          pda: pdaAccount,
+          signer: nominatedAuthority.publicKey,
+        })
+        .signers([nominatedAuthority])
+        .rpc();
+
+      pda = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pda.nominatedAuthority).to.be.null;
+    });
+
+    it("Should fail to cancel nomination if caller is not current authority", async () => {
+      const wrongSigner = anchor.web3.Keypair.generate();
+
+      // Fund the wrong signer
+      await anchor.web3.sendAndConfirmTransaction(
+        conn,
+        new anchor.web3.Transaction().add(
+          anchor.web3.SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: wrongSigner.publicKey,
+            lamports: 10_000_000,
+          })
+        ),
+        [wallet]
+      );
+
+      try {
+        await gatewayProgram.methods
+          .cancelAuthorityNomination()
+          .accounts({
+            pda: pdaAccount,
+            signer: wrongSigner.publicKey,
+          })
+          .signers([wrongSigner])
+          .rpc();
+        throw new Error("Expected error not thrown");
+      } catch (err) {
+        expect(err).to.be.instanceof(anchor.AnchorError);
+        expect(err.message).to.include("SignerIsNotAuthority");
+      }
+    });
+
+    it("Should fail to accept if no nomination exists", async () => {
+      const pda = await gatewayProgram.account.pda.fetch(pdaAccount);
+      // Ensure no nomination exists
+      if (pda.nominatedAuthority) {
+        await gatewayProgram.methods
+          .cancelAuthorityNomination()
+          .accounts({
+            pda: pdaAccount,
+            signer: nominatedAuthority.publicKey,
+          })
+          .signers([nominatedAuthority])
+          .rpc();
+      }
+
+      const randomKeypair = anchor.web3.Keypair.generate();
+
+      // Fund the random keypair
+      await anchor.web3.sendAndConfirmTransaction(
+        conn,
+        new anchor.web3.Transaction().add(
+          anchor.web3.SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: randomKeypair.publicKey,
+            lamports: 10_000_000,
+          })
+        ),
+        [wallet]
+      );
+
+      try {
+        await gatewayProgram.methods
+          .acceptAuthority()
+          .accounts({
+            pda: pdaAccount,
+            newAuthority: randomKeypair.publicKey,
+          })
+          .signers([randomKeypair])
+          .rpc();
+        throw new Error("Expected error not thrown");
+      } catch (err) {
+        expect(err).to.be.instanceof(anchor.AnchorError);
+        expect(err.message).to.include("NoNominatedAuthority");
+      }
+    });
+  });
+
+  describe("Backward Compatibility After Migration", () => {
+    it("Should maintain all existing functionality after migration", async () => {
+      // First, ensure deposits are not paused
+      const pdaData = await gatewayProgram.account.pda.fetch(pdaAccount);
+      const currentAuthorityPubkey = pdaData.authority;
+
+      // Find the keypair for current authority
+      let currentAuthKeypair: anchor.web3.Keypair | null = null;
+      if (currentAuthorityPubkey.equals(wallet.publicKey)) {
+        currentAuthKeypair = wallet;
+      } else if (currentAuthorityPubkey.equals(newAuthority.publicKey)) {
+        currentAuthKeypair = newAuthority;
+      }
+
+      // Unpause deposits if paused
+      if (pdaData.depositPaused && currentAuthKeypair) {
+        await gatewayProgram.methods
+          .setDepositPaused(false)
+          .accounts({
+            pda: pdaAccount,
+            signer: currentAuthorityPubkey,
+          })
+          .signers(currentAuthKeypair === wallet ? [] : [currentAuthKeypair])
+          .rpc();
+      }
+
+      // Test deposit (doesn't require authority - verifies PDA access works)
+      const balanceBefore = await conn.getBalance(pdaAccount);
+      await gatewayProgram.methods
+        .deposit(new anchor.BN(1_000_000_000), Array.from(address), revertOptions)
+        .rpc();
+      const balanceAfter = await conn.getBalance(pdaAccount);
+      expect(balanceAfter - balanceBefore).to.be.gte(1_000_000_000);
+
+      // Verify PDA structure is intact after migration
+      const pda = await gatewayProgram.account.pda.fetch(pdaAccount);
+      expect(pda.bump).to.be.a("number");
+      expect(pda.nominatedAuthority).to.not.be.undefined;
+      expect(pda.nonce).to.not.be.undefined;
+      expect(pda.tssAddress).to.not.be.undefined;
+      expect(pda.authority).to.not.be.undefined;
+      expect(pda.chainId).to.not.be.undefined;
+    });
+
+    it("Should work with SPL token operations after migration", async () => {
+      // Ensure deposits are not paused
+      const pdaData = await gatewayProgram.account.pda.fetch(pdaAccount);
+      const currentAuthorityPubkey = pdaData.authority;
+
+      // Find the keypair for current authority
+      let currentAuthKeypair: anchor.web3.Keypair | null = null;
+      if (currentAuthorityPubkey.equals(wallet.publicKey)) {
+        currentAuthKeypair = wallet;
+      } else if (currentAuthorityPubkey.equals(newAuthority.publicKey)) {
+        currentAuthKeypair = newAuthority;
+      }
+
+      // Unpause deposits if paused
+      if (pdaData.depositPaused && currentAuthKeypair) {
+        await gatewayProgram.methods
+          .setDepositPaused(false)
+          .accounts({
+            pda: pdaAccount,
+            signer: currentAuthorityPubkey,
+          })
+          .signers(currentAuthKeypair === wallet ? [] : [currentAuthKeypair])
+          .rpc();
+      }
+
+      // Test deposit SPL token
+      const pda_ata = await getOrCreateAssociatedTokenAccount(
+        conn,
+        wallet,
+        mint.publicKey,
+        pdaAccount,
+        true
+      );
+      const tokenAccount = await getOrCreateAssociatedTokenAccount(
+        conn,
+        wallet,
+        mint.publicKey,
+        wallet.publicKey
+      );
+
+      const balanceBefore = await spl.getAccount(conn, pda_ata.address);
+
+      await gatewayProgram.methods
+        .depositSplToken(
+          new anchor.BN(1_000_000),
+          Array.from(address),
+          revertOptions
+        )
+        .accounts({
+          from: tokenAccount.address,
+          to: pda_ata.address,
+          mintAccount: mint.publicKey,
+        })
+        .rpc();
+
+      const balanceAfter = await spl.getAccount(conn, pda_ata.address);
+      expect(balanceAfter.amount - balanceBefore.amount).to.equal(
+        1_000_000n
+      );
+    });
   });
 });

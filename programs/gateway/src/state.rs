@@ -13,6 +13,10 @@ pub struct Pda {
     pub chain_id: u64,
     /// Flag to indicate whether deposits are paused.
     pub deposit_paused: bool,
+    /// The bump seed for the PDA.
+    pub bump: u8,
+    /// Nominated authority pending acceptance.
+    pub nominated_authority: Option<Pubkey>,
 }
 
 /// Whitelist entry account for whitelisted SPL tokens.

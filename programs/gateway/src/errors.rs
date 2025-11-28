@@ -13,8 +13,6 @@ pub enum Errors {
     DepositToAddressMismatch,
     #[msg("MessageHashMismatch")]
     MessageHashMismatch,
-    #[msg("MemoLengthExceeded")]
-    MemoLengthExceeded,
     #[msg("DepositPaused")]
     DepositPaused,
     #[msg("SPLAtaAndMintAddressMismatch")]

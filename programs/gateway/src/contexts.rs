@@ -313,6 +313,43 @@ pub struct Unwhitelist<'info> {
     pub whitelist_candidate: Account<'info, Mint>,
 }
 
+/// Instruction context for refunding SPL tokens from gateway custody.
+#[derive(Accounts)]
+pub struct RefundSplToken<'info> {
+    /// The authority account refunding tokens from custody.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+
+    /// The associated token account for the Gateway PDA.
+    #[account(mut, associated_token::mint = mint_account, associated_token::authority = pda)]
+    pub pda_ata: Account<'info, TokenAccount>,
+
+    /// The mint account of the SPL token being refunded.
+    pub mint_account: Account<'info, Mint>,
+
+    /// The recipient wallet receiving the refunded tokens.
+    /// CHECK: Recipient account is not read; ownership validation is unnecessary.
+    pub recipient: UncheckedAccount<'info>,
+
+    /// The recipient's associated token account.
+    /// CHECK: Validation will occur during instruction processing.
+    #[account(mut)]
+    pub recipient_ata: AccountInfo<'info>,
+
+    /// The token program.
+    pub token_program: Program<'info, Token>,
+
+    /// The associated token program.
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    /// The system program.
+    pub system_program: Program<'info, System>,
+}
+
 /// Instruction context for checking upgrade status
 #[derive(Accounts)]
 pub struct Upgrade<'info> {

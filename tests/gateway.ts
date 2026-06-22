@@ -161,6 +161,40 @@ async function withdrawSplToken(
     .rpc({ commitment: "processed" });
 }
 
+async function refundSplToken(
+  gatewayProgram: Program<Gateway>,
+  mint: anchor.web3.PublicKey,
+  decimals: number,
+  amount: anchor.BN,
+  recipient: anchor.web3.PublicKey,
+  recipientAta: anchor.web3.PublicKey,
+  signer: anchor.web3.Keypair = anchor.workspace.Gateway.provider.wallet
+    .payer
+) {
+  const [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("meta", "utf-8")],
+    gatewayProgram.programId
+  );
+  const pdaAta = await spl.getAssociatedTokenAddress(
+    mint,
+    pdaAccount,
+    true
+  );
+
+  return gatewayProgram.methods
+    .refundSplToken(amount, decimals)
+    .accounts({
+      signer: signer.publicKey,
+      pda: pdaAccount,
+      pdaAta,
+      mintAccount: mint,
+      recipient,
+      recipientAta,
+    })
+    .signers(signer.publicKey.equals(anchor.workspace.Gateway.provider.wallet.publicKey) ? [] : [signer])
+    .rpc({ commitment: "processed" });
+}
+
 describe("Gateway", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -3909,6 +3943,123 @@ describe("Gateway", () => {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("NonceMismatch.");
     }
+  });
+
+  it("Refund SPL token to user", async () => {
+    const refundAmount = new anchor.BN(100_000);
+    const pdaAta = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const custodyBefore = await spl.getAccount(conn, pdaAta);
+    const recipientBefore = await spl.getAccount(conn, wallet_ata);
+
+    await refundSplToken(
+      gatewayProgram,
+      mint.publicKey,
+      usdcDecimals,
+      refundAmount,
+      wallet.publicKey,
+      wallet_ata
+    );
+
+    const custodyAfter = await spl.getAccount(conn, pdaAta);
+    const recipientAfter = await spl.getAccount(conn, wallet_ata);
+    expect(custodyBefore.amount - custodyAfter.amount).to.equal(
+      BigInt(refundAmount.toNumber())
+    );
+    expect(recipientAfter.amount - recipientBefore.amount).to.equal(
+      BigInt(refundAmount.toNumber())
+    );
+  });
+
+  it("Refund SPL token fails for non-authority", async () => {
+    try {
+      await refundSplToken(
+        gatewayProgram,
+        mint.publicKey,
+        usdcDecimals,
+        new anchor.BN(1),
+        wallet.publicKey,
+        wallet_ata,
+        random_account
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("SignerIsNotAuthority");
+    }
+  });
+
+  it("Refund SPL token fails for insufficient balance", async () => {
+    const pdaAta = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      pdaAccount,
+      true
+    );
+    const custody = await spl.getAccount(conn, pdaAta);
+
+    try {
+      await refundSplToken(
+        gatewayProgram,
+        mint.publicKey,
+        usdcDecimals,
+        new anchor.BN(custody.amount.toString()).addn(1),
+        wallet.publicKey,
+        wallet_ata
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("InsufficientBalance");
+    }
+  });
+
+  it("Refund SPL token creates recipient ATA if needed", async () => {
+    const refundRecipient = anchor.web3.Keypair.generate();
+    const refundAmount = new anchor.BN(50_000);
+    const recipientAta = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      refundRecipient.publicKey
+    );
+
+    await refundSplToken(
+      gatewayProgram,
+      mint.publicKey,
+      usdcDecimals,
+      refundAmount,
+      refundRecipient.publicKey,
+      recipientAta
+    );
+
+    const recipientAccount = await spl.getAccount(conn, recipientAta);
+    expect(recipientAccount.amount).to.equal(BigInt(refundAmount.toNumber()));
+  });
+
+  it("Refund SPL token works while deposits are paused", async () => {
+    await gatewayProgram.methods.setDepositPaused(true).rpc();
+
+    const refundRecipient = anchor.web3.Keypair.generate();
+    const refundAmount = new anchor.BN(25_000);
+    const recipientAta = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      refundRecipient.publicKey
+    );
+
+    await refundSplToken(
+      gatewayProgram,
+      mint.publicKey,
+      usdcDecimals,
+      refundAmount,
+      refundRecipient.publicKey,
+      recipientAta
+    );
+
+    const recipientAccount = await spl.getAccount(conn, recipientAta);
+    expect(recipientAccount.amount).to.equal(BigInt(refundAmount.toNumber()));
+
+    await gatewayProgram.methods.setDepositPaused(false).rpc();
   });
 
   it("Update TSS address", async () => {

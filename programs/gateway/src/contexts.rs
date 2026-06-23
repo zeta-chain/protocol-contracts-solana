@@ -321,7 +321,7 @@ pub struct RefundSplToken<'info> {
     pub signer: Signer<'info>,
 
     /// Gateway PDA.
-    #[account(mut, seeds = [b"meta"], bump)]
+    #[account(seeds = [b"meta"], bump)]
     pub pda: Account<'info, Pda>,
 
     /// The associated token account for the Gateway PDA.
@@ -332,7 +332,7 @@ pub struct RefundSplToken<'info> {
     pub mint_account: Account<'info, Mint>,
 
     /// The recipient wallet receiving the refunded tokens.
-    /// CHECK: Recipient account is not read; ownership validation is unnecessary.
+    /// CHECK: Only the pubkey is used to derive the expected ATA; account data is not validated.
     pub recipient: UncheckedAccount<'info>,
 
     /// The recipient's associated token account.

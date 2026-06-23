@@ -4040,26 +4040,28 @@ describe("Gateway", () => {
   it("Refund SPL token works while deposits are paused", async () => {
     await gatewayProgram.methods.setDepositPaused(true).rpc();
 
-    const refundRecipient = anchor.web3.Keypair.generate();
-    const refundAmount = new anchor.BN(25_000);
-    const recipientAta = await spl.getAssociatedTokenAddress(
-      mint.publicKey,
-      refundRecipient.publicKey
-    );
+    try {
+      const refundRecipient = anchor.web3.Keypair.generate();
+      const refundAmount = new anchor.BN(25_000);
+      const recipientAta = await spl.getAssociatedTokenAddress(
+        mint.publicKey,
+        refundRecipient.publicKey
+      );
 
-    await refundSplToken(
-      gatewayProgram,
-      mint.publicKey,
-      usdcDecimals,
-      refundAmount,
-      refundRecipient.publicKey,
-      recipientAta
-    );
+      await refundSplToken(
+        gatewayProgram,
+        mint.publicKey,
+        usdcDecimals,
+        refundAmount,
+        refundRecipient.publicKey,
+        recipientAta
+      );
 
-    const recipientAccount = await spl.getAccount(conn, recipientAta);
-    expect(recipientAccount.amount).to.equal(BigInt(refundAmount.toNumber()));
-
-    await gatewayProgram.methods.setDepositPaused(false).rpc();
+      const recipientAccount = await spl.getAccount(conn, recipientAta);
+      expect(recipientAccount.amount).to.equal(BigInt(refundAmount.toNumber()));
+    } finally {
+      await gatewayProgram.methods.setDepositPaused(false).rpc();
+    }
   });
 
   it("Update TSS address", async () => {

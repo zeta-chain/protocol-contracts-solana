@@ -385,11 +385,7 @@ pub mod gateway {
     /// * `ctx` - The instruction context.
     /// * `amount` - The amount of tokens to refund.
     /// * `decimals` - Token decimals for precision.
-    pub fn refund_spl_token(
-        ctx: Context<RefundSplToken>,
-        amount: u64,
-        decimals: u8,
-    ) -> Result<()> {
+    pub fn refund_spl_token(ctx: Context<RefundSplToken>, amount: u64, decimals: u8) -> Result<()> {
         instructions::refund::handle_spl(ctx, amount, decimals)
     }
 

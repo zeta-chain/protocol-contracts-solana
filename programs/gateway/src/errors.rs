@@ -23,4 +23,8 @@ pub enum Errors {
     InvalidInstructionData,
     #[msg("InvalidAtaOwner")]
     InvalidAtaOwner,
+    #[msg("InsufficientBalance")]
+    InsufficientBalance,
+    #[msg("InvalidAmount")]
+    InvalidAmount,
 }

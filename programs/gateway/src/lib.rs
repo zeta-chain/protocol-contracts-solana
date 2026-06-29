@@ -380,6 +380,15 @@ pub mod gateway {
         instructions::withdraw::handle_sol(ctx, amount, signature, recovery_id, message_hash, nonce)
     }
 
+    /// Refunds SPL tokens from gateway custody to a user. Caller is authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of tokens to refund.
+    /// * `decimals` - Token decimals for precision.
+    pub fn refund_spl_token(ctx: Context<RefundSplToken>, amount: u64, decimals: u8) -> Result<()> {
+        instructions::refund::handle_spl(ctx, amount, decimals)
+    }
+
     /// Withdraws SPL tokens. Caller is TSS.
     /// # Arguments
     /// * `ctx` - The instruction context.

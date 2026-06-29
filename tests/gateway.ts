@@ -4016,6 +4016,23 @@ describe("Gateway", () => {
     }
   });
 
+  it("Refund SPL token fails for zero amount", async () => {
+    try {
+      await refundSplToken(
+        gatewayProgram,
+        mint.publicKey,
+        usdcDecimals,
+        new anchor.BN(0),
+        wallet.publicKey,
+        wallet_ata
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("InvalidAmount");
+    }
+  });
+
   it("Refund SPL token creates recipient ATA if needed", async () => {
     const refundRecipient = anchor.web3.Keypair.generate();
     const refundAmount = new anchor.BN(50_000);
@@ -4035,6 +4052,28 @@ describe("Gateway", () => {
 
     const recipientAccount = await spl.getAccount(conn, recipientAta);
     expect(recipientAccount.amount).to.equal(BigInt(refundAmount.toNumber()));
+  });
+
+  it("Refund SPL token fails for mismatched recipient ATA", async () => {
+    const wrongRecipientAta = await spl.getAssociatedTokenAddress(
+      mint.publicKey,
+      random_account.publicKey
+    );
+
+    try {
+      await refundSplToken(
+        gatewayProgram,
+        mint.publicKey,
+        usdcDecimals,
+        new anchor.BN(1),
+        wallet.publicKey,
+        wrongRecipientAta
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("SPLAtaAndMintAddressMismatch");
+    }
   });
 
   it("Refund SPL token works while deposits are paused", async () => {

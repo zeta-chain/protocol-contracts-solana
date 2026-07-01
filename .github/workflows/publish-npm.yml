@@ -15,17 +15,22 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.88.0
 
-      - name: Install Node.js, Solana CLI, and Anchor
-        uses: heyAyushh/setup-anchor@v4.93
-        with:
-          use-avm: true
-          solana-cli-version: "2.1.0"
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config libssl-dev
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22.14.0"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Setup Solana
+        uses: heyAyushh/setup-solana@v5.9
+        with:
+          solana-cli-version: "2.1.0"
+
+      - name: Install Anchor CLI
+        run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.31.1 anchor-cli --locked --force
 
       - name: Build Prod
         run: |

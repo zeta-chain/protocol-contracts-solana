@@ -1,6 +1,7 @@
 use crate::{
-    contexts::RefundSplToken,
+    contexts::{RefundSol, RefundSplToken},
     errors::Errors,
+    state::Pda,
     utils::{verify_ata_match, verify_authority},
 };
 use anchor_lang::prelude::*;
@@ -8,12 +9,43 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_spl::token::transfer_checked;
 use spl_associated_token_account::instruction::create_associated_token_account;
 
+fn validate_refund_request(authority: &Pubkey, pda: &Account<Pda>, amount: u64) -> Result<()> {
+    verify_authority(authority, pda)?;
+    require!(amount > 0, Errors::InvalidAmount);
+    Ok(())
+}
+
+// Refunds native SOL from gateway custody to a user. Caller is authority stored in PDA.
+pub fn handle_sol(ctx: Context<RefundSol>, amount: u64) -> Result<()> {
+    let pda = &ctx.accounts.pda;
+
+    validate_refund_request(&ctx.accounts.signer.key(), pda, amount)?;
+
+    let pda_info = pda.to_account_info();
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(pda_info.data_len());
+    let available = pda_info.lamports().saturating_sub(min_balance);
+
+    require!(available >= amount, Errors::InsufficientBalance);
+
+    pda_info.sub_lamports(amount)?;
+    ctx.accounts.recipient.add_lamports(amount)?;
+
+    msg!(
+        "Refund SOL executed: amount = {}, recipient = {}, authority = {}",
+        amount,
+        ctx.accounts.recipient.key(),
+        ctx.accounts.signer.key()
+    );
+
+    Ok(())
+}
+
 // Refunds SPL tokens from gateway custody to a user. Caller is authority stored in PDA.
 pub fn handle_spl(ctx: Context<RefundSplToken>, amount: u64, decimals: u8) -> Result<()> {
     let pda = &ctx.accounts.pda;
 
-    verify_authority(&ctx.accounts.signer.key(), pda)?;
-    require!(amount > 0, Errors::InvalidAmount);
+    validate_refund_request(&ctx.accounts.signer.key(), pda, amount)?;
 
     verify_ata_match(
         &pda.key(),

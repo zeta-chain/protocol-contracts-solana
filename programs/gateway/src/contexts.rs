@@ -313,6 +313,23 @@ pub struct Unwhitelist<'info> {
     pub whitelist_candidate: Account<'info, Mint>,
 }
 
+/// Instruction context for refunding native SOL from gateway custody.
+#[derive(Accounts)]
+pub struct RefundSol<'info> {
+    /// The authority account refunding SOL from custody.
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Gateway PDA.
+    #[account(mut, seeds = [b"meta"], bump)]
+    pub pda: Account<'info, Pda>,
+
+    /// The recipient wallet receiving the refunded SOL.
+    /// CHECK: Recipient account is not read; ownership validation is unnecessary.
+    #[account(mut)]
+    pub recipient: UncheckedAccount<'info>,
+}
+
 /// Instruction context for refunding SPL tokens from gateway custody.
 #[derive(Accounts)]
 pub struct RefundSplToken<'info> {

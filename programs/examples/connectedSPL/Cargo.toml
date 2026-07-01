@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Test program used for testing withdraw and call SPL feature"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [lib]
 crate-type = ["cdylib", "lib"]
 name = "connected_spl"
@@ -19,4 +22,6 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 [dependencies]
 anchor-lang = { version = "=0.31.1" }
 anchor-spl = { version = "=0.31.1" }
-spl-associated-token-account = { version = "6.0.0", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "6.0.0", features = [
+    "no-entrypoint",
+] }

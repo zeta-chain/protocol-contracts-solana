@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Test program used for testing withdraw and call feature"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [lib]
 crate-type = ["cdylib", "lib"]
 name = "connected"
@@ -20,5 +23,7 @@ dev = ["gateway/dev"]
 [dependencies]
 anchor-lang = { version = "=0.31.1" }
 anchor-spl = { version = "=0.31.1" }
-spl-associated-token-account = { version = "6.0.0", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "6.0.0", features = [
+    "no-entrypoint",
+] }
 gateway = { path = "../../gateway", features = ["no-entrypoint", "cpi"] }

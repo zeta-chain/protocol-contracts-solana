@@ -380,6 +380,14 @@ pub mod gateway {
         instructions::withdraw::handle_sol(ctx, amount, signature, recovery_id, message_hash, nonce)
     }
 
+    /// Refunds native SOL from gateway custody to a user. Caller is authority stored in PDA.
+    /// # Arguments
+    /// * `ctx` - The instruction context.
+    /// * `amount` - The amount of lamports to refund.
+    pub fn refund_sol(ctx: Context<RefundSol>, amount: u64) -> Result<()> {
+        instructions::refund::handle_sol(ctx, amount)
+    }
+
     /// Refunds SPL tokens from gateway custody to a user. Caller is authority stored in PDA.
     /// # Arguments
     /// * `ctx` - The instruction context.

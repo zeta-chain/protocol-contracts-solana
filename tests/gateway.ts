@@ -161,6 +161,29 @@ async function withdrawSplToken(
     .rpc({ commitment: "processed" });
 }
 
+async function refundSol(
+  gatewayProgram: Program<Gateway>,
+  amount: anchor.BN,
+  recipient: anchor.web3.PublicKey,
+  signer: anchor.web3.Keypair = anchor.workspace.Gateway.provider.wallet
+    .payer
+) {
+  const [pdaAccount] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("meta", "utf-8")],
+    gatewayProgram.programId
+  );
+
+  return gatewayProgram.methods
+    .refundSol(amount)
+    .accounts({
+      signer: signer.publicKey,
+      pda: pdaAccount,
+      recipient,
+    })
+    .signers(signer.publicKey.equals(anchor.workspace.Gateway.provider.wallet.publicKey) ? [] : [signer])
+    .rpc({ commitment: "processed" });
+}
+
 async function refundSplToken(
   gatewayProgram: Program<Gateway>,
   mint: anchor.web3.PublicKey,
@@ -3942,6 +3965,102 @@ describe("Gateway", () => {
     } catch (err) {
       expect(err).to.be.instanceof(anchor.AnchorError);
       expect(err.message).to.include("NonceMismatch.");
+    }
+  });
+
+  it("Refund SOL to user", async () => {
+    const refundAmount = new anchor.BN(100_000_000);
+    const refundRecipient = anchor.web3.Keypair.generate();
+    const pdaBalanceBefore = await conn.getBalance(pdaAccount);
+    const recipientBalanceBefore = await conn.getBalance(
+      refundRecipient.publicKey
+    );
+
+    await refundSol(
+      gatewayProgram,
+      refundAmount,
+      refundRecipient.publicKey
+    );
+
+    const pdaBalanceAfter = await conn.getBalance(pdaAccount);
+    const recipientBalanceAfter = await conn.getBalance(
+      refundRecipient.publicKey
+    );
+    expect(pdaBalanceBefore - pdaBalanceAfter).to.equal(
+      refundAmount.toNumber()
+    );
+    expect(recipientBalanceAfter - recipientBalanceBefore).to.equal(
+      refundAmount.toNumber()
+    );
+  });
+
+  it("Refund SOL fails for non-authority", async () => {
+    try {
+      await refundSol(
+        gatewayProgram,
+        new anchor.BN(1),
+        wallet.publicKey,
+        random_account
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("SignerIsNotAuthority");
+    }
+  });
+
+  it("Refund SOL fails for insufficient balance", async () => {
+    const pdaAccountInfo = await conn.getAccountInfo(pdaAccount);
+    const rentExempt = await conn.getMinimumBalanceForRentExemption(
+      pdaAccountInfo!.data.length
+    );
+    const pdaBalance = await conn.getBalance(pdaAccount);
+    const maxRefund = pdaBalance - rentExempt;
+
+    try {
+      await refundSol(
+        gatewayProgram,
+        new anchor.BN(maxRefund + 1),
+        wallet.publicKey
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("InsufficientBalance");
+    }
+  });
+
+  it("Refund SOL fails for zero amount", async () => {
+    try {
+      await refundSol(
+        gatewayProgram,
+        new anchor.BN(0),
+        wallet.publicKey
+      );
+      throw new Error("Expected error not thrown");
+    } catch (err) {
+      expect(err).to.be.instanceof(anchor.AnchorError);
+      expect(err.message).to.include("InvalidAmount");
+    }
+  });
+
+  it("Refund SOL works while deposits are paused", async () => {
+    await gatewayProgram.methods.setDepositPaused(true).rpc();
+
+    try {
+      const refundRecipient = anchor.web3.Keypair.generate();
+      const refundAmount = new anchor.BN(50_000_000);
+
+      await refundSol(
+        gatewayProgram,
+        refundAmount,
+        refundRecipient.publicKey
+      );
+
+      const recipientBalance = await conn.getBalance(refundRecipient.publicKey);
+      expect(recipientBalance).to.equal(refundAmount.toNumber());
+    } finally {
+      await gatewayProgram.methods.setDepositPaused(false).rpc();
     }
   });
 
